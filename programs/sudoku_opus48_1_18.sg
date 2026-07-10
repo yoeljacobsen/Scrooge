@@ -1,0 +1,41 @@
+#row ( i -- r ) 9 / end
+#col ( i -- c ) 9 \ end
+#box ( i -- b ) -> [ i ] [ i 9 / 3 / 3 * i 9 \ 3 / + ] end
+#peer ( i j -- f ) -> [ i j ] [ i row j row = i col j col = or i box j box = or ] end
+
+#valid ( g p n -- ok )
+  nil cons cons $
+  [fold| idx acc val ctx |
+    idx ctx 0 : peer  idx ctx 0 : !=  and  val ctx 1 : =  and  acc or
+  from 0 ] not
+end
+
+#fe ( g -- p )
+  [fold| idx acc val _ | acc idx 81 val 0 = select min from 81 ]
+  -1 $ . 81 = select
+end
+
+#put ( g p n -- g2 )
+  nil cons cons $
+  [map| idx val ctx | ctx 1 : val idx ctx 0 : = select ]
+end
+
+#solve ( g s -- g s ok )
+  -> [ g s ] [ g fe . -1 = ]
+  cond [ % g s 1 ] else [ g $ s 1 try ] ?
+end
+
+#try ( g p s c -- g s ok )
+  -> [ g p s c ] [ c 9 > ]
+  cond [ g s 0 ] else [ g p s 1 + c att ] ?
+end
+
+#att ( g p s c -- g s ok )
+  -> [ g p s c ] [ g p c valid ]
+  cond [ g p c put s solve g p c res ] else [ g p s c 1 + try ] ?
+end
+
+#res ( g2 s2 ok g p c -- g s ok )
+  -> [ g2 s2 ok g p c ] [ ok ]
+  cond [ g2 s2 1 ] else [ g p s2 c 1 + try ] ?
+end

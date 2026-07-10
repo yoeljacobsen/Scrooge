@@ -1,0 +1,38 @@
+# Scrooge v1.8 Standard Flat Sudoku Solver
+
+# Static Coordinate & Value Arrays
+arr_nine [ 0 1 2 3 4 5 6 7 8 ]
+arr_box  [ 0 1 2 9 10 11 18 19 20 ]
+arr_vals [ 1 2 3 4 5 6 7 8 9 ]
+
+# Validation Fold Houses (Bracket-Isolated)
+row_seek [ | acc off | ^idx 9 / 9 * off + ^grid $ : ^val == acc + \ 0 ]
+col_seek [ | acc off | off 9 * ^idx 9 % + ^grid $ : ^val == acc + \ 0 ]
+box_seek [ | acc off | ^idx 9 / 3 / 3 * 9 * ^idx 9 % 3 / 3 * + off + ^grid $ : ^val == acc + \ 0 ]
+
+# Unified Gatekeeper (Returns 1 if valid, 0 otherwise)
+validate [ arr_nine row_seek , arr_nine col_seek , + arr_box box_seek , + 0 == ]
+
+# Matrix Mutation Helper (Replaces element at idx with val)
+# Stack: grid idx val -> mutated_grid
+mutate_grid [ | acc off | off ^idx == cond [ ^val ] else [ ^grid off : ] ? \ [ ] ]
+
+# Backtracking Core Explorer
+# Stack: grid idx steps -> grid steps success
+solve [
+  . 81 == cond [ 1 ] else [
+    @ . @ . : 0 == cond [
+      arr_vals [ | state v |
+        state 2 : cond [ state ] else [
+          state 1 : 1 + -> [ n_steps ]
+          state 0 : state 1 : v mutate_grid , -> [ n_grid ]
+          n_grid state 1 : v validate , cond [
+            n_grid state 1 : 1 + n_steps solve ,
+          ] else [ state ] ?
+        ] ?
+      \ [ ^grid ^steps 0 ] ]
+    ] else [
+      1 + solve ,
+    ] ?
+  ] ?
+]
