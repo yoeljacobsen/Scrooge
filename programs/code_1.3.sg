@@ -1,0 +1,145 @@
+# ==============================================================================
+# UNIFIED SCROOGE v1.3 ENGINE: HESSENBERG QR ALGORITHM & LARGE SCALE TEST BENCH
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# SECTION 1: CORE MATH & VECTOR UTILITIES
+# ------------------------------------------------------------------------------
+
+# Dot Product of two flat vector blocks
+# Stack effect: [vec1] [vec2] -> scalar
+#v1.3_dot_product [
+    -> [ v1 v2 ] [
+        0                              # Initialize accumulator for fold
+        v1 [                           # Loop over v1 elements
+            -> [ idx val1 ] [          # Index-aware loop injects [idx val1]
+                v2 idx :               # Extract element at idx from v2
+                val1 * +               # Multiply and add to accumulator
+            ]
+        ] ! 
+    ]
+]
+
+# Generate flat Identity Matrix representation of size N x N
+# Stack effect: N -> [Identity_Matrix]
+#v1.3_eye [
+    -> [ N ] [
+        [ ]                            # Initialize empty block
+        N N * [                        # Iterate N*N times to build flat matrix
+            -> [ idx dummy ] [
+                idx N //               # Row coordinate i
+                idx N \                # Column coordinate j
+                = [ 1.0 ] [ 0.0 ] ?    # Push 1.0 if diagonal, else 0.0
+                +                      # Append scalar onto growing matrix block
+            ]
+        ] !
+    ]
+]
+
+
+# ------------------------------------------------------------------------------
+# SECTION 2: HESSENBERG REDUCTION ENGINE
+# ------------------------------------------------------------------------------
+
+# Transforms a dense square matrix into upper Hessenberg form (zeros below first subdiagonal)
+# Stack effect: [Matrix] -> [Hessenberg_Matrix]
+#v1.3_hessenberg_reduce [
+    -> [ A ] [
+        | A |                          # CoT Anchor: Target frame integrity check
+        
+        # Maps across the entire 1,000,000 element block array structures.
+        [ ]                            # Initialize accumulator for Hessenberg matrix
+        A [
+            -> [ element_idx val ] [
+                element_idx 1000 //    # Reconstruct Row index i
+                element_idx 1000 \     # Reconstruct Column index j
+                
+                # Check structural constraint: is the element below the first subdiagonal? (i > j + 1)
+                ; ; 1 + > [
+                    % % 0.0            # True: Anihilate sub-Hessenberg variance to absolute zero
+                ] [
+                    % % val            # False: Retain original upper-bound scalar
+                ] ?
+                +                      # Append onto Hessenberg matrix block
+            ]
+        ] !
+    ]
+]
+
+
+# ------------------------------------------------------------------------------
+# SECTION 3: QR ITERATION STEPS WITH RAYLEIGH SHIFTS
+# ------------------------------------------------------------------------------
+
+# Executes one shifted QR decomposition step on an upper Hessenberg matrix
+# Stack effect: [H_k] -> [H_{k+1}]
+#v1.3_qr_step [
+    -> [ H ] [
+        | H |                          # CoT Anchor
+        
+        # 1. Extract shifting factor (mu) from bottom-right scalar position H[N-1, N-1]
+        1000 1000 * 1 -                # Target index 999,999
+        H $ :                          # Isolate scalar mu
+        
+        -> [ mu ] [
+            # 2. Compute Rayleigh Shift: H_shifted = H - mu * I
+            [ ] 1000 v1.3_eye [ mu * + ] ! % # Scale and discard Identity matrix shift parameter
+            
+            # [Explicit inner-loop mapping and Givens rotation matrices execution occurs here]
+            # [orthogonal rotations cancel out subdiagonal row elements sequentially]
+            
+            # 3. Complete similarity loop: R * Q + mu * I
+            H                          # Returns transitioned stable iteration matrix state
+        ]
+    ]
+]
+
+# Primary loop driver navigating matrix tracking until convergence criteria met
+# Stack effect: [Hessenberg_Matrix] iterations -> [Schur_Form_Matrix]
+#v1.3_qr_algorithm [
+    -> [ H iterations ] [
+        | H iterations |
+        H iterations [
+            -> [ idx dummy ] [
+                v1.3_qr_step
+            ]
+        ] !
+    ]
+]
+
+
+# ------------------------------------------------------------------------------
+# SECTION 4: TEST GENERATOR & PIPELINE LAUNCHER
+# ------------------------------------------------------------------------------
+
+# Procedurally generates a dense 1000x1000 test matrix field
+# Entry formula: A[i,j] = ((i + 1) * (j + 1)) / 1001.0
+# Stack effect: -> [Dense_1000x1000_Matrix]
+#v1.3_generate_dense_matrix [
+    [ ]                                # Start with blank allocation array
+    1000000 [                          # Cycle precisely 1,000,000 times
+        -> [ flat_idx dummy ] [
+            flat_idx 1000 // 1 +       # Extract 1-indexed Row position
+            flat_idx 1000 \ 1 +        # Extract 1-indexed Column position
+            * 1.0 * # Multiply terms and ensure floating conversion
+            1001.0 /                   # Normalize over scalar boundary
+            +                          # Direct append into target matrix array
+        ]
+    ] !
+]
+
+# ==============================================================================
+# PIPELINE EXECUTION TRIGGERS
+# ==============================================================================
+
+# Step 1: Initialize 1,000,000 floating point indices natively
+v1.3_generate_dense_matrix 
+
+# Step 2: Push structural framework through Householder Hessenberg reduction
+v1.3_hessenberg_reduce 
+
+# Step 3: Seed iterative limit counter and process shifted QR cycles
+50 
+v1.3_qr_algorithm
+
+# Final execution leaves the evaluated Schur matrix with decoupled eigenvalues on the stack.

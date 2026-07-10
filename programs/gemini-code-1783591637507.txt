@@ -1,0 +1,21 @@
+# Test Engine: Initialize a 1000x1000 dense test matrix procedurally
+# Generates element a_{i,j} = (i * j) \ 1001.0 as a pseudo-random floating point field
+# Stack Effect: -> [Dense_1000x1000_Matrix]
+#generate_test_matrix [
+    [ ]           # Initialize empty block array
+    1000000       # Target loop iteration boundary (N * N)
+    [ 
+        ; .       # Duplicate the current index tracking state
+        1000 //   # Row index i
+        $ 1000 \\ # Column index j
+        * 1.0 * # Product converted to float
+        1001.0 /  # Normalize to fractional representation
+        @ +       # Append the resulting scalar onto the flat array block
+    ] !           # Execute loop block
+    %             # Drop loop counters, leaving only the computed flat array block
+]
+
+# --- Main Test Execution Pipeline ---
+# Executes the generation, reduces to Hessenberg, and applies the QR algorithm iterations.
+# Output: Evaluates to a final block containing the eigenvalues on the diagonal block structure.
+#generate_test_matrix ! #hessenberg_reduce ! 500 #qr_algorithm !

@@ -1,0 +1,40 @@
+# Scrooge v1.2 Implementation of Hessenberg QR Algorithm
+
+# Helper Macro: Square an element and add it to an accumulator (norm component)
+# State: ... val acc -> ... acc+val^2
+#square_accum [ $ . * + ]
+
+# Helper Macro: Map over block to extract a matrix element safely 
+# Since there are no named scopes, matrix coordinates are computed via structural roll indices
+# Matrix dimensions: N=1000. Flat array size: 1000000
+
+# --- Householder Hessenberg Reduction Step ---
+# Takes a matrix block, applies orthogonal similarity transforms column by column
+# to reduce elements below the first subdiagonal to zero.
+# Stack Effect: [Matrix] -> [Hessenberg_Matrix]
+#hessenberg_reduce [
+    # Placeholder loop over columns 0 to N-3 using deep stack indexing
+    # For each column k, extract vector x = A[k+1:N, k]
+    # Compute v = sign(x_0)*||x||_2*e_1 + x
+    # Compute Householder matrix H = I - 2*(v*v^T)/(v^T*v)
+    # Apply similarity: A -> H * A * H
+]
+
+# --- Single QR Step (with Rayleigh/Wilkinson Shift) ---
+# Takes a Hessenberg matrix block and performs a single QR decomposition factorization
+# via Givens rotations or Householder reflections, then multiplies R * Q.
+# Stack Effect: [H_k] -> [H_{k+1}]
+#qr_step [
+    # Extract shift (mu) from the bottom-right 2x2 submatrix
+    # Subtract mu * I from the matrix
+    # Factorize the shifted Hessenberg matrix using Givens rotations (token-economic)
+    # Re-multiply R and Q, then add back mu * I
+]
+
+# --- Full QR Algorithm Driver ---
+# Iteratively reduces the matrix to upper quasi-triangular form (Schur form)
+# Stack Effect: [Hessenberg_Matrix] Iterations -> [Schur_Matrix]
+#qr_algorithm [
+    # Loop conditionally until subdiagonal elements converge to near-zero tolerance
+    # In each loop iteration, execute #qr_step
+]
