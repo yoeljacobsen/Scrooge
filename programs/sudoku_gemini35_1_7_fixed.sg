@@ -1,21 +1,7 @@
 [ [| idx val | val 0 == [ idx ] else [ 99 ] ? *] [| acc v | v acc < [ v ] else [ acc ] ? \ 99 ] ] -> [ find_empty ]
 
 [ -> [ g i v ]
-  i 9 / -> [ r ]
-  i 9 % -> [ c ]
-  r 3 / -> [ br ]
-  c 3 / -> [ bc ]
-  g [| idx curr_v |
-      curr_v ^v == [
-          idx ^i == [ 0 ] else [
-              idx 9 / ^r ==
-              idx 9 % ^c == +
-              idx 9 / 3 / ^br == idx 9 % 3 / ^bc == * +
-              0 > [ 1 ] else [ 0 ] ?
-          ] ?
-      ] else [ 0 ] ?
-  *]
-  [| sum item | sum item + \ 0 ] 0 ==
+  g i v valid
 ] -> [ check_valid ]
 
 [ -> [ g i v ]
@@ -24,7 +10,7 @@
 
 [
     -> [ grid steps ]
-    grid find_empty -> [ empty_idx ]
+    grid find_empty , -> [ empty_idx ]
     empty_idx 99 == [
         grid steps 1
     ] else [
@@ -39,7 +25,7 @@
                 s 1 + -> [ s_next ]
                 g ^empty_idx v ^check_valid [
                     g ^empty_idx v ^update_grid s_next ^solve -> [ r_g r_s r_f ]
-                    r_f r_s r_g [ ] cons cons cons
+                    r_f [ 1 r_s r_g [ ] cons cons cons ] else [ 0 r_s ^g [ ] cons cons cons ] ?
                 ] else [
                     0 s_next g [ ] cons cons cons
                 ] ?
@@ -50,4 +36,4 @@
     ] ?
 ] -> [ solve ]
 
-[ 0 solve | grid:Block[81] steps:Int flag:Int : | ]
+0 solve | grid:Block[81] steps:Int flag:Int : |

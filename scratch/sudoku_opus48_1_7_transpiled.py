@@ -217,55 +217,54 @@ def run(initial_stack=None):
             binding_10 = binding_11
             def binding_12(stack):
                 ok_16 = stack.pop()
-                def binding_13(stack):
+                def binding_14(stack):
                     steps_17 = stack.pop()
                     g_18 = stack.pop()
-                    def binding_14(stack):
-                        def binding_15(stack):
-                            pos_19 = stack.pop()
-                            def binding_16(stack):
-                                execute([0, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, steps_17=steps_17: stack.append(steps_17), [], op_cons, op_cons, op_cons], stack)
-                                init = stack.pop()
-                                target = stack.pop()
-                                acc = init
-                                def binding_17(stack):
-                                    st_22 = stack.pop()
-                                    def binding_18(stack):
-                                        rs_23 = stack.pop()
-                                        rg_24 = stack.pop()
-                                        rf_25 = stack.pop()
-                                        execute([lambda stack, rf_25=rf_25: stack.append(rf_25), 1, op_eq, [1, lambda stack, rg_24=rg_24: stack.append(rg_24), lambda stack, rs_23=rs_23: stack.append(rs_23), [], op_cons, op_cons, op_cons], [0, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, rs_23=rs_23: stack.append(rs_23), [], op_cons, op_cons, op_cons], op_ifelse], stack)
-                                    binding_18.is_binding = True
-                                    execute([lambda stack, g_18=g_18: stack.append(g_18), lambda stack, pos_19=pos_19: stack.append(pos_19), lambda stack, v_21=v_21: stack.append(v_21), binding_10, [lambda stack, g_18=g_18: stack.append(g_18), lambda stack, pos_19=pos_19: stack.append(pos_19), lambda stack, v_21=v_21: stack.append(v_21), binding_6, lambda stack, st_22=st_22: stack.append(st_22), binding_14, binding_18], [0, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, st_22=st_22: stack.append(st_22), [], op_cons, op_cons, op_cons], op_ifelse], stack)
-                                binding_17.is_binding = True
-                                for idx, x in enumerate(target):
-                                    stack.append(acc)
-                                    stack.append(x)
-                                    v_21 = stack.pop()
-                                    f_20 = stack.pop()
-                                    execute([[lambda stack, f_20=f_20: stack.append(f_20), 0, op_get], 1, op_eq, [lambda stack, f_20=f_20: stack.append(f_20)], [[lambda stack, f_20=f_20: stack.append(f_20), 2, op_get], 1, op_add, binding_17], op_ifelse], stack)
-                                    acc = stack.pop()
+                    def binding_15(stack):
+                        pos_19 = stack.pop()
+                        def binding_16(stack):
+                            execute([0, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, steps_17=steps_17: stack.append(steps_17), [], op_cons, op_cons, op_cons], stack)
+                            init = stack.pop()
+                            target = stack.pop()
+                            acc = init
+                            def binding_17(stack):
+                                st_22 = stack.pop()
+                                def binding_18(stack):
+                                    rs_23 = stack.pop()
+                                    rg_24 = stack.pop()
+                                    rf_25 = stack.pop()
+                                    execute([lambda stack, rf_25=rf_25: stack.append(rf_25), 1, op_eq, [1, lambda stack, rg_24=rg_24: stack.append(rg_24), lambda stack, rs_23=rs_23: stack.append(rs_23), [], op_cons, op_cons, op_cons], [0, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, rs_23=rs_23: stack.append(rs_23), [], op_cons, op_cons, op_cons], op_ifelse], stack)
+                                binding_18.is_binding = True
+                                execute([lambda stack, g_18=g_18: stack.append(g_18), lambda stack, pos_19=pos_19: stack.append(pos_19), lambda stack, v_21=v_21: stack.append(v_21), binding_10, [lambda stack, g_18=g_18: stack.append(g_18), lambda stack, pos_19=pos_19: stack.append(pos_19), lambda stack, v_21=v_21: stack.append(v_21), binding_6, lambda stack, st_22=st_22: stack.append(st_22), binding_13, binding_18], [0, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, st_22=st_22: stack.append(st_22), [], op_cons, op_cons, op_cons], op_ifelse], stack)
+                            binding_17.is_binding = True
+                            for idx, x in enumerate(target):
                                 stack.append(acc)
-                            def binding_19(stack):
-                                res_26 = stack.pop()
-                                execute([lambda stack, res_26=res_26: stack.append(res_26), 0, op_get, lambda stack, res_26=res_26: stack.append(res_26), 1, op_get, lambda stack, res_26=res_26: stack.append(res_26), 2, op_get], stack)
-                            binding_19.is_binding = True
-                            execute([lambda stack, pos_19=pos_19: stack.append(pos_19), -1, op_eq, [1, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, steps_17=steps_17: stack.append(steps_17)], [[1, 2, 3, 4, 5, 6, 7, 8, 9], binding_16, binding_19], op_ifelse], stack)
-                        binding_15.is_binding = True
-                        execute([lambda stack, g_18=g_18: stack.append(g_18), binding_1, binding_15], stack)
-                    def binding_20(stack):
-                        solve_27 = stack.pop()
-                        def binding_21(stack):
-                            steps_28 = stack.pop()
-                            grid_29 = stack.pop()
-                            f_30 = stack.pop()
-                            execute([lambda stack, grid_29=grid_29: stack.append(grid_29), lambda stack, steps_28=steps_28: stack.append(steps_28)], stack)
-                        binding_21.is_binding = True
-                        execute([[5, 3, 0, 0, 7, 0, 0, 0, 0, 6, 0, 0, 1, 9, 5, 0, 0, 0, 0, 9, 8, 0, 0, 0, 0, 6, 0, 8, 0, 0, 0, 6, 0, 0, 0, 3, 4, 0, 0, 8, 0, 3, 0, 0, 1, 7, 0, 0, 0, 2, 0, 0, 0, 6, 0, 6, 0, 0, 0, 0, 2, 8, 0, 0, 0, 0, 4, 1, 9, 0, 0, 5, 0, 0, 0, 0, 8, 0, 0, 7, 9], 0, binding_14, binding_21], stack)
-                    binding_20.is_binding = True
-                    execute([[binding_14], binding_20], stack)
-                binding_13.is_binding = True
-                execute([[binding_13]], stack)
+                                stack.append(x)
+                                v_21 = stack.pop()
+                                f_20 = stack.pop()
+                                execute([lambda stack, f_20=f_20: stack.append(f_20), 0, op_get, 1, op_eq, [lambda stack, f_20=f_20: stack.append(f_20)], [lambda stack, f_20=f_20: stack.append(f_20), 2, op_get, 1, op_add, binding_17], op_ifelse], stack)
+                                acc = stack.pop()
+                            stack.append(acc)
+                        def binding_19(stack):
+                            res_26 = stack.pop()
+                            execute([lambda stack, res_26=res_26: stack.append(res_26), 0, op_get, lambda stack, res_26=res_26: stack.append(res_26), 1, op_get, lambda stack, res_26=res_26: stack.append(res_26), 2, op_get], stack)
+                        binding_19.is_binding = True
+                        execute([lambda stack, pos_19=pos_19: stack.append(pos_19), -1, op_eq, [1, lambda stack, g_18=g_18: stack.append(g_18), lambda stack, steps_17=steps_17: stack.append(steps_17)], [[1, 2, 3, 4, 5, 6, 7, 8, 9], binding_16, binding_19], op_ifelse], stack)
+                    binding_15.is_binding = True
+                    execute([lambda stack, g_18=g_18: stack.append(g_18), binding_1, binding_15], stack)
+                binding_14.is_binding = True
+                binding_13 = binding_14
+                def binding_20(stack):
+                    solve_27 = stack.pop()
+                    def binding_21(stack):
+                        steps_28 = stack.pop()
+                        grid_29 = stack.pop()
+                        f_30 = stack.pop()
+                        execute([lambda stack, grid_29=grid_29: stack.append(grid_29), lambda stack, steps_28=steps_28: stack.append(steps_28)], stack)
+                    binding_21.is_binding = True
+                    execute([0, binding_13, binding_21], stack)
+                binding_20.is_binding = True
+                execute([[binding_13], binding_20], stack)
             binding_12.is_binding = True
             execute([[binding_10], binding_12], stack)
         binding_9.is_binding = True
