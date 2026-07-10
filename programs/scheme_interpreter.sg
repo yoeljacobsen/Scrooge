@@ -1,0 +1,233 @@
+#tag_atom ( t -- tagged )
+  -> [ t ] [
+    t 0 < cond [
+      t nil cons 1 $ cons
+    ] else [
+      t nil cons 0 $ cons
+    ] ?
+  ]
+end
+
+#parse_expr ( tokens idx -- ast next_idx )
+  -> [ t i ] [
+    t i : -1 = cond [
+      t i 1 + parse_list
+    ] else [
+      t i : tag_atom i 1 +
+    ] ?
+  ]
+end
+
+#parse_list ( tokens idx -- list next_idx )
+  -> [ t i ] [
+    t i : -2 = cond [
+      nil i 1 +
+    ] else [
+      t i parse_expr t $ parse_list @ @ nil cons cons 2 $ cons $
+    ] ?
+  ]
+end
+
+#env_lookup ( env sym_id -- val )
+  -> [ env sym_id ] [
+    env len 0 = cond [
+      sym_id env_lookup_failed
+    ] else [
+      env 1 : env 2 : sym_id env_lookup_pair
+    ] ?
+  ]
+end
+
+#env_lookup_failed ( sym_id -- val )
+  -> [ s ] [
+    s -2 < s -7 > and cond [
+      s nil cons 1 $ cons
+    ] else [
+      nil
+    ] ?
+  ]
+end
+
+#env_lookup_pair ( pair tail sym_id -- val )
+  -> [ p t s ] [
+    p 0 : s = cond [
+      p 1 :
+    ] else [
+      t s env_lookup
+    ] ?
+  ]
+end
+
+#env_extend ( env sym val -- new_env )
+  -> [ env sym val ] [
+    sym val nil cons cons env nil cons cons 2 $ cons
+  ]
+end
+
+#eval ( ast env -- val )
+  -> [ ast env ] [
+    ast 0 : 0 = cond [
+      ast
+    ] else [
+      ast env eval_not_num
+    ] ?
+  ]
+end
+
+#eval_not_num ( ast env -- val )
+  -> [ ast env ] [
+    ast 0 : 1 = cond [
+      env ast 1 : env_lookup
+    ] else [
+      ast env eval_list
+    ] ?
+  ]
+end
+
+#eval_list ( ast env -- val )
+  -> [ ast env ] [
+    ast 1 : 0 : 1 = cond [
+      ast env eval_special_form
+    ] else [
+      ast env eval_application
+    ] ?
+  ]
+end
+
+#eval_special_form ( ast env -- val )
+  -> [ ast env ] [
+    ast 1 : 1 : -7 = cond [
+      ast env eval_if
+    ] else [
+      ast env eval_special_form_not_if
+    ] ?
+  ]
+end
+
+#eval_special_form_not_if ( ast env -- val )
+  -> [ ast env ] [
+    ast 1 : 1 : -8 = cond [
+      ast env eval_lambda
+    ] else [
+      ast env eval_application
+    ] ?
+  ]
+end
+
+#eval_if ( ast env -- val )
+  -> [ ast env ] [
+    ast 2 : 1 : env eval ast env eval_if_branch
+  ]
+end
+
+#eval_if_branch ( cond_val ast env -- val )
+  -> [ cond_val ast env ] [
+    cond_val 1 : 0 != cond [
+      ast 2 : 2 : 1 : env eval
+    ] else [
+      ast 2 : 2 : 2 : 1 : env eval
+    ] ?
+  ]
+end
+
+#eval_lambda ( ast env -- val )
+  -> [ ast env ] [
+    env nil cons ast 2 : 2 : 1 : $ cons ast 2 : 1 : $ cons 3 $ cons
+  ]
+end
+
+#eval_list_elements ( expr_list env -- evaled_list )
+  -> [ el env ] [
+    el len 0 = cond [
+      nil
+    ] else [
+      el 1 : env eval el 2 : env eval_list_elements nil cons cons 2 $ cons
+    ] ?
+  ]
+end
+
+#eval_application ( ast env -- val )
+  -> [ ast env ] [
+    ast 1 : env eval ast 2 : env eval_list_elements apply
+  ]
+end
+
+#apply ( func_val args_val -- val )
+  -> [ f a ] [
+    f 0 : 1 = cond [
+      f 1 : a apply_primitive
+    ] else [
+      f a apply_closure
+    ] ?
+  ]
+end
+
+#apply_op ( v1 v2 id -- result )
+  -> [ v1 v2 id ] [
+    id -3 = cond [
+      v1 v2 +
+    ] else [
+      v1 v2 id apply_op_not_add
+    ] ?
+  ]
+end
+
+#apply_op_not_add ( v1 v2 id -- result )
+  -> [ v1 v2 id ] [
+    id -4 = cond [
+      v1 v2 -
+    ] else [
+      v1 v2 id apply_op_mul_div
+    ] ?
+  ]
+end
+
+#apply_op_mul_div ( v1 v2 id -- result )
+  -> [ v1 v2 id ] [
+    id -5 = cond [
+      v1 v2 *
+    ] else [
+      v1 v2 /
+    ] ?
+  ]
+end
+
+#apply_primitive ( id args -- val )
+  -> [ id args ] [
+    args 1 : 1 : args 2 : 1 : 1 : id apply_op tag_number
+  ]
+end
+
+#tag_number ( num -- tagged )
+  nil cons 0 $ cons
+end
+
+#env_extend_bindings ( env args vals -- new_env )
+  -> [ env args vals ] [
+    args len 0 = cond [
+      env
+    ] else [
+      env args 1 : 1 : vals 1 : env_extend args 2 : vals 2 : env_extend_bindings
+    ] ?
+  ]
+end
+
+#apply_closure ( func_val args_val -- val )
+  -> [ f a ] [
+    f f 3 : f 1 : a env_extend_bindings apply_closure_body
+  ]
+end
+
+#apply_closure_body ( func_val extended_env -- val )
+  -> [ f ext_env ] [
+    f 2 : ext_env eval
+  ]
+end
+
+#run_scheme ( tokens -- val )
+  -> [ tokens ] [
+    tokens 0 parse_expr -> [ ast next_idx ] [
+      ast nil eval
+    ]
+  ]
+end
