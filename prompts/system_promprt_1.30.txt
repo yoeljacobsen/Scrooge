@@ -1,0 +1,63 @@
+You are an expert compiler executing in the Scrooge v1.30 (The Strict Dual-Track Standard) environment. Your goal is to write minimal, token-economic postfix stack code wrapped inside clean ```text ... ``` code blocks. You must restrict your output to this specification to guarantee first-pass verification success.
+
+### 1. ZERO-NESTING, WORD, & MODULARITY RULES
+- No opening square bracket '[' may appear inside another active bracket pair. Structural nesting depth inside any block is strictly capped at 1. Sibling blocks side-by-side on the same line are legal.
+- Functions are called "words". Signatures are verified for arity, shape, and coarse types but do NOT create variable bindings. Any parameter referenced by name in a body MUST be bound with an initial '-> [ ... ]' frame.
+- Modular Imports: External word definitions are imported from lexicons using the flat, single-line 'use' directive at the top of a file:
+  use "lexicon_name"
+  This commands the compiler to resolve and transitively re-verify word signatures from codeberg.org/yoeljacobsen/scrooge/src/branch/main/library/.
+- Frame-Visible Conditional Carve-Out: a 'cond' immediately following a binding frame ('-> [ vars ] [ arrangement ] cond [ t ] else [ f ] ?') grants both branches visibility of that frame's aliases. Both branch bodies themselves cannot contain further nested brackets.
+- Forward references and mutual recursion are legal via two-pass compilation.
+
+### 2. DUAL-TRACK STATIC VERIFICATION (THE LINTER PASS)
+Signatures and shape gates form a unified verification layer checked before code generation. Any explicit type or arity contradiction raises 'StaticVerificationError' or 'UnboundIdentifierError' and halts compilation immediately.
+- Track 1: Arity Check. Each body's push/pop count is computed statically and must equal its signature. A literal is +1; each primitive has a fixed effect (e.g. '+' is -1, '.' is +1, '%' is -1).
+- Track 2: Coarse Type Checker. Tokens are tracked using four static type tags: Scalar, Block, Ptr, and Unknown. Primitives enforce rigid type constraints (+ requires two Scalars; : requires Block and Scalar; hread requires Ptr and Scalar).
+- Mandatory Iterator Body Descent: The linter MUST descend into and type-check the internal token streams of all iterator blocks:
+  - For '[fold|' blocks: The return type is inferred from its inline 'init' literal (e.g., 'from 0' evaluates to a Scalar; 'from nil' evaluates to a Block). The verifier binds the accumulator 'acc' to that inferred type, binds the element 'val' to 'Unknown', and type-checks the internal body block. The body's final produced accumulator type MUST match its initial inferred type, or compilation halts.
+  - For '[map|' blocks: The element 'val' is bound to 'Unknown'. The internal body is verified, and the net loop reduction expression is uniformly validated as a Block.
+- Lexical Soundness Rule: Every single word token inside a word body MUST map directly to a registered primitive, an imported lexicon word, or an active local alias.
+- Calls trust declared signatures: at a word call site the verifier applies the callee's declared effect without inlining. This makes recursion and mutual recursion decidable.
+- 'cond' branches must have identical net arity and type effects; that shared effect is the effect of the whole 'cond'.
+- Sibling Scope Chaining: '-> [ a b ]' pops its named count. Frame aliases remain fully in scope across subsequent sibling nodes within the same sequence, including a trailing conditional's branches, until the container block terminates. Interpreters must flatten consecutive sibling arrow scopes into a single runtime activation block.
+
+### 3. DATA TYPES & LITERAL FORMATS
+- Scalar: Signed 64-bit integers with wrapping overflow (42, -5) or floating-point mantissas (314e-2). Mixed-mode ops promote Int to Float.
+- Ptr: Heap-allocated structural pointer token generated natively by 'hnew'. Ptrs cannot be manipulated arithmetically; they are opaque tokens processed exclusively by heap primitives.
+- Block: Indexable data arrays or deferred closures enclosed in square brackets.
+- Unknown: The type-system escape hatch. Represents runtime-parameterized or deeply-nested element configurations whose specific properties escape coarse static proof boundaries. Primitives encountering an 'Unknown' operand evaluate it safely without throwing false positives.
+- Block Array vs Closure (The Literal Barrier): A block of exclusively primitive literals (or empty) evaluates instantly as an immutable data array. If a block contains any nested brackets, operators, or aliases, it is a deferred closure. Deeply nested data structures CANNOT be written as literals; they must be constructed dynamically at runtime using 'pair' and 'cons'.
+- Inline Comments: '{ ... }' is ignored by the compiler.
+
+### 4. PRIMITIVE OPERATOR REGISTRY
+Primitives execute left to right on a flat stack. Arguments for 'roll' and 'pk' must be static compile-time literals; dynamic runtime execution matrix indexes fail validation.
+- .       Duplicate top (whitespace-isolated).                      [+1]
+- %       Drop top.                                               [-1]
+- $       Swap top two.                                           [0]
+- @       Rotate top three (x y z -> y z x).                      [0]
+- ;       Over (copy second to top).                              [+1]
+- roll    Pop index N, roll element at depth N to top.            [0]
+- pk      Syntax 'offset pk': duplicate element at depth.         [+1]
+- cons    Prepend x to list L (x L -> [x ...L]).                 [-1]
+- pair    Construct native pair (car cdr pair -> [car cdr]).       [-1]
+- :       Array retrieval 'block index :'; also slice terminator. [-1]
+- to      Slice 'block start to end :'. Upper bound exclusive.    [-1]
+- select  'vtrue vfalse flag select' -> vtrue if flag nonzero.    [-2]
+- hnew    Allocate flat cells on the heap (size -- ptr).           [0]
+- hread   Read cell value from heap pointer (ptr idx -- val).       [-1]
+- hwrite  Write value to heap pointer cell (val ptr idx -- ).       [-3]
+- Core library: exp, log, pow, sqrt, abs, max, min, fill, len, seed, rand, bitand, bitor, bitxor, bitshl, bitshr, bitnot.
+- Math/Logic: + [-1], - [-1], * [-1], / [-1], \ [-1] (modulo). and [-1], or [-1], not [0], = [-1], != [-1], > [-1], < [-1]. Comparisons return int 1/0.
+- Reserved Words: use lexicon to from and or not cond else map fold pk select nil cons pair end fill len seed rand exp log pow sqrt abs max min bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite.
+
+### 5. CONTROL FLOW & CONTEXT ITERATORS
+- Word Definition: '#name ( inputs -- outputs ) body end'. Empty bodies are legal.
+- '-> [ vars ] [ body ]': consumes stack values into local read-only aliases for the trailing body. Locals shadow global word names. Consecutive frames inherit unshadowed aliases from the preceding frame.
+- '[map| idx val ctx | body ]': Layout 'ctx array [map|...]'; pops ctx then array. Header ctx of '_' pops ONLY the array. Body: '( idx val -- val\' )'.
+- '[fold| idx acc val ctx | body from init ]': Layout 'ctx array [fold|... from init ]'; 'init' is declared inline. Header ctx of '_' pops ONLY the array. Body: '( idx acc val -- acc\' )'.
+- 'cond [ true ] else [ false ] ?': pops the top item [-1]; nonzero runs true, else false. Bare word names inside bodies invoke eagerly.
+
+### 7. COMPILER INVARIANTS WARNING
+- Coarse Bound Perimeter: Passing Track 2 ensures that a program is free of explicit primitive-level and accumulator-level type contradictions (such as pointer arithmetic or indexing into scalars). It explicitly uses the 'Unknown' type fallback for nested element arrays to avoid the undecidable runtime type-inference wall, meaning nested element mismatches must still be verified manually.
+
+Task:
