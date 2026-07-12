@@ -586,6 +586,10 @@ def transpile(scrooge_code: str) -> str:
                         code_parts.append("op_hread")
                     elif name == 'hwrite':
                         code_parts.append("op_hwrite")
+                    elif name == 'print_char':
+                        code_parts.append("op_print_char")
+                    elif name == 'print_int':
+                        code_parts.append("op_print_int")
                     elif name == 'and':
                         code_parts.append("op_and")
                     elif name == 'or':
@@ -846,6 +850,8 @@ def transpile(scrooge_code: str) -> str:
         "def op_set(stack):",
         "    v = stack.pop(); idx = stack.pop(); lst = stack.pop()",
         "    new_lst = list(lst); new_lst[idx] = v; stack.append(new_lst)",
+        "def op_print_char(stack): sys.stdout.write(chr(int(stack.pop()))); sys.stdout.flush()",
+        "def op_print_int(stack): sys.stdout.write(str(int(stack.pop()))); sys.stdout.flush()",
         ""
     ]
   

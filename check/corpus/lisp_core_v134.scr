@@ -1,0 +1,75 @@
+{ ===================================================================
+  Metacircular evaluator core, Scrooge v1.24.
+  AST encoding (all nodes are 2-element pairs [tag payload]):
+    number:  [ 0 n ]
+    symbol:  [ 1 symid ]
+    if:      [ 2 [ cond_expr [ then_expr else_expr ] ] ]
+    prim:    [ 3 [ op [ arg1 arg2 ] ] ]   op: 0=+ 1=* 2==
+    (kept intentionally small; enough for real eval/apply recursion)
+  Environment: assoc list of [ symid value ] pairs, -1 sentinel on miss.
+  =================================================================== }
+
+{ ---- environment ---- }
+#env_extend ( env sym val -- new_env )
+  -> [ env sym val ] [ sym val pair env cons ]
+end
+#lk_hit ( pr sym acc -- v ) -> [ pr sym acc ] [ pr 1 : ] end
+#lk_miss ( pr sym acc -- v ) -> [ pr sym acc ] [ acc ] end
+#lk_step ( idx acc pr sym -- acc2 )
+  -> [ idx acc pr sym ] [ pr sym acc pr 0 : sym = ]
+  cond [ lk_hit ] else [ lk_miss ] ?
+end
+#env_lookup ( env sym -- val )
+  -> [ env sym ] [ sym env [fold| idx acc pr ctx | idx acc pr ctx lk_step from -1 ] ]
+end
+
+{ ---- tag dispatch helpers ---- }
+#tag_of ( node -- t ) -> [ node ] [ node 0 : ] end
+#payload_of ( node -- p ) -> [ node ] [ node 1 : ] end
+
+{ ---- primitive application: op arg1 arg2 ---- }
+#prim_add ( op a b -- r ) -> [ op a b ] [ a b + ] end
+#prim_mul ( op a b -- r ) -> [ op a b ] [ a b * ] end
+#prim_eq  ( op a b -- r ) -> [ op a b ] [ a b = ] end
+#prim_mul_or_eq ( op a b -- r )
+  -> [ op a b ] [ op a b op 1 = ]
+  cond [ prim_mul ] else [ prim_eq ] ?
+end
+#prim_apply ( op a b -- r )
+  -> [ op a b ] [ op a b op 0 = ]
+  cond [ prim_add ] else [ prim_mul_or_eq ] ?
+end
+
+{ ---- eval: number / symbol / if / prim ---- }
+#eval_num ( env node -- v ) -> [ env node ] [ node payload_of ] end
+#eval_sym ( env node -- v ) -> [ env node ] [ env node payload_of env_lookup ] end
+
+#if_then ( env branches -- v ) -> [ env branches ] [ env branches 0 : eval ] end
+#if_else ( env branches -- v ) -> [ env branches ] [ env branches 1 : eval ] end
+#eval_if ( env node -- v )
+  -> [ env node ] [ env node payload_of ]
+  -> [ env p ] [ env p 1 : env p 0 : eval ]
+  -> [ env branches test ] [ env branches test 0 != ]
+  cond [ if_then ] else [ if_else ] ?
+end
+
+#eval_prim ( env node -- v )
+  -> [ env node ] [ env node payload_of ]
+  -> [ env p ] [ p 0 : env p 1 : ]
+  -> [ op env args ] [ op env args 0 : eval env args 1 : eval ]
+  -> [ op a b ] [ op a b prim_apply ]
+end
+
+{ ---- eval dispatch by tag (0 num,1 sym,2 if,3 prim) ---- }
+#eval_if_or_prim ( env node -- v )
+  -> [ env node ] [ env node node tag_of 2 = ]
+  cond [ eval_if ] else [ eval_prim ] ?
+end
+#eval_sym_or_up ( env node -- v )
+  -> [ env node ] [ env node node tag_of 1 = ]
+  cond [ eval_sym ] else [ eval_if_or_prim ] ?
+end
+#eval ( env node -- v )
+  -> [ env node ] [ env node node tag_of 0 = ]
+  cond [ eval_num ] else [ eval_sym_or_up ] ?
+end

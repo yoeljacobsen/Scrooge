@@ -1,0 +1,3 @@
+#rec_make ( size -- ptr ) hnew end
+#rec_get ( ptr field_offset -- val ) hread end
+#rec_set ( val ptr field_offset -- ) hwrite end

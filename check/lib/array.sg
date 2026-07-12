@@ -1,0 +1,27 @@
+#arr_size ( shape_block -- total_cells )
+  [fold| idx acc val _ | acc val * from 1 ]
+end
+#arr_make ( shape_block -- ptr )
+  -> [ shape_block ] [
+    shape_block arr_size
+    shape_block len + 1 +
+    hnew -> [ base_ptr ] [
+      shape_block len base_ptr 0 hwrite
+      shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] %
+      base_ptr
+    ]
+  ]
+end
+#arr_offset ( ptr coords_block -- flat_offset )
+  -> [ ptr coords_block ] [
+    0
+    coords_block [fold| idx acc coord _ | ptr 1 idx + hread acc * coord + from 0 ]
+    ptr len + 1 + +
+  ]
+end
+#arr_get ( ptr coords_block -- val )
+  -> [ ptr coords_block ] [ ptr ptr coords_block arr_offset hread ]
+end
+#arr_set ( val ptr coords_block -- )
+  -> [ val ptr coords_block ] [ val ptr ptr coords_block arr_offset hwrite ]
+end
