@@ -1,0 +1,277 @@
+#find_col_hit ( idx acc val ctx -- index )
+  -> [ idx acc val ctx ] [ idx ]
+end
+
+#find_col_miss ( idx acc val ctx -- acc )
+  -> [ idx acc val ctx ] [ acc ]
+end
+
+#find_col_step ( idx acc val ctx -- acc2 )
+  -> [ idx acc val ctx ] [ val ctx = ]
+  cond [ idx acc val ctx find_col_hit ] else [ idx acc val ctx find_col_miss ] ?
+end
+
+#find_col_idx ( columns_block target_col_id -- index )
+  -> [ columns_block target_col_id ] [
+    target_col_id columns_block [fold| idx acc val ctx | idx acc val ctx find_col_step from -1 ]
+  ]
+end
+
+#project_elem ( idx val ctx_pair -- val2 )
+  -> [ idx val ctx_pair ] [
+    ctx_pair 0 : -> [ cols ] [ ctx_pair 1 : ] -> [ r ] [
+      r cols val find_col_idx :
+    ]
+  ]
+end
+
+#project_row ( row columns_block select_columns_block -- projected_row )
+  -> [ row columns_block select_columns_block ] [
+    columns_block row pair select_columns_block
+  ]
+  -> [ ctx_pair sel_cols ] [
+    ctx_pair sel_cols [map| idx val ctx | idx val ctx project_elem ]
+  ]
+end
+
+#concat_blocks ( block1 block2 -- concatenated )
+  -> [ block1 block2 ] [
+    block2 block1 [fold| idx acc val ctx | val acc cons from block2 ]
+  ]
+end
+
+#scan_rows_step ( rows_ptr columns_block select_columns_block filter_col_idx filter_val current_idx stop_idx acc_results -- rows_ptr columns_block select_columns_block filter_col_idx filter_val next_idx stop_idx new_acc_results )
+  -> [ rows_ptr columns_block select_columns_block filter_col_idx filter_val current_idx stop_idx acc_results ] [
+    rows_ptr current_idx hread
+  ]
+  -> [ row ] [
+    row filter_col_idx : filter_val =
+  ]
+  cond [
+    row columns_block select_columns_block project_row
+    acc_results cons
+  ] else [
+    acc_results
+  ] ?
+  -> [ new_acc ] [
+    rows_ptr columns_block select_columns_block filter_col_idx filter_val
+    current_idx 1 + stop_idx new_acc
+  ]
+end
+
+#scan_rows ( rows_ptr columns_block select_columns_block filter_col_idx filter_val current_idx stop_idx acc_results -- result_block )
+  -> [ rows_ptr columns_block select_columns_block filter_col_idx filter_val current_idx stop_idx acc_results ] [
+    current_idx stop_idx =
+  ]
+  cond [
+    acc_results
+  ] else [
+    rows_ptr columns_block select_columns_block filter_col_idx filter_val current_idx stop_idx acc_results
+    scan_rows_step
+    scan_rows
+  ] ?
+end
+
+#scan_right_step ( right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left right_idx right_num_rows acc_results -- right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left next_right_idx right_num_rows new_acc_results )
+  -> [ right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left right_idx right_num_rows acc_results ] [
+    right_rows_ptr right_idx hread
+  ]
+  -> [ right_row ] [
+    right_row right_join_col_idx : left_val =
+  ]
+  cond [
+    right_row right_cols select_right_cols project_row
+    proj_left concat_blocks
+    acc_results cons
+  ] else [
+    acc_results
+  ] ?
+  -> [ new_acc ] [
+    right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left
+    right_idx 1 + right_num_rows new_acc
+  ]
+end
+
+#scan_right_loop ( right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left right_idx right_num_rows acc_results -- result_block )
+  -> [ right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left right_idx right_num_rows acc_results ] [
+    right_idx right_num_rows =
+  ]
+  cond [
+    acc_results
+  ] else [
+    right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left right_idx right_num_rows acc_results
+    scan_right_step
+    scan_right_loop
+  ] ?
+end
+
+#scan_left_step ( left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx left_idx left_num_rows right_num_rows acc_results -- left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx next_left_idx left_num_rows right_num_rows new_acc_results )
+  -> [ left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx left_idx left_num_rows right_num_rows acc_results ] [
+    left_rows_ptr left_idx hread
+  ]
+  -> [ left_row ] [
+    left_row left_join_col_idx :
+    left_row left_cols select_left_cols project_row
+  ]
+  -> [ left_val proj_left ] [
+    right_rows_ptr right_cols select_right_cols right_join_col_idx left_val proj_left 0 right_num_rows acc_results
+    scan_right_loop
+  ]
+  -> [ new_acc ] [
+    left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx
+    left_idx 1 + left_num_rows right_num_rows new_acc
+  ]
+end
+
+#scan_left_loop ( left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx left_idx left_num_rows right_num_rows acc_results -- result_block )
+  -> [ left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx left_idx left_num_rows right_num_rows acc_results ] [
+    left_idx left_num_rows =
+  ]
+  cond [
+    acc_results
+  ] else [
+    left_rows_ptr left_cols select_left_cols left_join_col_idx right_rows_ptr right_cols select_right_cols right_join_col_idx left_idx left_num_rows right_num_rows acc_results
+    scan_left_step
+    scan_left_loop
+  ] ?
+end
+
+#db_create_table ( db_ptr stmt -- )
+  -> [ db_ptr stmt ] [ stmt 1 : stmt 2 : ]
+  -> [ table_id columns_block ] [ 4 hnew 100 hnew ]
+  -> [ table_ptr rows_ptr ] [
+    columns_block table_ptr 0 hwrite
+    0 table_ptr 1 hwrite
+    100 table_ptr 2 hwrite
+    rows_ptr table_ptr 3 hwrite
+    table_ptr db_ptr table_id hwrite
+  ]
+end
+
+#db_insert ( db_ptr stmt -- )
+  -> [ db_ptr stmt ] [ stmt 1 : stmt 2 : ]
+  -> [ table_id values_block ] [ db_ptr table_id hread ]
+  -> [ table_ptr ] [
+    table_ptr
+    table_ptr 1 hread
+    table_ptr 2 hread
+    table_ptr 3 hread
+  ]
+  -> [ t_ptr num_rows capacity rows_ptr ] [
+    num_rows capacity <
+  ]
+  cond [
+    values_block rows_ptr num_rows hwrite
+    num_rows 1 + t_ptr 1 hwrite
+  ] else [
+    { do nothing }
+  ] ?
+end
+
+#db_select ( db_ptr stmt -- result_block )
+  -> [ db_ptr stmt ] [
+    stmt 1 :
+    stmt 2 :
+    stmt 3 :
+    stmt 4 :
+  ]
+  -> [ table_id select_columns_block filter_col_id filter_val ] [
+    db_ptr table_id hread
+  ]
+  -> [ table_ptr ] [
+    table_ptr 0 hread
+    table_ptr 1 hread
+    table_ptr 3 hread
+  ]
+  -> [ columns_block num_rows rows_ptr ] [
+    columns_block filter_col_id find_col_idx
+  ]
+  -> [ filter_col_idx ] [
+    rows_ptr columns_block select_columns_block filter_col_idx filter_val 0 num_rows nil scan_rows
+  ]
+end
+
+#db_join ( db_ptr stmt -- result_block )
+  -> [ db_ptr stmt ] [
+    stmt 1 :
+    stmt 2 :
+    stmt 3 :
+    stmt 4 :
+    stmt 5 :
+    stmt 6 :
+  ]
+  -> [ left_table_id right_table_id left_join_col_id right_join_col_id select_left_cols select_right_cols ] [
+    db_ptr left_table_id hread
+    db_ptr right_table_id hread
+  ]
+  -> [ left_table_ptr right_table_ptr ] [
+    left_table_ptr 0 hread
+    left_table_ptr 1 hread
+    left_table_ptr 3 hread
+    right_table_ptr 0 hread
+    right_table_ptr 1 hread
+    right_table_ptr 3 hread
+  ]
+  -> [ left_cols left_num_rows left_rows_ptr right_cols right_num_rows right_rows_ptr ] [
+    left_cols left_join_col_id find_col_idx
+    right_cols right_join_col_id find_col_idx
+  ]
+  -> [ left_join_col_idx right_join_col_idx ] [
+    left_rows_ptr left_cols select_left_cols left_join_col_idx
+    right_rows_ptr right_cols select_right_cols right_join_col_idx
+    0 left_num_rows right_num_rows nil
+    scan_left_loop
+  ]
+end
+
+#populate_step ( db_ptr table_id current_n val_multiplier -- )
+  -> [ db_ptr table_id current_n val_multiplier ] [
+    current_n
+    current_n val_multiplier * nil cons
+    cons
+  ]
+  -> [ values_block ] [
+    2 table_id values_block nil cons cons cons
+  ]
+  -> [ stmt ] [
+    db_ptr stmt db_insert
+  ]
+end
+
+#populate_data ( db_ptr table_id current_n stop_n val_multiplier -- )
+  -> [ db_ptr table_id current_n stop_n val_multiplier ] [
+    current_n stop_n >
+  ]
+  cond [
+    { done }
+  ] else [
+    db_ptr table_id current_n val_multiplier populate_step
+    db_ptr table_id current_n 1 + stop_n val_multiplier populate_data
+  ] ?
+end
+
+#populate_right_step ( db_ptr table_id current_n -- )
+  -> [ db_ptr table_id current_n ] [
+    current_n 2 *
+    current_n 1000 + nil cons
+    cons
+  ]
+  -> [ values_block ] [
+    2 table_id values_block nil cons cons cons
+  ]
+  -> [ stmt ] [
+    db_ptr stmt db_insert
+  ]
+end
+
+#populate_right_data ( db_ptr table_id current_n stop_n -- )
+  -> [ db_ptr table_id current_n stop_n ] [
+    current_n stop_n >
+  ]
+  cond [
+    { done }
+  ] else [
+    db_ptr table_id current_n populate_right_step
+    db_ptr table_id current_n 1 + stop_n populate_right_data
+  ] ?
+end
