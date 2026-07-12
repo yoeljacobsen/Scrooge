@@ -29,3 +29,11 @@ tool "util" name "contains" sig "( block target -- flag )" desc "1 if target pre
 tool "util" name "filter_eq" sig "( block target -- filtered )" desc "Keeps elements equal to target (order preserved)."
 tool "util" name "index_of" sig "( block target -- idx )" desc "First index equal to target, or -1."
 tool "util" name "concat" sig "( block1 block2 -- joined )" desc "Concatenates two blocks; empty-safe."
+
+tool "strings" name "str_print" sig "( str -- )" desc "Prints a string (block of ASCII codes) to stdout."
+tool "strings" name "is_digit" sig "( ch -- flag )" desc "1 if char code is 0-9, else 0."
+tool "strings" name "is_space" sig "( ch -- flag )" desc "1 if char code is space/tab/newline/CR, else 0."
+tool "strings" name "is_upper" sig "( ch -- flag )" desc "1 if char code is A-Z, else 0."
+tool "strings" name "is_lower" sig "( ch -- flag )" desc "1 if char code is a-z, else 0."
+tool "strings" name "int_to_str" sig "( n -- str )" desc "Converts a non-negative integer to its digit-character block."
+tool "strings" name "print_line" sig "( n -- )" desc "Prints an integer followed by a newline."

@@ -1,0 +1,41 @@
+{ ---- Minimal Strings Lexicon: a string is a Block of ASCII integer codes ---- }
+{ ---- Structural ops (reverse, length, concat, char-at, find-char) are already ---- }
+{ ---- provided by util.sg since a string IS a Block. This lexicon adds only    ---- }
+{ ---- what strings need beyond generic blocks: I/O, char predicates, int<->str. ---- }
+
+{ ---- Print a whole string to stdout ---- }
+#sp_step ( idx acc val ctx -- acc2 )
+  -> [ idx acc val ctx ] [ val print_char acc ]
+end
+#str_print ( str -- )
+  -> [ str ] [ str [fold| idx acc val _ | idx acc val 0 sp_step from 0 ] % ]
+end
+
+{ ---- Character predicates (fixed comparisons; return 1/0) ---- }
+#is_digit ( ch -- flag )
+  -> [ ch ] [ ch 47 > ch 58 < and ]
+end
+#is_space ( ch -- flag )
+  -> [ ch ] [ ch 32 = ch 9 = or ch 10 = or ch 13 = or ]
+end
+#is_upper ( ch -- flag )
+  -> [ ch ] [ ch 64 > ch 91 < and ]
+end
+#is_lower ( ch -- flag )
+  -> [ ch ] [ ch 96 > ch 123 < and ]
+end
+
+{ ---- Integer -> string (non-negative). Replaces manual base-10 formatting. ---- }
+#its_loop ( n acc -- result )
+  -> [ n acc ] [ n 0 = ]
+  cond [ acc ] else [ n 10 / n 10 \ 48 + acc cons its_loop ] ?
+end
+#int_to_str ( n -- str )
+  -> [ n ] [ n 0 = ]
+  cond [ 48 nil cons ] else [ n nil its_loop ] ?
+end
+
+{ ---- Print an integer via string conversion, then newline ---- }
+#print_line ( n -- )
+  -> [ n ] [ n int_to_str str_print 10 print_char ]
+end

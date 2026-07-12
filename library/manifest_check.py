@@ -13,6 +13,7 @@ LEXICON_FILES = {
     "list":   "v126_list.sg",
     "record": "v126_record.sg",
     "util":   "util.sg",
+    "strings":"strings.sg",
 }
 
 def parse_manifest_full(path="manifest.sm"):
