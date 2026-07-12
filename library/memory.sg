@@ -1,63 +1,41 @@
-{ ---- Generic Memory Operations Lexicon ---- }
-
 #hclear_step ( ptr idx stop_idx -- ptr idx2 stop_idx )
-  -> [ p idx stop_idx ] [
-    0 p idx hwrite
-    p idx 1 + stop_idx
-  ]
+  -> [ p idx stop_idx ] [ 0 p idx hwrite p idx 1 + stop_idx ]
 end
-
 #hclear_loop ( ptr idx stop_idx -- )
-  -> [ p idx stop_idx ] [
-    idx stop_idx <
-  ]
+  -> [ p idx stop_idx ] [ idx stop_idx < ]
   cond [ p idx stop_idx hclear_step hclear_loop ] else [ ] ?
 end
-
 #hclear ( ptr start size -- )
-  -> [ p start size ] [
-    p start start size + hclear_loop
-  ]
+  -> [ p start size ] [ p start start size + hclear_loop ]
 end
-
 #hfill_step ( val ptr idx stop_idx -- val ptr idx2 stop_idx )
-  -> [ val p idx stop_idx ] [
-    val p idx hwrite
-    val p idx 1 + stop_idx
-  ]
+  -> [ val p idx stop_idx ] [ val p idx hwrite val p idx 1 + stop_idx ]
 end
-
 #hfill_loop ( val ptr idx stop_idx -- )
-  -> [ val p idx stop_idx ] [
-    idx stop_idx <
-  ]
+  -> [ val p idx stop_idx ] [ idx stop_idx < ]
   cond [ val p idx stop_idx hfill_step hfill_loop ] else [ ] ?
 end
-
-{ ---- Generic Loop Lexicon Primitives ---- }
-
 #hloop_fill ( ptr start stop val -- )
-  -> [ p start stop val ] [
-    val p start stop hfill_loop
-  ]
+  -> [ p start stop val ] [ val p start stop hfill_loop ]
 end
-
 #hadd_step ( val ptr idx stop_idx -- val ptr idx2 stop_idx )
-  -> [ val p idx stop_idx ] [
-    p idx hread val + p idx hwrite
-    val p idx 1 + stop_idx
-  ]
+  -> [ val p idx stop_idx ] [ p idx hread val + p idx hwrite val p idx 1 + stop_idx ]
 end
-
 #hadd_loop ( val ptr idx stop_idx -- )
-  -> [ val p idx stop_idx ] [
-    idx stop_idx <
-  ]
+  -> [ val p idx stop_idx ] [ idx stop_idx < ]
   cond [ val p idx stop_idx hadd_step hadd_loop ] else [ ] ?
 end
-
 #hloop_add ( ptr start stop val -- )
-  -> [ p start stop val ] [
-    val p start stop hadd_loop
-  ]
+  -> [ p start stop val ] [ val p start stop hadd_loop ]
+end
+#h_find_val_check ( ptr size val current_idx -- index )
+  -> [ ptr size val current_idx ] [ ptr current_idx hread val = ]
+  cond [ current_idx ] else [ ptr size val current_idx 1 + h_find_val_loop ] ?
+end
+#h_find_val_loop ( ptr size val current_idx -- index )
+  -> [ ptr size val current_idx ] [ current_idx size = ]
+  cond [ -1 ] else [ ptr size val current_idx h_find_val_check ] ?
+end
+#h_find_val ( ptr size val -- index )
+  -> [ ptr size val ] [ ptr size val 0 h_find_val_loop ]
 end

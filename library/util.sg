@@ -1,0 +1,35 @@
+#reverse ( block -- reversed )
+  [fold| idx acc val _ | val acc cons from nil ]
+end
+#length ( block -- n )
+  [fold| idx acc val _ | acc 1 + from 0 ]
+end
+#nth ( block idx -- val )
+  :
+end
+#sum ( block -- total )
+  [fold| idx acc val _ | acc val + from 0 ]
+end
+#contains ( block target -- flag )
+  -> [ block target ] [ target block [fold| idx acc val ctx | acc val ctx = or from 0 ] ]
+end
+#feq_step ( idx acc val ctx -- acc2 )
+  -> [ idx acc val ctx ] [ val ctx = ]
+  cond [ val acc cons ] else [ acc ] ?
+end
+#filter_eq ( block target -- filtered )
+  -> [ block target ] [
+    target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
+  ]
+  reverse
+end
+#idx_step ( idx acc val ctx -- acc2 )
+  -> [ idx acc val ctx ] [ acc -1 = val ctx = and ]
+  cond [ idx ] else [ acc ] ?
+end
+#index_of ( block target -- idx )
+  -> [ block target ] [ target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ] ]
+end
+#concat ( block1 block2 -- joined )
+  -> [ b1 b2 ] [ b1 reverse [fold| idx acc val _ | val acc cons from b2 ] ]
+end
