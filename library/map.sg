@@ -1,33 +1,27 @@
-{ ---- Growable Mutable List Lexicon ---- }
+{ ---- Encapsulated Key-Value Hash Map Lexicon ---- }
 
-#lst_make ( initial_capacity -- ptr )
-  -> [ initial_capacity ] [
-    3 hnew -> [ head_ptr ] [
-      initial_capacity head_ptr 0 hwrite
-      0 head_ptr 1 hwrite
-      initial_capacity hnew head_ptr 2 hwrite
-      head_ptr
-    ]
+#map_make ( buckets_size -- ptr )
+  -> [ buckets_size ] [ buckets_size 2 * hnew ]
+end
+
+#map_hash ( key buckets_size -- bucket_idx )
+  \ 2 *
+end
+
+#map_get ( ptr key -- val )
+  -> [ ptr key ] [
+    key ptr len 2 / map_hash
+    -> [ bucket_idx ] [ ptr bucket_idx hread key = ]
+    cond [ ptr bucket_idx 1 + hread ] else [ -1 ] ?
   ]
 end
 
-#lst_get ( ptr idx -- val )
-  -> [ ptr idx ] [ ptr 2 hread idx hread ]
-end
-
-#lst_set ( val ptr idx -- )
-  -> [ val ptr idx ] [ val ptr 2 hread idx hwrite ]
-end
-
-#lst_push ( val ptr -- )
-  -> [ val ptr ] [
-    ptr 0 hread
-    ptr 1 hread
-    = cond [
-      val ptr ptr 1 hread lst_set
-    ] else [
-      val ptr ptr 1 hread lst_set
-      ptr 1 hread 1 + ptr 1 hwrite
-    ] ?
+#map_set ( val ptr key -- )
+  -> [ val ptr key ] [
+    key ptr len 2 / map_hash
+    -> [ bucket_idx ] [
+      key ptr bucket_idx hwrite
+      val ptr bucket_idx 1 + hwrite
+    ]
   ]
 end

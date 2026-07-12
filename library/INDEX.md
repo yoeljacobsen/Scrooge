@@ -16,3 +16,7 @@ lexicon map #map_set ( val ptr key -- ) "Inserts or updates a key-value pair ins
 lexicon record #rec_make ( size -- ptr ) "Allocates a fixed-capacity record memory segment on the heap containing a specific number of data slots."
 lexicon record #rec_get ( ptr field_offset -- val ) "Reads an encapsulated record field entry from a constant integer offset cell."
 lexicon record #rec_set ( val ptr field_offset -- ) "Writes an encapsulated record field entry into a constant integer offset cell."
+
+lexicon memory #hclear     ( ptr start size -- ) "Iteratively writes a value of 0 to a sequential block of heap cells starting from a base pointer offset. Optimized via TCO."
+lexicon memory #hloop_fill ( ptr start stop val -- ) "Loops across a specified range of linear heap memory addresses, filling every cell with a target scalar value payload. Flattened via TCO."
+lexicon memory #hloop_add  ( ptr start stop val -- ) "Iterates across a target heap memory range, performing element-wise scalar addition against every cell's existing value. Flattened via TCO."

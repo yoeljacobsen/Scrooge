@@ -4,6 +4,9 @@ import os
 import traceback
 
 def strip_comments(code):
+    # First, strip curly brace comments { ... }
+    code = re.sub(r"\{[^}]*\}", "", code)
+    
     # Heuristic to detect if the file uses semicolon comments
     use_semicolon = False
     for line in code.split('\n'):
@@ -24,7 +27,7 @@ def strip_comments(code):
             if char == '"':
                 in_string = not in_string
             elif char == '#' and not in_string:
-                # Check if it's a macro or a comment.
+                # Check if it's a macro or a word definition or comment.
                 if i + 1 < len(line) and (line[i+1].isalpha() or line[i+1] == '_'):
                     continue
                 else:
@@ -42,6 +45,9 @@ def tokenize(code):
     token_specification = [
         ('ARROW',     r'->'),
         ('ELSE',      r'\belse\b'),
+        ('SIG_ARROW', r'--'),
+        ('LPAREN',    r'\('),
+        ('RPAREN',    r'\)'),
         ('BAR_BLOCK', r'\|[ a-zA-Z0-9_\s*:\\\.\-\[\]]+\|'),
         ('MACRO',     r'#[a-zA-Z_][\w\.]*'),
         ('FLOAT',     r'-?\d+\.\d+'),
@@ -99,7 +105,6 @@ def parse(tokens):
     return stack[0]
 
 def sanitize_name(name):
-    # Strip any trailing asterisks (e.g. W* -> W_star)
     return name.replace('.', '_').replace('*', '_star')
 
 def get_var_name(var_str):
@@ -138,32 +143,75 @@ def transpile(scrooge_code: str) -> str:
     tokens = tokenize(scrooge_code)
     parsed = parse(tokens)
     
+    # Extract word definitions first
+    words = {}
+    main_items = []
+    i = 0
+    n = len(parsed)
+    while i < n:
+        item = parsed[i]
+        if isinstance(item, tuple) and item[0] == 'MACRO' and i + 1 < n and parsed[i+1] == ('LPAREN', '('):
+            word_name = item[1][1:]
+            i += 2
+            inputs = []
+            while i < n and parsed[i] != ('SIG_ARROW', '--'):
+                if parsed[i][0] == 'WORD':
+                    inputs.append(parsed[i][1])
+                i += 1
+            if i < n and parsed[i] == ('SIG_ARROW', '--'):
+                i += 1
+            outputs = []
+            while i < n and parsed[i] != ('RPAREN', ')'):
+                if parsed[i][0] == 'WORD':
+                    outputs.append(parsed[i][1])
+                i += 1
+            if i < n and parsed[i] == ('RPAREN', ')'):
+                i += 1
+            # collect body elements until 'end' at same level
+            body = []
+            while i < n:
+                body_item = parsed[i]
+                if isinstance(body_item, tuple) and body_item == ('WORD', 'end'):
+                    i += 1
+                    break
+                body.append(body_item)
+                i += 1
+            words[word_name] = {
+                'inputs': inputs,
+                'outputs': outputs,
+                'body': body
+            }
+        else:
+            main_items.append(item)
+            i += 1
+
     # Check if the first parsed item is an entry type gate (BAR_BLOCK containing ':')
     entry_vars = []
-    if len(parsed) > 0 and isinstance(parsed[0], tuple) and parsed[0][0] == 'BAR_BLOCK':
-        bar_val = parsed[0][1]
+    if len(main_items) > 0 and isinstance(main_items[0], tuple) and main_items[0][0] == 'BAR_BLOCK':
+        bar_val = main_items[0][1]
         if ':' in bar_val:
             stack_part, lex_part = bar_val[1:-1].split(':', 1)
             stack_vars = stack_part.strip().split()
             if stack_vars:
                 entry_vars = [get_var_name(v) for v in stack_vars]
-                parsed = parsed[1:]
+                main_items = main_items[1:]
                 
     macros = {}
-    main_items = []
+    temp_main = []
     
     # Extract macro definitions at the top level
     i = 0
-    while i < len(parsed):
-        item = parsed[i]
+    while i < len(main_items):
+        item = main_items[i]
         if isinstance(item, tuple) and item[0] == 'MACRO':
             macro_name = item[1][1:] # strip '#'
-            if i + 1 < len(parsed) and isinstance(parsed[i+1], Block):
-                macros[macro_name] = (sanitize_name(macro_name), parsed[i+1])
+            if i + 1 < len(main_items) and isinstance(main_items[i+1], Block):
+                macros[macro_name] = (sanitize_name(macro_name), main_items[i+1])
                 i += 2
                 continue
-        main_items.append(item)
+        temp_main.append(item)
         i += 1
+    main_items = temp_main
         
     binding_counter = [0]
     scope_counter = [0]
@@ -181,13 +229,17 @@ def transpile(scrooge_code: str) -> str:
                         top_level_arrow_vars.add(get_var_name(v_item[1]))
         scan_idx += 1
     
-    def transpile_items(items, var_mappings=None, lex_funcs=None):
+    lex_funcs = {}
+    for name in words:
+        lex_funcs[name] = f"word_{sanitize_name(name)}"
+        
+    def transpile_items(items, var_mappings=None, lex_funcs_env=None):
         if var_mappings is None:
             var_mappings = {}
-        if lex_funcs is None:
-            lex_funcs = {}
+        if lex_funcs_env is None:
+            lex_funcs_env = lex_funcs
             
-        print("DEBUG ENTRY: transpile_items called. items count:", len(items), "lex_funcs keys:", list(lex_funcs.keys()))
+        print("DEBUG ENTRY: transpile_items called. items count:", len(items), "lex_funcs keys:", list(lex_funcs_env.keys()))
             
         code_parts = []
         local_defs = []
@@ -195,25 +247,21 @@ def transpile(scrooge_code: str) -> str:
         while i < len(items):
             item = items[i]
             if isinstance(item, tuple) and item[0] == 'BAR_BLOCK':
-                # Skip standalone BAR_BLOCK tokens (comments/assertions)
                 i += 1
                 continue
             elif isinstance(item, Block):
                 is_eager_block = False
                 if len(item.elements) > 0 and isinstance(item.elements[0], tuple) and item.elements[0][0] == 'BAR_BLOCK':
-                     # Check if it contains OP_FOLD or ends with '*'
                      has_fold = any(isinstance(el, tuple) and el[0] == 'OP_FOLD' for el in item.elements)
                      has_map = len(item.elements) > 0 and isinstance(item.elements[-1], tuple) and item.elements[-1] == ('OP_ARITH', '*')
                      if has_fold or has_map:
                           is_eager_block = True
                           
                 if not is_eager_block:
-                     # Skip compiling this block now if it's immediately followed by ARROW.
                      if i + 1 < len(items) and isinstance(items[i+1], tuple) and items[i+1][0] == 'ARROW':
                           i += 1
                           continue
                     
-                # Check if block starts with parameter binding | vars |
                 if len(item.elements) > 0 and isinstance(item.elements[0], tuple) and item.elements[0][0] == 'BAR_BLOCK':
                     bar_val = item.elements[0][1]
                     bar_vars = [get_var_name(v) for v in bar_val[1:-1].strip().split()]
@@ -222,7 +270,6 @@ def transpile(scrooge_code: str) -> str:
                         is_assertion = True
                         
                     if not is_assertion:
-                        # Find if it is a Vector Fold or Vector Map
                         fold_idx = -1
                         for idx, el in enumerate(item.elements):
                             if isinstance(el, tuple) and el[0] == 'OP_FOLD':
@@ -231,7 +278,6 @@ def transpile(scrooge_code: str) -> str:
                         print("DEBUG FOLD: Detected BAR_BLOCK. fold_idx:", fold_idx, "elements count:", len(item.elements))
                                 
                         if fold_idx != -1:
-                            # Vector Fold syntax: [| acc val | body \ init ]
                             body_elements = item.elements[1:fold_idx]
                             init_elements = item.elements[fold_idx+1:]
                             
@@ -247,8 +293,8 @@ def transpile(scrooge_code: str) -> str:
                             nested_var_mappings.setdefault(bar_vars[0], []).append(acc_unique)
                             nested_var_mappings.setdefault(bar_vars[1], []).append(val_unique)
                             
-                            body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, lex_funcs)
-                            init_content, init_local_defs = transpile_items(init_elements, var_mappings, lex_funcs)
+                            body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, lex_funcs_env)
+                            init_content, init_local_defs = transpile_items(init_elements, var_mappings, lex_funcs_env)
                             
                             indented_body_defs = [indent_code(d) for d in body_local_defs]
                             body_local_defs_str = "\n".join(indented_body_defs)
@@ -285,7 +331,6 @@ def transpile(scrooge_code: str) -> str:
                             i += 1
                             continue
                         elif len(item.elements) > 0 and isinstance(item.elements[-1], tuple) and item.elements[-1] == ('OP_ARITH', '*'):
-                            # Vector Map syntax: [| idx val | body * ]
                             body_elements = item.elements[1:-1]
                             
                             binding_counter[0] += 1
@@ -300,7 +345,7 @@ def transpile(scrooge_code: str) -> str:
                             nested_var_mappings.setdefault(bar_vars[0], []).append(idx_unique)
                             nested_var_mappings.setdefault(bar_vars[1], []).append(val_unique)
                             
-                            body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, lex_funcs)
+                            body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, lex_funcs_env)
                             
                             indented_body_defs = [indent_code(d) for d in body_local_defs]
                             body_local_defs_str = "\n".join(indented_body_defs)
@@ -329,7 +374,6 @@ def transpile(scrooge_code: str) -> str:
                             i += 1
                             continue
                         else:
-                            # Fallback to parameter binding syntax: [ | class_idx row | body ]
                             binding_counter[0] += 1
                             b_name = f"binding_{binding_counter[0]}"
                             
@@ -342,7 +386,7 @@ def transpile(scrooge_code: str) -> str:
                                 pop_lines.append(f"    {unique_name} = stack.pop()")
                             pop_code = "\n".join(pop_lines)
                             
-                            body_content, body_local_defs = transpile_items(item.elements[1:], nested_var_mappings, lex_funcs)
+                            body_content, body_local_defs = transpile_items(item.elements[1:], nested_var_mappings, lex_funcs_env)
                             
                             indented_body_defs = [indent_code(d) for d in body_local_defs]
                             body_local_defs_str = "\n".join(indented_body_defs)
@@ -356,37 +400,31 @@ def transpile(scrooge_code: str) -> str:
                             i += 1
                             continue
                     else:
-                        # Stack assertion, transpile the rest of the block inline
-                        block_content, block_local_defs = transpile_items(item.elements[1:], var_mappings, lex_funcs)
+                        block_content, block_local_defs = transpile_items(item.elements[1:], var_mappings, lex_funcs_env)
                         local_defs.extend(block_local_defs)
                         code_parts.append(f"[{block_content}]")
                         i += 1
                         continue
                 else:
-                    # Recursively transpile nested block inline
-                    block_content, block_local_defs = transpile_items(item.elements, var_mappings, lex_funcs)
+                    block_content, block_local_defs = transpile_items(item.elements, var_mappings, lex_funcs_env)
                     local_defs.extend(block_local_defs)
                     code_parts.append(f"[{block_content}]")
             elif isinstance(item, tuple) and item[0] == 'ARROW':
-                # Lexical binding: -> [ vars ] [ body ]
                 if i + 1 >= len(items):
                     raise RuntimeError("Malformed binding: expected variables block after '->'")
                 vars_block = items[i+1]
                 if not isinstance(vars_block, Block):
                     raise RuntimeError("Malformed binding: expected Block node for variables")
                 
-                # Determine body elements
                 if i + 2 < len(items) and isinstance(items[i+2], Block) and i + 3 == len(items):
                     body_elements = items[i+2].elements
                 else:
                     body_elements = items[i+2:]
                     
-                # Extract variable names
                 var_names = [get_var_name(v_item[1]) for v_item in vars_block.elements if isinstance(v_item, tuple) and v_item[0] == 'WORD']
                 
-                nested_lex_funcs = dict(lex_funcs)
+                nested_lex_funcs = dict(lex_funcs_env)
                 
-                # Check if preceding item was a skipped block (defining a function)
                 is_func_def = False
                 if i > 0 and isinstance(items[i-1], Block):
                      prev_block = items[i-1]
@@ -398,23 +436,19 @@ def transpile(scrooge_code: str) -> str:
                                is_eager = True
                      if not is_eager:
                           is_func_def = True
-                          
+                           
                 if is_func_def:
                     func_block = items[i-1]
                     binding_counter[0] += 1
                     func_name = f"binding_{binding_counter[0]}"
                     
                     print(f"DEBUG ARROW: Recursive bind detected for {var_names} as {func_name}")
-                    print("  lex_funcs before bind:", list(lex_funcs.keys()))
                     
-                    # Register variable names pointing to the recursive helper block
                     for var in var_names:
                         nested_lex_funcs[var] = func_name
                         
-                    # Compile the function block with recursive function references registered
                     block_content, block_local_defs = transpile_items(func_block.elements, var_mappings, nested_lex_funcs)
                     
-                    # Wrap compiled content into the helper function definition
                     if not (block_content.startswith('[') and block_content.endswith(']')) and not block_content.startswith('binding_'):
                         indented_defs = [indent_code(d) for d in block_local_defs]
                         local_defs_str = "\n".join(indented_defs)
@@ -432,7 +466,6 @@ def transpile(scrooge_code: str) -> str:
                 else:
                     print(f"DEBUG ARROW: Regular bind for {var_names}")
                 
-                # Generate the lexical binding pop code for variables in vars_block
                 binding_counter[0] += 1
                 b_name = f"binding_{binding_counter[0]}"
                 
@@ -445,10 +478,8 @@ def transpile(scrooge_code: str) -> str:
                     pop_lines.append(f"    {unique_name} = stack.pop()")
                 pop_code = "\n".join(pop_lines)
                 
-                # Transpile body with new environment mappings
                 body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, nested_lex_funcs)
                 
-                # Indent body local definitions
                 indented_body_defs = [indent_code(d) for d in body_local_defs]
                 body_local_defs_str = "\n".join(indented_body_defs)
                 if body_local_defs_str:
@@ -459,12 +490,9 @@ def transpile(scrooge_code: str) -> str:
                 
                 code_parts.append(b_name)
                 break
-                continue
             elif isinstance(item, tuple) and item[0] == 'RANGE':
                 val_range = val
-                # Slice operation: start..end :
                 if i + 1 < len(items) and items[i+1] == ('OP_ARITH', ':'):
-                    # Count carets prefix
                     num_carets = 0
                     while val_range.startswith('^'):
                         num_carets += 1
@@ -512,14 +540,13 @@ def transpile(scrooge_code: str) -> str:
                 elif kind in ('WORD', 'MACRO'):
                     name = val[1:] if val.startswith('#') else val
                     
-                    # Count and strip carets for parent scope resolution
                     num_carets = 0
                     while name.startswith('^'):
                         num_carets += 1
                         name = name[1:]
                         
-                    if name in lex_funcs:
-                        code_parts.append(lex_funcs[name])
+                    if name in lex_funcs_env:
+                        code_parts.append(lex_funcs_env[name])
                     elif name in var_mappings:
                         mappings_list = var_mappings[name]
                         idx = -1 - num_carets
@@ -553,9 +580,23 @@ def transpile(scrooge_code: str) -> str:
                         code_parts.append("op_bind")
                     elif name == 'exp':
                         code_parts.append("op_exp")
+                    elif name == 'hnew':
+                        code_parts.append("op_hnew")
+                    elif name == 'hread':
+                        code_parts.append("op_hread")
+                    elif name == 'hwrite':
+                        code_parts.append("op_hwrite")
+                    elif name == 'and':
+                        code_parts.append("op_and")
+                    elif name == 'or':
+                        code_parts.append("op_or")
+                    elif name == 'not':
+                        code_parts.append("op_not")
+                    elif name == 'nil':
+                        code_parts.append("lambda stack: stack.append([])")
                     else:
                         print("DEBUG ERROR: Unknown word:", name)
-                        print("  lex_funcs:", list(lex_funcs.keys()))
+                        print("  lex_funcs:", list(lex_funcs_env.keys()))
                         print("  var_mappings:", list(var_mappings.keys()))
                         raise RuntimeError(f"Unknown word/macro: {val}")
                 elif kind in ('OP_ARITH', 'OP_SHIFT', 'OP_SET', 'OP_COMP', 'OP_LOGIC', 'OP_DIV_INT', 'OP_FOLD'):
@@ -611,15 +652,27 @@ def transpile(scrooge_code: str) -> str:
     macro_funcs = []
     for name, (clean_name, block) in macros.items():
         block_content, block_local_defs = transpile_items(block.elements)
-        # Indent block local definitions
         indented_defs = [indent_code(d) for d in block_local_defs]
         local_defs_str = "\n".join(indented_defs)
         if local_defs_str:
             local_defs_str = local_defs_str + "\n"
         macro_funcs.append(f"def macro_{clean_name}(stack):\n{local_defs_str}    execute([{block_content}], stack)")
 
+    # Compile defined words
+    word_funcs = []
+    for name, data in words.items():
+        clean_name = sanitize_name(name)
+        body_content, body_local_defs = transpile_items(data['body'])
+        indented_defs = [indent_code(d) for d in body_local_defs]
+        local_defs_str = "\n".join(indented_defs)
+        if local_defs_str:
+            local_defs_str = local_defs_str + "\n"
+        if body_content.strip():
+            word_funcs.append(f"def word_{clean_name}(stack):\n{local_defs_str}    execute([{body_content}], stack)")
+        else:
+            word_funcs.append(f"def word_{clean_name}(stack):\n{local_defs_str}    pass")
+
     main_content, main_local_defs = transpile_items(main_items, var_mappings=var_mappings)
-    # Indent main local definitions
     indented_main_defs = [indent_code(d) for d in main_local_defs]
     main_local_defs_str = "\n".join(indented_main_defs)
     if main_local_defs_str:
@@ -629,6 +682,7 @@ def transpile(scrooge_code: str) -> str:
     py_code = [
         "# Transpiled Scrooge Code",
         "import sys",
+        "sys.setrecursionlimit(200000)",
         "import math",
         "",
         "# Runtime Helper Functions",
@@ -650,6 +704,18 @@ def transpile(scrooge_code: str) -> str:
         "def op_is_list(stack):    stack.append(int(isinstance(stack.pop(), list)))",
         "def op_is_string(stack):  stack.append(int(isinstance(stack.pop(), str)))",
         "def op_exp(stack):        stack.append(math.exp(stack.pop()))",
+        "",
+        "def op_hnew(stack):",
+        "    size = stack.pop()",
+        "    stack.append([0] * size)",
+        "",
+        "def op_hread(stack):",
+        "    idx = stack.pop(); ptr = stack.pop()",
+        "    stack.append(ptr[idx])",
+        "",
+        "def op_hwrite(stack):",
+        "    idx = stack.pop(); ptr = stack.pop(); val = stack.pop()",
+        "    ptr[idx] = val",
         "",
         "def op_pick(stack):",
         "    n = stack.pop()",
@@ -752,12 +818,13 @@ def transpile(scrooge_code: str) -> str:
         "        stack.append(res)",
         "    else:",
         "        stack.append(a * b)",
-        "def op_div(stack): b = stack.pop(); a = stack.pop(); stack.append(a / b)",
+        "def op_div(stack): b = stack.pop(); a = stack.pop(); stack.append(a // b)",
         "def op_div_int(stack): b = stack.pop(); a = stack.pop(); stack.append(a // b)",
         "def op_mod(stack): b = stack.pop(); a = stack.pop(); stack.append(a % b)",
         "def op_xor(stack): b = stack.pop(); a = stack.pop(); stack.append(a ^ b)",
-        "def op_and(stack): b = stack.pop(); a = stack.pop(); stack.append(a & b)",
-        "def op_or(stack):  b = stack.pop(); a = stack.pop(); stack.append(a | b)",
+        "def op_and(stack): b = stack.pop(); a = stack.pop(); stack.append(int(bool(a) and bool(b)))",
+        "def op_or(stack):  b = stack.pop(); a = stack.pop(); stack.append(int(bool(a) or bool(b)))",
+        "def op_not(stack): stack.append(int(not bool(stack.pop())))",
         "",
         "def op_eq(stack): b = stack.pop(); a = stack.pop(); stack.append(int(a == b))",
         "def op_gt(stack): b = stack.pop(); a = stack.pop(); stack.append(int(a > b))",
@@ -781,8 +848,9 @@ def transpile(scrooge_code: str) -> str:
         "    new_lst = list(lst); new_lst[idx] = v; stack.append(new_lst)",
         ""
     ]
- 
+  
     py_code.extend(macro_funcs)
+    py_code.extend(word_funcs)
     py_code.append("")
     
     py_code.extend([
@@ -806,7 +874,11 @@ def transpile(scrooge_code: str) -> str:
     if main_content.strip():
         py_code.append(f"    execute([{main_content}], stack)")
     else:
-        py_code.append("    pass")
+        if words:
+            last_word_name = list(words.keys())[-1]
+            py_code.append(f"    word_{sanitize_name(last_word_name)}(stack)")
+        else:
+            py_code.append("    pass")
         
     py_code.append("    return stack")
     
