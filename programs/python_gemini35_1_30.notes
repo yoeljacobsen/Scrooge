@@ -1,0 +1,64 @@
+Based on the structural architecture and memory mapping implemented in the Scrooge v1.30 interpreter, here is a detailed breakdown of the supported Python language subset, followed by a valid test program.
+
+---
+
+## Supported Python Subset
+
+The interpreter is designed around a single-pass prefix parser and an explicit heap-allocated runtime stack frame. To maintain compatibility with Scrooge's strict verification and token limits, it supports a highly specialized, lightweight subset of Python:
+
+### 1. Function Definitions (`def`)
+
+* **Structure:** Only top-level, single-parameter functions are supported using the syntax `def f(x):`.
+* **Naming Constraints:** Function names and argument names must be **single, lowercase English characters** (`a` through `z`).
+* **Scoping & Execution:** Functions do not return explicit values via a `return` statement. Instead, they act as procedural subroutines that execute statements sequentially, manipulate local variables within a dynamically allocated stack frame, or print outputs.
+
+### 2. Variable Scope and Storage
+
+* **Identifiers:** Local variables are strictly limited to single, lowercase English characters (`a`–`z`).
+* **Dynamic Stacking:** When a function is called, a new runtime frame is carved out on the heap. Variables are entirely local to their execution frame, preventing side-effects across recursive or nested calls.
+
+### 3. Assignments and Expressions
+
+* **Simple Assignment:** Supports binding an integer or variable to an identifier (e.g., `x = 5`, `y = x`).
+* **Binary Arithmetic:** Supports basic expressions containing up to two operands and a single operator (e.g., `x = a + b` or `y = z - 3`). Supported operators are strictly limited to addition (`+`) and subtraction (`-`).
+
+### 4. Control Flow and Output
+
+* **Function Invocations:** Functions are invoked as standalone statements using the standard trailing parenthesis syntax (e.g., `f(5)` or `g(a)`).
+* **Print Statement:** Supports printing values using `print(x)` or `print x`. The output is tracked inside a dynamic heap buffer and formatted into standard text upon termination, automatically appending a newline character after each call.
+
+---
+
+## Suggested Test Program
+
+To test the interpreter, the script must define its functions sequentially at zero indentation, followed immediately by a single, unindented top-level line that acts as the program's entry point.
+
+```python
+def g(x):
+    a = x + 10
+    print(a)
+
+def f(n):
+    b = n - 2
+    g(b)
+
+f(5)
+
+```
+
+### Trace of Execution
+
+1. **Compilation/Parsing Pass:** The interpreter reads `def g(x):` and `def f(n):`, tracking their body boundaries and argument configurations in the heap's lexicon space. It skips over indented blocks until it encounters `f(5)` at zero indentation, marking it as the execution root.
+2. **First Call Frame (`f`):** The main loop calls `f(5)`. A stack frame is generated on the heap, setting the local variable `n = 5`.
+3. **Evaluation:** Inside `f`, the interpreter evaluates `b = n - 2` ($5 - 2$), allocating `b = 3` inside `f`'s local context. It then encounters the call statement `g(b)`.
+4. **Second Call Frame (`g`):** A new stack frame is safely appended to the heap. The value of `b` ($3$) is evaluated and bound to the new local argument `x`.
+5. **Output Generation:** Inside `g`, the expression `a = x + 10` ($3 + 10$) stores `13` in `a`. The statement `print(a)` appends the characters `1`, `3`, and `\n` to the standard output buffer.
+
+**Expected Output String:**
+
+```text
+13
+
+```
+
+Would you like to extend this subset further to include conditional logic (`if/else`) blocks, or should we look at optimizing the memory footprint of the runtime stack frames?

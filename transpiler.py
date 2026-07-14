@@ -10,7 +10,13 @@ def strip_comments(code):
     # Heuristic to detect if the file uses semicolon comments
     use_semicolon = False
     for line in code.split('\n'):
-        if line.strip().startswith(';'):
+        stripped = line.strip()
+        if stripped.startswith(';'):
+            # If it starts with ';' followed by another ';' or common operators, it is code, not a comment
+            if len(stripped) > 1 and stripped[1] in (' ', '\t'):
+                next_part = stripped[2:].strip()
+                if next_part and next_part[0] in (';', '.', '$', '%', '@', '+', '*', '/', '\\', '[', ']', '?', '!'):
+                    continue
             use_semicolon = True
             break
             
@@ -239,8 +245,6 @@ def transpile(scrooge_code: str) -> str:
         if lex_funcs_env is None:
             lex_funcs_env = lex_funcs
             
-        print("DEBUG ENTRY: transpile_items called. items count:", len(items), "lex_funcs keys:", list(lex_funcs_env.keys()))
-            
         code_parts = []
         local_defs = []
         i = 0
@@ -275,7 +279,6 @@ def transpile(scrooge_code: str) -> str:
                             if isinstance(el, tuple) and el[0] == 'OP_FOLD':
                                 fold_idx = idx
                                 break
-                        print("DEBUG FOLD: Detected BAR_BLOCK. fold_idx:", fold_idx, "elements count:", len(item.elements))
                                 
                         if fold_idx != -1:
                             body_elements = item.elements[1:fold_idx]
@@ -442,8 +445,6 @@ def transpile(scrooge_code: str) -> str:
                     binding_counter[0] += 1
                     func_name = f"binding_{binding_counter[0]}"
                     
-                    print(f"DEBUG ARROW: Recursive bind detected for {var_names} as {func_name}")
-                    
                     for var in var_names:
                         nested_lex_funcs[var] = func_name
                         
@@ -464,7 +465,7 @@ def transpile(scrooge_code: str) -> str:
                         
                     code_parts.append(f"[{func_name}]")
                 else:
-                    print(f"DEBUG ARROW: Regular bind for {var_names}")
+                    pass
                 
                 binding_counter[0] += 1
                 b_name = f"binding_{binding_counter[0]}"

@@ -48,3 +48,14 @@ To run the benchmarks and print performance comparisons:
 ```bash
 python3 run_comparisons.py
 ```
+
+---
+
+## Authors & Attribution
+
+This project was created and is maintained by **Yoel Jacobsen** (<yoel.jacobsen@gmail.com>).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](file:///home/yoel/Experiments/Scrooge/Scrooge/LICENSE) file for details. This permissive license ensures the codebase is open and does not block future dual-licensing options.
+
