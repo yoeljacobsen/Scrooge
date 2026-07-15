@@ -6,13 +6,13 @@ end
 
 #arr_make ( shape_block -- ptr )
   -> [ shape_block ] [
-    shape_block arr_size
-    shape_block len + 1 +
-    hnew -> [ base_ptr ] [
-      shape_block len base_ptr 0 hwrite
-      shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] %
-      base_ptr
-    ]
+    shape_block
+    shape_block arr_size shape_block len + 1 + hnew
+  ]
+  -> [ shape_block base_ptr ] [
+    shape_block len base_ptr 0 hwrite
+    shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] %
+    base_ptr
   ]
 end
 
@@ -23,7 +23,7 @@ end
       ptr 1 idx + hread
       acc * coord +
     from 0 ]
-    ptr len + 1 + +
+    ptr 0 hread + 1 + +
   ]
 end
 

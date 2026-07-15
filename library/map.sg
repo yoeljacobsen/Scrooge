@@ -10,18 +10,25 @@ end
 
 #map_get ( ptr key -- val )
   -> [ ptr key ] [
+    ptr
+    key
     key ptr len 2 / map_hash
-    -> [ bucket_idx ] [ ptr bucket_idx hread key = ]
+  ]
+  -> [ ptr key bucket_idx ] [
+    ptr bucket_idx hread key =
     cond [ ptr bucket_idx 1 + hread ] else [ -1 ] ?
   ]
 end
 
 #map_set ( val ptr key -- )
   -> [ val ptr key ] [
+    val
+    ptr
+    key
     key ptr len 2 / map_hash
-    -> [ bucket_idx ] [
-      key ptr bucket_idx hwrite
-      val ptr bucket_idx 1 + hwrite
-    ]
+  ]
+  -> [ val ptr key bucket_idx ] [
+    key ptr bucket_idx hwrite
+    val ptr bucket_idx 1 + hwrite
   ]
 end

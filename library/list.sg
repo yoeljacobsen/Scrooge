@@ -2,12 +2,14 @@
 
 #lst_make ( initial_capacity -- ptr )
   -> [ initial_capacity ] [
-    3 hnew -> [ head_ptr ] [
-      initial_capacity head_ptr 0 hwrite
-      0 head_ptr 1 hwrite
-      initial_capacity hnew head_ptr 2 hwrite
-      head_ptr
-    ]
+    initial_capacity
+    3 hnew
+  ]
+  -> [ initial_capacity head_ptr ] [
+    initial_capacity head_ptr 0 hwrite
+    0 head_ptr 1 hwrite
+    initial_capacity hnew head_ptr 2 hwrite
+    head_ptr
   ]
 end
 
@@ -21,13 +23,10 @@ end
 
 #lst_push ( val ptr -- )
   -> [ val ptr ] [
-    ptr 0 hread
-    ptr 1 hread
-    = cond [
-      val ptr ptr 1 hread lst_set
-    ] else [
-      val ptr ptr 1 hread lst_set
-      ptr 1 hread 1 + ptr 1 hwrite
-    ] ?
+    ptr 1 hread ptr 0 hread <
   ]
+  cond [
+    val ptr ptr 1 hread lst_set
+    ptr 1 hread 1 + ptr 1 hwrite
+  ] else [ ] ?
 end

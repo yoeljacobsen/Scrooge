@@ -576,7 +576,11 @@ class Interp:
         elif w == 'fill':
             val = s.pop(); length = s.pop(); s.append([val] * length)
         elif w == 'len':
-            s.append(len(s.pop()))
+            val = s.pop()
+            if isinstance(val, tuple) and len(val) == 2 and val[0] == '__ptr__':
+                s.append(len(val[1]))
+            else:
+                s.append(len(val))
         elif w == 'seed':
             self._rng_state = (s.pop() & 0xFFFFFFFFFFFFFFFF) or 1
         elif w == 'rand':
