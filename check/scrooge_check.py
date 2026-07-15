@@ -7,7 +7,10 @@ Runs, in order, halting at the first phase that produces errors:
                             frame identifiers (v1.34 rule). Runs BEFORE parsing
                             so it replaces the cryptic "unterminated block"
                             crash with a clear ReservedWordIdentifierError.
-  1. Parse                : structural / grammar errors.
+  1. Parse                : structural / grammar errors, including the v1.42
+                            Zero-Nesting Rule (a '[' opened while another
+                            bracket is already active must be a Pure Data
+                            Literal Block — see check_nesting() below).
   2. Arity  (Track 1)     : net stack effect matches each signature.
   3. Types  (Track 2)     : coarse Scalar/Block/Ptr/Unknown consistency.
   (Lexical soundness — unknown-word detection — is enforced inside Track 1.)
@@ -108,6 +111,114 @@ class Phase:
         self.errors = errors
 
 
+# ---------------------------------------------------------------------------
+# v1.42 Zero-Nesting Rule (structural nesting pass)
+#
+# Scrooge caps *active code* nesting at depth 1: a '[ ... ]' block used as a
+# plain data value is only legal one level deep — a second, nested '[ ... ]'
+# inside it is only legal if that nested block is a Pure Data Literal:
+# recursively nothing but numeric scalars and further brackets (exactly what
+# a double-quoted string literal expands into, and what a hand-written
+# literal array like '[ 1 [ 2 3 ] ]' is). Anything else nested at depth >= 2
+# — a primitive, a word call, a '->' frame binding, an alias — must be
+# extracted into a named word instead.
+#
+# Crucially, "depth" here is *data-value* nesting, not raw bracket-token
+# nesting: an arrow frame's '-> [ vars ] [ body ]', a 'cond [ t ] else [ f ]
+# ?' branch, and a '[map| ... ]' / '[fold| ... ]' iterator each open a fresh
+# *scope*, not a data value — a fold loop's own body living inside a frame's
+# body bracket is not "a bracket nested inside a bracket" in the sense this
+# rule cares about (this is exactly how library/array.sg's arr_make already
+# nests a [fold| ... ] inside a '-> [...] [...]' body, and is unaffected by
+# this rule). So this pass walks the *parsed node tree* (from parse_nodes /
+# extract_macros) rather than raw tokens: it already resets to a fresh flat
+# sequence at every frame/cond/map/fold boundary, exactly mirroring how
+# verify.py's own arity Analyzer recurses through the same node kinds.
+# Only a generic ('block', ...) node — a literal/closure array — found
+# directly inside *another* generic ('block', ...) node is genuine
+# depth-2+ nesting subject to the Pure Data Literal requirement.
+# ---------------------------------------------------------------------------
+
+NESTING_ERROR_MESSAGE = (
+    "[FAIL] Phase parse: Nested code/closure blocks are forbidden. "
+    "Nesting depth is capped at 1. Extract nested closure into a named word."
+)
+
+
+def _is_pure_data_nodes(nodes):
+    """True iff every node in `nodes` is a numeric literal or another
+    purely-numeric block — i.e. nothing but scalars and brackets, all the
+    way down. A ('lit', []) node is the 'nil' keyword, not a numeric
+    scalar, so it disqualifies purity; a ('lit', <int|float>) node does not."""
+    for node in nodes:
+        kind = node[0]
+        if kind == 'lit':
+            if isinstance(node[1], list):
+                return False  # 'nil' keyword, not a numeric scalar
+            continue
+        if kind == 'block':
+            if not _is_pure_data_nodes(node[1]):
+                return False
+            continue
+        return False  # 'word' / 'frame' / 'cond' / 'map' / 'fold' / 'gate'
+    return True
+
+
+def _check_nesting_nodes(nodes, in_data_block):
+    """Recursively walk a parsed node list for Zero-Nesting violations.
+    `in_data_block` is True exactly when `nodes` is the direct contents of
+    a generic ('block', ...) node that is itself already nested inside
+    another data block — i.e. depth >= 2. At that point the *entire*
+    remaining subtree must be pure data, full stop (a single
+    `_is_pure_data_nodes` check covers it, since that helper already
+    recurses through any further nested ('block', ...) nodes).
+
+    Frame bodies, cond branches, and map/fold bodies each start a fresh
+    *scope* (in_data_block resets to False), since they are control
+    constructs, not data values — a fold loop's own body living inside a
+    frame's body bracket is not "nested" in the sense this rule cares
+    about. Returns NESTING_ERROR_MESSAGE on the first violation, else None."""
+    if in_data_block:
+        return None if _is_pure_data_nodes(nodes) else NESTING_ERROR_MESSAGE
+
+    for node in nodes:
+        kind = node[0]
+        if kind == 'block':
+            err = _check_nesting_nodes(node[1], True)
+            if err:
+                return err
+        elif kind == 'frame':
+            err = _check_nesting_nodes(node[2], False)
+            if err:
+                return err
+        elif kind == 'cond':
+            err = _check_nesting_nodes(node[1], False) or _check_nesting_nodes(node[2], False)
+            if err:
+                return err
+        elif kind == 'map':
+            err = _check_nesting_nodes(node[4], False)
+            if err:
+                return err
+        elif kind == 'fold':
+            err = _check_nesting_nodes(node[5], False) or _check_nesting_nodes(node[6], False)
+            if err:
+                return err
+        # 'lit' / 'word' / 'gate' — nothing to recurse into
+    return None
+
+
+def check_nesting(macros, top_nodes):
+    """Enforce the v1.42 Zero-Nesting Rule across every macro body and the
+    top-level program. Returns NESTING_ERROR_MESSAGE on the first
+    violation found (halting further verification, per spec), or None if
+    everything is clean."""
+    for macro in macros.values():
+        err = _check_nesting_nodes(macro.body, False)
+        if err:
+            return err
+    return _check_nesting_nodes(top_nodes, False)
+
+
 def reserved_word_pass(tokens):
     """Scan signatures and '-> [ ... ]' frames for reserved identifiers.
     Runs on the raw token stream so it fires before the parser can choke."""
@@ -164,17 +275,22 @@ def check_source(code):
     needed = used_lexicons(toks)
     extern = load_manifest(allowed_lexicons=needed) if needed else {}
 
-    # Phase 1: parse
+    # Phase 1: parse (structural grammar, plus the v1.42 nesting-depth cap)
     try:
         macros, top = extract_macros(toks)
-        parse_nodes(top)
-        phases.append(Phase("parse", True, []))
+        top_nodes = parse_nodes(top)
     except ScroogeError as e:
         phases.append(Phase("parse", False, [f"ParseError: {e}"]))
         return phases
     except Exception as e:
         phases.append(Phase("parse", False, [f"ParseError: {type(e).__name__}: {e}"]))
         return phases
+
+    nest_err = check_nesting(macros, top_nodes)
+    if nest_err:
+        phases.append(Phase("parse", False, [nest_err]))
+        return phases
+    phases.append(Phase("parse", True, []))
 
     # Phase 2: arity (also catches unknown-word / lexical soundness)
     aerr = verify(code, extern=extern)
