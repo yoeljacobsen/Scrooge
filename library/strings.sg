@@ -32,7 +32,7 @@ end
 end
 #int_to_str ( n -- str )
   -> [ n ] [ n 0 = ]
-  cond [ 48 nil cons ] else [ n nil its_loop ] ?
+  cond [ "0" ] else [ n nil its_loop ] ?
 end
 
 { ---- Print an integer via string conversion, then newline ---- }

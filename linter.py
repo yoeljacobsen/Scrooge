@@ -11,7 +11,22 @@ def strip_comments(code):
         cleaned_lines.append(line)
     return "\n".join(cleaned_lines)
 
+def expand_string_literals(source_code: str) -> str:
+    """
+    Scans for double-quoted string literals and converts them into
+    bracketed space-separated ASCII decimal arrays.
+    """
+    def to_ascii_block(match):
+        content = match.group(1)
+        bytes_content = content.encode('utf-8').decode('unicode_escape')
+        ascii_values = [str(ord(char)) for char in bytes_content]
+        return f"[ {' '.join(ascii_values)} ]"
+
+    string_pattern = r'"([^"\\]*(?:\\.[^"\\]*)*)"'
+    return re.sub(string_pattern, to_ascii_block, source_code)
+
 def tokenize(code):
+    code = expand_string_literals(code)
     code = strip_comments(code)
     token_specification = [
         ("ARROW",     r"->"),
@@ -48,7 +63,27 @@ def tokenize(code):
         if kind in ("SKIP", "ELSE"):
             continue
         tokens.append((kind, value))
-    return tokens
+    return _strip_use(tokens)
+
+def _strip_use(tokens):
+    out = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        if tokens[i] == ('WORD', 'use'):
+            if i + 1 < n and tokens[i+1][0] == 'STRING':
+                i += 2
+                continue
+            elif i + 1 < n and tokens[i+1][0] == 'LBRACKET':
+                i += 2
+                while i < n and tokens[i][0] != 'RBRACKET':
+                    i += 1
+                if i < n:
+                    i += 1
+                continue
+        out.append(tokens[i])
+        i += 1
+    return out
 
 class Block:
     def __init__(self, elements):
@@ -65,6 +100,8 @@ def parse_tokens(tokens):
             if len(stack) < 2:
                 raise RuntimeError("Unmatched closing bracket ']'")
             completed = stack.pop()
+            if len(completed) > 1 and completed[0] in (('WORD', 'fold'), ('WORD', 'map')) and completed[1][0] == 'BAR_BLOCK':
+                completed = completed[1:]
             stack[-1].append(Block(completed))
         else:
             stack[-1].append((kind, val))

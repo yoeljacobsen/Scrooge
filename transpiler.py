@@ -44,13 +44,30 @@ def strip_comments(code):
         cleaned_lines.append(line)
     return '\n'.join(cleaned_lines)
 
+def expand_string_literals(source_code: str) -> str:
+    """
+    Scans for double-quoted string literals and converts them into
+    bracketed space-separated ASCII decimal arrays.
+    """
+    def to_ascii_block(match):
+        content = match.group(1)
+        bytes_content = content.encode('utf-8').decode('unicode_escape')
+        ascii_values = [str(ord(char)) for char in bytes_content]
+        return f"[ {' '.join(ascii_values)} ]"
+
+    string_pattern = r'"([^"\\]*(?:\\.[^"\\]*)*)"'
+    return re.sub(string_pattern, to_ascii_block, source_code)
+
 def tokenize(code):
+    # Expand string literals first, before comments and other tokens
+    code = expand_string_literals(code)
     # Strip comments first
     code = strip_comments(code)
     
     token_specification = [
         ('ARROW',     r'->'),
         ('ELSE',      r'\belse\b'),
+        ('COND',      r'\bcond\b'),
         ('SIG_ARROW', r'--'),
         ('LPAREN',    r'\('),
         ('RPAREN',    r'\)'),
@@ -80,13 +97,33 @@ def tokenize(code):
     for mo in re.finditer(tok_regex, code):
         kind = mo.lastgroup
         value = mo.group()
-        if kind in ('SKIP', 'ELSE'):
+        if kind in ('SKIP', 'ELSE', 'COND'):
             continue
         elif kind == 'MISMATCH':
             raise RuntimeError(f"Unexpected character {value!r}")
         else:
             tokens.append((kind, value))
-    return tokens
+    return _strip_use(tokens)
+
+def _strip_use(tokens):
+    out = []
+    i = 0
+    n = len(tokens)
+    while i < n:
+        if tokens[i] == ('WORD', 'use'):
+            if i + 1 < n and tokens[i+1][0] == 'STRING':
+                i += 2
+                continue
+            elif i + 1 < n and tokens[i+1][0] == 'LBRACKET':
+                i += 2
+                while i < n and tokens[i][0] != 'RBRACKET':
+                    i += 1
+                if i < n:
+                    i += 1
+                continue
+        out.append(tokens[i])
+        i += 1
+    return out
 
 class Block:
     def __init__(self, elements):
@@ -103,6 +140,8 @@ def parse(tokens):
             if len(stack) < 2:
                 raise RuntimeError("Unmatched closing bracket ']'")
             completed = stack.pop()
+            if len(completed) > 1 and completed[0] in (('WORD', 'fold'), ('WORD', 'map')) and completed[1][0] == 'BAR_BLOCK':
+                completed = completed[1:]
             stack[-1].append(Block(completed))
         else:
             stack[-1].append((kind, val))
@@ -256,11 +295,11 @@ def transpile(scrooge_code: str) -> str:
             elif isinstance(item, Block):
                 is_eager_block = False
                 if len(item.elements) > 0 and isinstance(item.elements[0], tuple) and item.elements[0][0] == 'BAR_BLOCK':
-                     has_fold = any(isinstance(el, tuple) and el[0] == 'OP_FOLD' for el in item.elements)
-                     has_map = len(item.elements) > 0 and isinstance(item.elements[-1], tuple) and item.elements[-1] == ('OP_ARITH', '*')
-                     if has_fold or has_map:
-                          is_eager_block = True
-                          
+                      has_fold = any((isinstance(el, tuple) and el[0] == 'OP_FOLD') or (isinstance(el, tuple) and el == ('WORD', 'from')) for el in item.elements)
+                      has_map = len(item.elements) > 0 and isinstance(item.elements[-1], tuple) and item.elements[-1] == ('OP_ARITH', '*')
+                      if has_fold or has_map:
+                           is_eager_block = True
+                           
                 if not is_eager_block:
                      if i + 1 < len(items) and isinstance(items[i+1], tuple) and items[i+1][0] == 'ARROW':
                           i += 1
@@ -276,7 +315,7 @@ def transpile(scrooge_code: str) -> str:
                     if not is_assertion:
                         fold_idx = -1
                         for idx, el in enumerate(item.elements):
-                            if isinstance(el, tuple) and el[0] == 'OP_FOLD':
+                            if (isinstance(el, tuple) and el[0] == 'OP_FOLD') or (isinstance(el, tuple) and el == ('WORD', 'from')):
                                 fold_idx = idx
                                 break
                                 
@@ -288,13 +327,41 @@ def transpile(scrooge_code: str) -> str:
                             b_name = f"binding_{binding_counter[0]}"
                             
                             scope_counter[0] += 1
-                            acc_unique = f"{sanitize_name(bar_vars[0])}_{scope_counter[0]}"
+                            if len(bar_vars) == 2:
+                                idx_var = "_"
+                                acc_var = bar_vars[0]
+                                val_var = bar_vars[1]
+                                ctx_var = "_"
+                            elif len(bar_vars) >= 4:
+                                idx_var = bar_vars[0]
+                                acc_var = bar_vars[1]
+                                val_var = bar_vars[2]
+                                ctx_var = bar_vars[3]
+                            else:
+                                idx_var = "_"
+                                acc_var = bar_vars[0]
+                                val_var = bar_vars[1]
+                                ctx_var = "_"
+                                
+                            idx_unique = f"{sanitize_name(idx_var)}_{scope_counter[0]}"
                             scope_counter[0] += 1
-                            val_unique = f"{sanitize_name(bar_vars[1])}_{scope_counter[0]}"
+                            acc_unique = f"{sanitize_name(acc_var)}_{scope_counter[0]}"
+                            scope_counter[0] += 1
+                            val_unique = f"{sanitize_name(val_var)}_{scope_counter[0]}"
                             
+                            has_ctx = ctx_var != "_"
+                            ctx_unique = ""
+                            if has_ctx:
+                                scope_counter[0] += 1
+                                ctx_unique = f"{sanitize_name(ctx_var)}_{scope_counter[0]}"
+                                
                             nested_var_mappings = {k: list(v) for k, v in var_mappings.items()}
-                            nested_var_mappings.setdefault(bar_vars[0], []).append(acc_unique)
-                            nested_var_mappings.setdefault(bar_vars[1], []).append(val_unique)
+                            if idx_var != "_":
+                                nested_var_mappings.setdefault(idx_var, []).append(idx_unique)
+                            nested_var_mappings.setdefault(acc_var, []).append(acc_unique)
+                            nested_var_mappings.setdefault(val_var, []).append(val_unique)
+                            if has_ctx:
+                                nested_var_mappings.setdefault(ctx_var, []).append(ctx_unique)
                             
                             body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, lex_funcs_env)
                             init_content, init_local_defs = transpile_items(init_elements, var_mappings, lex_funcs_env)
@@ -315,6 +382,7 @@ def transpile(scrooge_code: str) -> str:
                                 f"    execute([{init_content}], stack)",
                                 "    init = stack.pop()",
                                 "    target = stack.pop()",
+                                f"    {ctx_unique} = stack.pop()" if has_ctx else "",
                                 "    acc = init",
                                 f"    {body_local_defs_str.strip()}" if body_local_defs_str.strip() else "",
                                 "    for idx, x in enumerate(target):",
@@ -322,6 +390,7 @@ def transpile(scrooge_code: str) -> str:
                                 "        stack.append(x)",
                                 f"        {val_unique} = stack.pop()",
                                 f"        {acc_unique} = stack.pop()",
+                                f"        {idx_unique} = idx" if idx_var != "_" else "",
                                 f"        execute([{body_content}], stack)",
                                 "        acc = stack.pop()",
                                 "    stack.append(acc)"
@@ -340,13 +409,35 @@ def transpile(scrooge_code: str) -> str:
                             b_name = f"binding_{binding_counter[0]}"
                             
                             scope_counter[0] += 1
-                            idx_unique = f"{sanitize_name(bar_vars[0])}_{scope_counter[0]}"
+                            if len(bar_vars) == 2:
+                                idx_var = "_"
+                                val_var = bar_vars[0]
+                                ctx_var = bar_vars[1]
+                            elif len(bar_vars) >= 3:
+                                idx_var = bar_vars[0]
+                                val_var = bar_vars[1]
+                                ctx_var = bar_vars[2]
+                            else:
+                                idx_var = "_"
+                                val_var = bar_vars[0]
+                                ctx_var = "_"
+                                
+                            idx_unique = f"{sanitize_name(idx_var)}_{scope_counter[0]}"
                             scope_counter[0] += 1
-                            val_unique = f"{sanitize_name(bar_vars[1])}_{scope_counter[0]}"
+                            val_unique = f"{sanitize_name(val_var)}_{scope_counter[0]}"
                             
+                            has_ctx = ctx_var != "_"
+                            ctx_unique = ""
+                            if has_ctx:
+                                scope_counter[0] += 1
+                                ctx_unique = f"{sanitize_name(ctx_var)}_{scope_counter[0]}"
+                                
                             nested_var_mappings = {k: list(v) for k, v in var_mappings.items()}
-                            nested_var_mappings.setdefault(bar_vars[0], []).append(idx_unique)
-                            nested_var_mappings.setdefault(bar_vars[1], []).append(val_unique)
+                            if idx_var != "_":
+                                nested_var_mappings.setdefault(idx_var, []).append(idx_unique)
+                            nested_var_mappings.setdefault(val_var, []).append(val_unique)
+                            if has_ctx:
+                                nested_var_mappings.setdefault(ctx_var, []).append(ctx_unique)
                             
                             body_content, body_local_defs = transpile_items(body_elements, nested_var_mappings, lex_funcs_env)
                             
@@ -358,6 +449,7 @@ def transpile(scrooge_code: str) -> str:
                             map_code = [
                                 f"def {b_name}(stack):",
                                 "    target = stack.pop()",
+                                f"    {ctx_unique} = stack.pop()" if has_ctx else "",
                                 "    res = []",
                                 f"    {body_local_defs_str.strip()}" if body_local_defs_str.strip() else "",
                                 "    for idx, x in enumerate(target):",
@@ -433,7 +525,7 @@ def transpile(scrooge_code: str) -> str:
                      prev_block = items[i-1]
                      is_eager = False
                      if len(prev_block.elements) > 0 and isinstance(prev_block.elements[0], tuple) and prev_block.elements[0][0] == 'BAR_BLOCK':
-                          has_fold = any(isinstance(el, tuple) and el[0] == 'OP_FOLD' for el in prev_block.elements)
+                          has_fold = any((isinstance(el, tuple) and el[0] == 'OP_FOLD') or (isinstance(el, tuple) and el == ('WORD', 'from')) for el in prev_block.elements)
                           has_map = len(prev_block.elements) > 0 and isinstance(prev_block.elements[-1], tuple) and prev_block.elements[-1] == ('OP_ARITH', '*')
                           if has_fold or has_map:
                                is_eager = True
@@ -565,7 +657,7 @@ def transpile(scrooge_code: str) -> str:
                         code_parts.append("op_slice")
                     elif name == 'wrap':
                         code_parts.append("op_wrap")
-                    elif name == 'pick':
+                    elif name in ('pick', 'pk'):
                         code_parts.append("op_pick")
                     elif name == 'roll':
                         code_parts.append("op_roll")
@@ -581,6 +673,18 @@ def transpile(scrooge_code: str) -> str:
                         code_parts.append("op_bind")
                     elif name == 'exp':
                         code_parts.append("op_exp")
+                    elif name == 'bitand':
+                        code_parts.append("op_bitand")
+                    elif name == 'bitor':
+                        code_parts.append("op_bitor")
+                    elif name == 'bitxor':
+                        code_parts.append("op_bitxor")
+                    elif name == 'bitnot':
+                        code_parts.append("op_bitnot")
+                    elif name == 'bitshl':
+                        code_parts.append("op_bitshl")
+                    elif name == 'bitshr':
+                        code_parts.append("op_bitshr")
                     elif name == 'hnew':
                         code_parts.append("op_hnew")
                     elif name == 'hread':
@@ -611,7 +715,7 @@ def transpile(scrooge_code: str) -> str:
                         '$': 'op_swap',
                         '@': 'op_rot',
                         ';': 'op_over',
-                        '~': 'op_not',
+                        '~': 'op_bitnot',
                         '?': 'op_ifelse',
                         '!': 'op_loop',
                         ',': 'op_apply',
@@ -623,8 +727,8 @@ def transpile(scrooge_code: str) -> str:
                         '\\': 'op_mod',
                         '\\\\': 'op_fold',
                         '^': 'op_xor',
-                        '&': 'op_and',
-                        '|': 'op_or',
+                        '&': 'op_bitand',
+                        '|': 'op_bitor',
                         '=': 'op_eq',
                         '==': 'op_eq',
                         '>': 'op_gt',
@@ -759,7 +863,12 @@ def transpile(scrooge_code: str) -> str:
         "",
         "def op_ifelse(stack):",
         "    false_blk = stack.pop(); true_blk = stack.pop(); cond = stack.pop()",
-        "    if cond != 0:",
+        "    if isinstance(cond, list):",
+        "        execute(cond, stack)",
+        "        cond_val = stack.pop()",
+        "    else:",
+        "        cond_val = cond",
+        "    if cond_val != 0 and cond_val:",
         "        execute(true_blk, stack)",
         "    else:",
         "        execute(false_blk, stack)",
@@ -823,7 +932,12 @@ def transpile(scrooge_code: str) -> str:
         "        stack.append(res)",
         "    else:",
         "        stack.append(a * b)",
-        "def op_div(stack): b = stack.pop(); a = stack.pop(); stack.append(a // b)",
+        "def op_div(stack):",
+        "    b = stack.pop(); a = stack.pop()",
+        "    if isinstance(a, int) and isinstance(b, int):",
+        "        stack.append(int(a / b) if (a < 0) ^ (b < 0) and a % b != 0 else a // b)",
+        "    else:",
+        "        stack.append(a / b)",
         "def op_div_int(stack): b = stack.pop(); a = stack.pop(); stack.append(a // b)",
         "def op_mod(stack): b = stack.pop(); a = stack.pop(); stack.append(a % b)",
         "def op_xor(stack): b = stack.pop(); a = stack.pop(); stack.append(a ^ b)",
@@ -840,6 +954,12 @@ def transpile(scrooge_code: str) -> str:
         "",
         "def op_lshift(stack): b = stack.pop(); a = stack.pop(); stack.append(a << b)",
         "def op_rshift(stack): b = stack.pop(); a = stack.pop(); stack.append(a >> b)",
+        "def op_bitand(stack): b = stack.pop(); a = stack.pop(); stack.append(a & b)",
+        "def op_bitor(stack):  b = stack.pop(); a = stack.pop(); stack.append(a | b)",
+        "def op_bitxor(stack): b = stack.pop(); a = stack.pop(); stack.append(a ^ b)",
+        "def op_bitnot(stack): stack.append(~stack.pop())",
+        "def op_bitshl(stack): b = stack.pop(); a = stack.pop(); stack.append(a << b)",
+        "def op_bitshr(stack): b = stack.pop(); a = stack.pop(); stack.append(a >> b)",
         "",
         "def op_get(stack):",
         "    idx = stack.pop()",
