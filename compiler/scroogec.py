@@ -418,6 +418,7 @@ class ScroogeCompiler:
         return main_offset
 
     def compile_nodes(self, nodes):
+        frames_opened = 0
         for node in nodes:
             kind = node[0]
             if kind == 'lit':
@@ -495,6 +496,7 @@ class ScroogeCompiler:
                 
                 scope = {var: idx for idx, var in enumerate(vars_list)}
                 self.scopes.append(scope)
+                frames_opened += 1
                 
                 self.bytecode.append(OP_ENTER_FRAME)
                 self.bytecode.append(N)
@@ -504,9 +506,6 @@ class ScroogeCompiler:
                     self.bytecode.append(idx)
                     
                 self.compile_nodes(body_nodes)
-                
-                self.bytecode.append(OP_LEAVE_FRAME)
-                self.scopes.pop()
             elif kind == 'map':
                 idx_var, val_var, ctx_var, body_nodes = node[1], node[2], node[3], node[4]
                 
@@ -673,6 +672,10 @@ class ScroogeCompiler:
                 self.bytecode.append(OP_LEAVE_FRAME)
             else:
                 raise ScroogeError(f"Unsupported AST node type in compiler: {kind}")
+        
+        for _ in range(frames_opened):
+            self.bytecode.append(OP_LEAVE_FRAME)
+            self.scopes.pop()
 
 # --------------------------------------------------------------------------
 # CLI Main
