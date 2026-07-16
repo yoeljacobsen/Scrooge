@@ -46,6 +46,13 @@ OP_LEAVE_FRAME   = 0x46
 OP_STORE         = 0x47
 OP_LOAD          = 0x48
 
+OP_BITAND        = 0x32
+OP_BITOR         = 0x33
+OP_BITXOR        = 0x34
+OP_BITSHL        = 0x35
+OP_BITSHR        = 0x36
+OP_BITNOT        = 0x37
+
 PRIMITIVE_OPCODES = {
     '.': OP_DUP,
     '%': OP_DROP,
@@ -75,6 +82,12 @@ PRIMITIVE_OPCODES = {
     'pair': OP_PAIR,
     'len': OP_LEN,
     ':': OP_GET,
+    'bitand': OP_BITAND,
+    'bitor': OP_BITOR,
+    'bitxor': OP_BITXOR,
+    'bitshl': OP_BITSHL,
+    'bitshr': OP_BITSHR,
+    'bitnot': OP_BITNOT,
 }
 
 # --------------------------------------------------------------------------
@@ -846,7 +859,7 @@ def compile_scrooge_source(source_code: str) -> bytes:
     # 4. Bytecode Section
     header = bytearray()
     header.extend(b'SCG\x2b')
-    header.extend(struct.pack('>H', 143))
+    header.extend(struct.pack('>H', 144))
     header.extend(struct.pack('>I', main_offset))
 
     cp_bytes = compiler.constant_pool.serialize()

@@ -33,3 +33,11 @@ end
 #concat ( block1 block2 -- joined )
   -> [ b1 b2 ] [ b1 reverse [fold| idx acc val _ | val acc cons from b2 ] ]
 end
+
+#>= ( a b -- bool )
+  < not
+end
+
+#<= ( a b -- bool )
+  > not
+end

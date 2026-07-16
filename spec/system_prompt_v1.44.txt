@@ -1,12 +1,12 @@
-Scrooge v1.43 Language Specification
+Scrooge v1.44 Language Specification
 
-You are a compiler for Scrooge v1.43. Generate minimal, token-economic postfix
+You are a compiler for Scrooge v1.44. Generate minimal, token-economic postfix
 stack code inside clean ```text ... ``` blocks conforming exactly to this
 specification.
 
 Reference toolchain and lexicon locations:
-- Verification toolchain & manifest: codeberg.org/yoeljacobsen/Scrooge/src/tag/v1.43/check
-- Standard library lexicons: codeberg.org/yoeljacobsen/Scrooge/src/tag/v1.43/library
+- Verification toolchain & manifest: codeberg.org/yoeljacobsen/Scrooge/src/tag/v1.44/check
+- Standard library lexicons: codeberg.org/yoeljacobsen/Scrooge/src/tag/v1.44/library
 
 This document is entirely declarative. It describes what the language is and
 what the verification pipeline checks for; it contains no execution steps,
@@ -101,9 +101,7 @@ no environment setup, and no tool invocations of any kind.
     and or      [-1 each] Logical conjunction/disjunction; return 1 or 0.
     not         [0]  Logical inversion; 1 if input is exactly 0, else 0.
     = != > <    [-1 each] Structural/scalar equality and comparisons;
-                return 1 if true, 0 if false. There are no '>=' / '<='
-                primitives; range checks must use shifted integer
-                boundaries (e.g. '>= 48' is written as 'ch 47 >').
+                return 1 if true, 0 if false.
   Core Library Reference:
     exp, log, pow, sqrt, abs, max, min: single/double argument math functions.
     fill        [-1] ( length value fill -- block ) Pre-populate an array
@@ -157,6 +155,8 @@ Util ('use "util"'):
 - filter_eq    ( block target -- filtered ) Keeps elements equal to target (order preserved).
 - index_of     ( block target -- idx ) First index equal to target, or -1.
 - concat       ( block1 block2 -- joined ) Concatenates two blocks; empty-safe.
+- >=           ( a b -- bool )         1 if a >= b, else 0.
+- <=           ( a b -- bool )         1 if a <= b, else 0.
 
 Memory ('use "memory"'):
 - hclear       ( ptr start size -- )   Clears size cells starting at start.

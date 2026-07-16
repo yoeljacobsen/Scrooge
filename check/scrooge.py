@@ -602,11 +602,11 @@ class Interp:
         elif w == 'bitxor':
             b = s.pop(); a = s.pop(); s.append(a ^ b)
         elif w == 'bitshl':
-            b = s.pop(); a = s.pop(); s.append((a << b) & 0xFFFFFFFFFFFFFFFF)
+            b = s.pop(); a = s.pop(); val = (a << b) & 0xFFFFFFFFFFFFFFFF; s.append(val - 0x10000000000000000 if val >= 0x8000000000000000 else val)
         elif w == 'bitshr':
-            b = s.pop(); a = s.pop(); s.append((a % (1 << 64)) >> b)
+            b = s.pop(); a = s.pop(); val = (a % (1 << 64)) >> b; s.append(val - 0x10000000000000000 if val >= 0x8000000000000000 else val)
         elif w == 'bitnot':
-            a = s.pop(); s.append(~a & 0xFFFFFFFFFFFFFFFF)
+            a = s.pop(); val = ~a & 0xFFFFFFFFFFFFFFFF; s.append(val - 0x10000000000000000 if val >= 0x8000000000000000 else val)
         else:
             raise ScroogeError(f"unknown word/primitive: {w!r}")
 
