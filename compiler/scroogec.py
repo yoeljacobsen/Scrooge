@@ -41,6 +41,10 @@ OP_JUMP          = 0x41
 OP_CALL          = 0x42
 OP_CONS          = 0x43
 OP_PAIR          = 0x44
+OP_ENTER_FRAME   = 0x45
+OP_LEAVE_FRAME   = 0x46
+OP_STORE         = 0x47
+OP_LOAD          = 0x48
 
 PRIMITIVE_OPCODES = {
     '.': OP_DUP,
@@ -389,6 +393,7 @@ class ScroogeCompiler:
         self.symbol_table = {}  # name -> byte_offset
         self.bytecode = bytearray()
         self.calls_to_patch = [] # list of (placeholder_offset, target_name)
+        self.scopes = []
 
     def compile_all(self, top_nodes):
         # 1. Compile user-defined macros/words first
@@ -436,7 +441,19 @@ class ScroogeCompiler:
                     raise ScroogeError("Nested code blocks (closures) on stack not supported in Step-Zero VM.")
             elif kind == 'word':
                 name = node[1]
-                if name in PRIMITIVE_OPCODES:
+                resolved = False
+                for depth, scope in enumerate(reversed(self.scopes)):
+                    if name in scope:
+                        local_idx = scope[name]
+                        resolved_idx = (depth << 4) | local_idx
+                        self.bytecode.append(OP_LOAD)
+                        self.bytecode.append(resolved_idx)
+                        resolved = True
+                        break
+                
+                if resolved:
+                    pass
+                elif name in PRIMITIVE_OPCODES:
                     self.bytecode.append(PRIMITIVE_OPCODES[name])
                 elif name in self.macros:
                     # Emit call instruction
@@ -471,6 +488,25 @@ class ScroogeCompiler:
                 # End of conditional starts right here
                 end_cond = len(self.bytecode)
                 self.bytecode[jmp_placeholder:jmp_placeholder+4] = struct.pack('>I', end_cond)
+            elif kind == 'frame':
+                vars_list = node[1]
+                body_nodes = node[2]
+                N = len(vars_list)
+                
+                scope = {var: idx for idx, var in enumerate(vars_list)}
+                self.scopes.append(scope)
+                
+                self.bytecode.append(OP_ENTER_FRAME)
+                self.bytecode.append(N)
+                
+                for idx in reversed(range(N)):
+                    self.bytecode.append(OP_STORE)
+                    self.bytecode.append(idx)
+                    
+                self.compile_nodes(body_nodes)
+                
+                self.bytecode.append(OP_LEAVE_FRAME)
+                self.scopes.pop()
             else:
                 raise ScroogeError(f"Unsupported AST node type in compiler: {kind}")
 
