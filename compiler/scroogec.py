@@ -507,6 +507,170 @@ class ScroogeCompiler:
                 
                 self.bytecode.append(OP_LEAVE_FRAME)
                 self.scopes.pop()
+            elif kind == 'map':
+                idx_var, val_var, ctx_var, body_nodes = node[1], node[2], node[3], node[4]
+                
+                self.bytecode.append(OP_ENTER_FRAME)
+                self.bytecode.append(5)
+                
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(2)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(2)
+                self.bytecode.append(OP_LEN)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(3)
+                
+                self.bytecode.append(OP_NIL)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(4)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(3)
+                self.bytecode.append(OP_CONST)
+                idx_1 = self.constant_pool.add_constant(1)
+                self.bytecode.extend(struct.pack('>I', idx_1))
+                self.bytecode.append(OP_SUB)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(0)
+                
+                loop_start = len(self.bytecode)
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(0)
+                self.bytecode.append(OP_CONST)
+                idx_neg1 = self.constant_pool.add_constant(-1)
+                self.bytecode.extend(struct.pack('>I', idx_neg1))
+                self.bytecode.append(OP_GT)
+                
+                self.bytecode.append(OP_JUMP_IF_FALSE)
+                jmp_to_end_placeholder = len(self.bytecode)
+                self.bytecode.extend(bytes(4))
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(2)
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(0)
+                self.bytecode.append(OP_GET)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(1)
+                
+                scope = {
+                    idx_var: 0,
+                    val_var: 1,
+                    ctx_var: 2
+                }
+                self.scopes.append(scope)
+                
+                self.compile_nodes(body_nodes)
+                
+                self.scopes.pop()
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(4)
+                self.bytecode.append(OP_CONS)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(4)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(0)
+                self.bytecode.append(OP_CONST)
+                idx_1 = self.constant_pool.add_constant(1)
+                self.bytecode.extend(struct.pack('>I', idx_1))
+                self.bytecode.append(OP_SUB)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(0)
+                
+                self.bytecode.append(OP_JUMP)
+                self.bytecode.extend(struct.pack('>I', loop_start))
+                
+                loop_end = len(self.bytecode)
+                self.bytecode[jmp_to_end_placeholder:jmp_to_end_placeholder+4] = struct.pack('>I', loop_end)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(4)
+                
+                self.bytecode.append(OP_LEAVE_FRAME)
+
+            elif kind == 'fold':
+                idx_var, acc_var, val_var, ctx_var, body_nodes, init_nodes = node[1], node[2], node[3], node[4], node[5], node[6]
+                
+                self.compile_nodes(init_nodes)
+                
+                self.bytecode.append(OP_ENTER_FRAME)
+                self.bytecode.append(5)
+                
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(1)
+                
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(3)
+                
+                self.bytecode.append(OP_CONST)
+                idx_0 = self.constant_pool.add_constant(0)
+                self.bytecode.extend(struct.pack('>I', idx_0))
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(0)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(3)
+                self.bytecode.append(OP_LEN)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(4)
+                
+                loop_start = len(self.bytecode)
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(0)
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(4)
+                self.bytecode.append(OP_LT)
+                
+                self.bytecode.append(OP_JUMP_IF_FALSE)
+                jmp_to_end_placeholder = len(self.bytecode)
+                self.bytecode.extend(bytes(4))
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(3)
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(0)
+                self.bytecode.append(OP_GET)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(2)
+                
+                scope = {
+                    idx_var: 0,
+                    acc_var: 1,
+                    val_var: 2,
+                    ctx_var: 3
+                }
+                self.scopes.append(scope)
+                
+                self.compile_nodes(body_nodes)
+                
+                self.scopes.pop()
+                
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(1)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(0)
+                self.bytecode.append(OP_CONST)
+                idx_1 = self.constant_pool.add_constant(1)
+                self.bytecode.extend(struct.pack('>I', idx_1))
+                self.bytecode.append(OP_ADD)
+                self.bytecode.append(OP_STORE)
+                self.bytecode.append(0)
+                
+                self.bytecode.append(OP_JUMP)
+                self.bytecode.extend(struct.pack('>I', loop_start))
+                
+                loop_end = len(self.bytecode)
+                self.bytecode[jmp_to_end_placeholder:jmp_to_end_placeholder+4] = struct.pack('>I', loop_end)
+                
+                self.bytecode.append(OP_LOAD)
+                self.bytecode.append(1)
+                
+                self.bytecode.append(OP_LEAVE_FRAME)
             else:
                 raise ScroogeError(f"Unsupported AST node type in compiler: {kind}")
 
