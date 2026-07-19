@@ -29,6 +29,8 @@ tool "util" name "contains" sig "( block target -- flag )" desc "1 if target pre
 tool "util" name "filter_eq" sig "( block target -- filtered )" desc "Keeps elements equal to target (order preserved)."
 tool "util" name "index_of" sig "( block target -- idx )" desc "First index equal to target, or -1."
 tool "util" name "concat" sig "( block1 block2 -- joined )" desc "Concatenates two blocks; empty-safe."
+tool "util" name ">=" sig "( a b -- bool )" desc "1 if a >= b, else 0."
+tool "util" name "<=" sig "( a b -- bool )" desc "1 if a <= b, else 0."
 
 tool "strings" name "str_print" sig "( str -- )" desc "Prints a string (block of ASCII codes) to stdout."
 tool "strings" name "is_digit" sig "( ch -- flag )" desc "1 if char code is 0-9, else 0."
