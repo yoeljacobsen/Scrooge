@@ -476,17 +476,17 @@ class Interp:
     # ------------------------------------------------------------------
     def do_prim(self, w, stack):
         s = stack
-        if w == '.':
+        if w in ('.', 'dup'):
             s.append(s[-1])
-        elif w == '%':
+        elif w in ('%', 'drop'):
             s.pop()
-        elif w == '$':
+        elif w in ('$', 'swap'):
             s[-1], s[-2] = s[-2], s[-1]
-        elif w == '@':
+        elif w in ('@', 'rot'):
             # x y z -> y z x   (rotate top three)
             z = s.pop(); y = s.pop(); x = s.pop()
             s.append(y); s.append(z); s.append(x)
-        elif w == ';':
+        elif w in (';', 'over'):
             s.append(s[-2])  # over
         elif w == 'roll':
             n = s.pop()
@@ -500,12 +500,12 @@ class Interp:
         elif w == 'pair':
             cdr = s.pop(); car = s.pop()
             s.append([car, cdr])
-        elif w == ':':
+        elif w in (':', 'at'):
             top = s.pop()
             block_or_start = s.pop()
             if isinstance(block_or_start, _SliceStart):
-                # slice: block start to end :  -> stack was block, then
-                # _SliceStart(start) pushed by 'to', then end pushed, then ':'
+                # slice: block start to end at  -> stack was block, then
+                # _SliceStart(start) pushed by 'to', then end pushed, then 'at'
                 end = top
                 start = block_or_start.start
                 block = s.pop()
@@ -515,9 +515,9 @@ class Interp:
                 block = block_or_start
                 s.append(block[idx])
         elif w == 'to':
-            # syntax: block start to end :
+            # syntax: block start to end at
             # at 'to', top of stack is `start`, `block` below it. Replace start
-            # with a marker so ':' can distinguish slice from index.
+            # with a marker so 'at' can distinguish slice from index.
             start = s.pop()
             s.append(_SliceStart(start))
         elif w == '+':

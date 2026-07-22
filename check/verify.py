@@ -12,6 +12,7 @@ from scrooge import tokenize, extract_macros, parse_nodes, Macro
 # Represented as (pops, pushes).
 PRIM_EFFECT = {
     '.': (1, 2), '%': (1, 0), '$': (2, 2), '@': (3, 3), ';': (2, 3),
+    'dup': (1, 2), 'drop': (1, 0), 'swap': (2, 2), 'rot': (3, 3), 'over': (2, 3),
     'cons': (2, 1), 'pair': (2, 1),
     'hnew': (1, 1), 'hread': (2, 1), 'hwrite': (3, 0),
     'print_char': (1,0), 'print_int': (1,0),
@@ -26,7 +27,7 @@ PRIM_EFFECT = {
     'bitshl': (2, 1), 'bitshr': (2, 1), 'bitnot': (1, 1),
     'pk': (1, 2),   # pops the literal index, pushes the dup: net +1
     'roll': (1, 1), # pops index, moves one item to top: net 0 in item count
-    # ':' and 'to' handled specially (polymorphic) — see analyzer
+    # ':' / 'at' and 'to' handled specially (polymorphic) — see analyzer
 }
 
 
@@ -92,7 +93,7 @@ class Analyzer:
     def word_effect(self, w, nodes, i, where, locals_in_scope):
         if w in locals_in_scope:
             return 1  # alias reference pushes its value
-        if w == ':':
+        if w in (':', 'at'):
             # polymorphic: slice terminator (net handled by 'to') or index.
             # Heuristic: if a 'to' word precedes in this sequence unmatched,
             # this ':' closes a slice (block start end -> block[start:end]):

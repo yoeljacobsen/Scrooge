@@ -8,7 +8,7 @@
   -> [ idx acc val ctx ] [ val print_char acc ]
 end
 #str_print ( str -- )
-  -> [ str ] [ str [fold| idx acc val _ | idx acc val 0 sp_step from 0 ] % ]
+  -> [ str ] [ str [fold| idx acc val _ | idx acc val 0 sp_step from 0 ] drop ]
 end
 
 { ---- Character predicates (fixed comparisons; return 1/0) ---- }
@@ -25,7 +25,7 @@ end
   -> [ ch ] [ ch 96 > ch 123 < and ]
 end
 
-{ ---- Integer -> string (non-negative). Replaces manual base-10 formatting. ---- }
+{ ---- Integer -> string (non-negative)dup Replaces manual base-10 formatting. ---- }
 #its_loop ( n acc -- result )
   -> [ n acc ] [ n 0 = ]
   cond [ acc ] else [ n 10 / n 10 \ 48 + acc cons its_loop ] ?

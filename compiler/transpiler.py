@@ -695,6 +695,18 @@ def transpile(scrooge_code: str) -> str:
                         code_parts.append("op_print_char")
                     elif name == 'print_int':
                         code_parts.append("op_print_int")
+                    elif name == 'dup':
+                        code_parts.append("op_dup")
+                    elif name == 'drop':
+                        code_parts.append("op_drop")
+                    elif name == 'swap':
+                        code_parts.append("op_swap")
+                    elif name == 'rot':
+                        code_parts.append("op_rot")
+                    elif name == 'over':
+                        code_parts.append("op_over")
+                    elif name == 'at':
+                        code_parts.append("op_get")
                     elif name == 'and':
                         code_parts.append("op_and")
                     elif name == 'or':
@@ -715,6 +727,11 @@ def transpile(scrooge_code: str) -> str:
                         '$': 'op_swap',
                         '@': 'op_rot',
                         ';': 'op_over',
+                        'dup': 'op_dup',
+                        'drop': 'op_drop',
+                        'swap': 'op_swap',
+                        'rot': 'op_rot',
+                        'over': 'op_over',
                         '~': 'op_bitnot',
                         '?': 'op_ifelse',
                         '!': 'op_loop',
@@ -739,6 +756,7 @@ def transpile(scrooge_code: str) -> str:
                         '<<': 'op_lshift',
                         '>>': 'op_rshift',
                         ':': 'op_get',
+                        'at': 'op_get',
                         '::': 'op_set',
                     }
                     if val in op_map:

@@ -11,7 +11,7 @@ end
   ]
   -> [ shape_block base_ptr ] [
     shape_block len base_ptr 0 hwrite
-    shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] %
+    shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] drop
     base_ptr
   ]
 end

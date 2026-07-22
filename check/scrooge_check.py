@@ -100,6 +100,7 @@ RESERVED = {
     'fill', 'len', 'seed', 'rand', 'exp', 'log', 'pow', 'sqrt', 'abs',
     'max', 'min', 'bitand', 'bitor', 'bitxor', 'bitshl', 'bitshr', 'bitnot',
     'hnew', 'hread', 'hwrite', 'print_char', 'print_int', 'roll',
+    'dup', 'drop', 'swap', 'rot', 'over', 'at',
 }
 
 

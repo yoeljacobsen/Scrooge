@@ -163,8 +163,8 @@ def extract_words(parsed_items):
 # Type checking categories
 primitives = {
     "+", "-", "*", "/", "\\", "and", "or", "not", "=", "!=", ">", "<", "<=", ">=",
-    ".", "%", "$", "@", ";", "roll", "pk", "pick", "hnew", "hread", "hwrite",
-    "cons", "pair", ":", "to", "select", "nil", "len", "slice", "wrap",
+    ".", "%", "$", "@", ";", "dup", "drop", "swap", "rot", "over", "roll", "pk", "pick", "hnew", "hread", "hwrite",
+    "cons", "pair", ":", "at", "to", "select", "nil", "len", "slice", "wrap",
     "is_list", "is_string", "exp", "log", "pow", "sqrt", "abs", "max", "min", "fill", "seed", "rand",
     "bitand", "bitor", "bitxor", "bitshl", "bitshr", "bitnot",
     "print_char", "print_int",
@@ -467,9 +467,9 @@ def verify_block(elements, initial_stack, scope, word_definitions):
                         stack.pop()
                         stack.append("Block")
                         
-                    elif name == ":":
+                    elif name in (":", "at"):
                         if len(stack) < 2:
-                            raise RuntimeError(f"Stack underflow for retrieval operator ':'")
+                            raise RuntimeError(f"Stack underflow for retrieval operator '{name}'")
                         idx_t = stack.pop()
                         lst_t = stack.pop()
                         if not is_type_compatible(idx_t, "Scalar"):

@@ -121,25 +121,25 @@ class TC:
             tstack.append(scope[w]); return
         if w in ('to',):
             tstack.append(U); return
-        if w == ':':
+        if w in (':', 'at'):
             if len(tstack)>=2:
                 idx=tstack.pop(); blk=tstack.pop()
                 if blk == P:
-                    self.errors.append(f"{where}: ':' index into Ptr (should be hread)")
+                    self.errors.append(f"{where}: '{w}' index into Ptr (should be hread)")
                 elif blk == S:
-                    self.errors.append(f"{where}: ':' index into Scalar (not indexable)")
+                    self.errors.append(f"{where}: '{w}' index into Scalar (not indexable)")
                 tstack.append(U)
             return
-        if w in ('.','$','@',';','roll','pk','pick'):
+        if w in ('.','dup','$','swap','@','rot',';','over','roll','pk','pick'):
             # structural, keep types roughly; simplistic
-            if w=='.': tstack.append(tstack[-1] if tstack else U)
-            elif w==';': tstack.append(tstack[-2] if len(tstack)>=2 else U)
+            if w in ('.', 'dup'): tstack.append(tstack[-1] if tstack else U)
+            elif w in (';', 'over'): tstack.append(tstack[-2] if len(tstack)>=2 else U)
             elif w in ('pk', 'pick'):
                 if tstack: tstack.pop()
                 tstack.append(U)
-            # $,@,roll: leave as-is (coarse)
+            # $,swap,@,rot,roll: leave as-is (coarse)
             return
-        if w == '%':
+        if w in ('%', 'drop'):
             if tstack: tstack.pop()
             return
         if w in PRIM_TYPES:

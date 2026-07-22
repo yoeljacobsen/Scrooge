@@ -5,7 +5,7 @@ end
   [fold| idx acc val _ | acc 1 + from 0 ]
 end
 #nth ( block idx -- val )
-  :
+  at
 end
 #sum ( block -- total )
   [fold| idx acc val _ | acc val + from 0 ]
