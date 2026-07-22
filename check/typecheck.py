@@ -12,7 +12,16 @@ This is intentionally coarse and only flags PROVABLE violations.
 """
 from scrooge import tokenize, extract_macros, parse_nodes
 
-S, B, P, U = 'Scalar', 'Block', 'Ptr', 'Unknown'
+S, B, P, R, M, U = 'Scalar', 'Block', 'Ptr', 'Record', 'Map', 'Unknown'
+
+TYPE_MAP = {
+    'Scalar': S, 'float': S, 'int': S,
+    'Block': B, 'Array': B, 'List': B,
+    'Ptr': P,
+    'Record': R,
+    'Map': M,
+    'Unknown': U
+}
 
 class TypeError_(Exception): pass
 
@@ -42,7 +51,8 @@ class TC:
 
     def check(self, m):
         # type stack; frame aliases -> type
-        self._walk(m.body, f"#{m.name}", [], {})
+        in_t = [TYPE_MAP.get(i.split(':')[-1] if ':' in i else i, U) for i in m.inputs]
+        self._walk(m.body, f"#{m.name}", in_t, {})
 
     def _walk(self, nodes, where, tstack, env):
         i = 0
@@ -121,14 +131,26 @@ class TC:
             tstack.append(scope[w]); return
         if w in ('to',):
             tstack.append(U); return
-        if w in (':', 'at'):
+        if w in (':', 'at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at'):
             if len(tstack)>=2:
                 idx=tstack.pop(); blk=tstack.pop()
                 if blk == P:
                     self.errors.append(f"{where}: '{w}' index into Ptr (should be hread)")
+                elif blk == R:
+                    self.errors.append(f"{where}: '{w}' index into Record (records are heterogeneous, use _get)")
                 elif blk == S:
                     self.errors.append(f"{where}: '{w}' index into Scalar (not indexable)")
                 tstack.append(U)
+            return
+        if w in ('array_get', 'arr_get', 'list_get', 'lst_get', 'map_get', 'record_get', 'rec_get', 'block_get'):
+            if len(tstack)>=2:
+                key=tstack.pop(); coll=tstack.pop()
+                tstack.append(U)
+            return
+        if w in ('array_set', 'arr_set', 'list_set', 'lst_set', 'map_set', 'record_set', 'rec_set', 'block_set'):
+            if len(tstack)>=3:
+                val=tstack.pop(); key=tstack.pop(); coll=tstack.pop()
+                tstack.append(coll if coll in (B, R, M) else B)
             return
         if w in ('.','dup','$','swap','@','rot',';','over','roll','pk','pick'):
             # structural, keep types roughly; simplistic

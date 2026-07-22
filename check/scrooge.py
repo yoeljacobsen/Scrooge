@@ -500,7 +500,7 @@ class Interp:
         elif w == 'pair':
             cdr = s.pop(); car = s.pop()
             s.append([car, cdr])
-        elif w in (':', 'at'):
+        elif w in (':', 'at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at'):
             top = s.pop()
             block_or_start = s.pop()
             if isinstance(block_or_start, _SliceStart):
@@ -513,7 +513,65 @@ class Interp:
             else:
                 idx = top
                 block = block_or_start
+                if isinstance(block, tuple) and len(block) == 2 and block[0] == '__ptr__':
+                    raise ScroogeError("TypeError: cannot use _at on Ptr (use hread)")
+                if isinstance(block, dict):
+                    raise ScroogeError("TypeError: cannot use _at on Record/Map (use _get)")
+                if not isinstance(block, (list, tuple)):
+                    raise ScroogeError(f"TypeError: cannot index {type(block).__name__}")
+                if not isinstance(idx, int):
+                    raise ScroogeError(f"TypeError: index must be integer, got {type(idx).__name__}")
                 s.append(block[idx])
+        elif w in ('array_get', 'arr_get', 'list_get', 'lst_get', 'map_get', 'record_get', 'rec_get', 'block_get'):
+            key = s.pop()
+            coll = s.pop()
+            if isinstance(coll, dict):
+                s.append(coll[key])
+            elif isinstance(coll, (list, tuple)):
+                if isinstance(key, int):
+                    s.append(coll[key])
+                else:
+                    found = False
+                    for item in coll:
+                        if isinstance(item, (list, tuple)) and len(item) == 2 and item[0] == key:
+                            s.append(item[1])
+                            found = True
+                            break
+                    if not found:
+                        raise ScroogeError(f"KeyError: key {key!r} not found in collection")
+            else:
+                raise ScroogeError(f"TypeError: cannot _get on {type(coll).__name__}")
+        elif w in ('array_set', 'arr_set', 'list_set', 'lst_set', 'map_set', 'record_set', 'rec_set', 'block_set'):
+            val = s.pop()
+            key_or_idx = s.pop()
+            coll = s.pop()
+            def type_cat(v):
+                if isinstance(v, (int, float)): return 'Scalar'
+                if isinstance(v, (list, tuple)) and len(v) == 2 and v[0] == '__ptr__': return 'Ptr'
+                if isinstance(v, (list, tuple, dict)): return 'Block'
+                return 'Unknown'
+            if isinstance(coll, dict):
+                new_coll = dict(coll)
+                if key_or_idx in new_coll:
+                    old_v = new_coll[key_or_idx]
+                    if type_cat(old_v) != type_cat(val):
+                        raise ScroogeError(f"TypeError: structural immutability violation: slot {key_or_idx!r} type {type_cat(old_v)} cannot be replaced with {type_cat(val)}")
+                new_coll[key_or_idx] = val
+                s.append(new_coll)
+            elif isinstance(coll, (list, tuple)):
+                idx = key_or_idx
+                if not isinstance(idx, int):
+                    raise ScroogeError(f"TypeError: slot index must be integer, got {type(idx).__name__}")
+                if idx < 0 or idx >= len(coll):
+                    raise ScroogeError(f"IndexError: index {idx} out of range for length {len(coll)}")
+                old_v = coll[idx]
+                if type_cat(old_v) != type_cat(val):
+                    raise ScroogeError(f"TypeError: structural immutability violation: slot {idx} type {type_cat(old_v)} cannot be replaced with {type_cat(val)}")
+                new_coll = list(coll)
+                new_coll[idx] = val
+                s.append(new_coll)
+            else:
+                raise ScroogeError(f"TypeError: cannot _set on {type(coll).__name__}")
         elif w == 'to':
             # syntax: block start to end at
             # at 'to', top of stack is `start`, `block` below it. Replace start
