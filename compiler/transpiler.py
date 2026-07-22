@@ -705,8 +705,10 @@ def transpile(scrooge_code: str) -> str:
                         code_parts.append("op_rot")
                     elif name == 'over':
                         code_parts.append("op_over")
-                    elif name == 'at':
+                    elif name in ('at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at', 'array_get', 'arr_get', 'list_get', 'map_get', 'record_get', 'rec_get', 'block_get'):
                         code_parts.append("op_get")
+                    elif name in ('array_set', 'arr_set', 'list_set', 'map_set', 'record_set', 'rec_set', 'block_set'):
+                        code_parts.append("op_set")
                     elif name == 'and':
                         code_parts.append("op_and")
                     elif name == 'or':
@@ -732,6 +734,25 @@ def transpile(scrooge_code: str) -> str:
                         'swap': 'op_swap',
                         'rot': 'op_rot',
                         'over': 'op_over',
+                        'at': 'op_get',
+                        'array_at': 'op_get',
+                        'arr_at': 'op_get',
+                        'list_at': 'op_get',
+                        'block_at': 'op_get',
+                        'array_get': 'op_get',
+                        'arr_get': 'op_get',
+                        'list_get': 'op_get',
+                        'map_get': 'op_get',
+                        'record_get': 'op_get',
+                        'rec_get': 'op_get',
+                        'block_get': 'op_get',
+                        'array_set': 'op_set',
+                        'arr_set': 'op_set',
+                        'list_set': 'op_set',
+                        'map_set': 'op_set',
+                        'record_set': 'op_set',
+                        'rec_set': 'op_set',
+                        'block_set': 'op_set',
                         '~': 'op_bitnot',
                         '?': 'op_ifelse',
                         '!': 'op_loop',
