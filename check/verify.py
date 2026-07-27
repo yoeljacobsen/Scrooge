@@ -15,7 +15,7 @@ PRIM_EFFECT = {
     'cons': (2, 1), 'pair': (2, 1),
     'array_at': (2, 1), 'arr_at': (2, 1), 'list_at': (2, 1), 'block_at': (2, 1),
     'array_get': (2, 1), 'arr_get': (2, 1), 'list_get': (2, 1), 'map_get': (2, 1), 'record_get': (2, 1), 'rec_get': (2, 1), 'block_get': (2, 1),
-    'array_set': (3, 1), 'arr_set': (3, 1), 'list_set': (3, 1), 'map_set': (3, 1), 'record_set': (3, 1), 'rec_set': (3, 1), 'block_set': (3, 1),
+    'array_set': (3, 0), 'arr_set': (3, 0), 'list_set': (3, 0), 'map_set': (3, 0), 'record_set': (3, 0), 'rec_set': (3, 0), 'block_set': (3, 1),
     'hnew': (1, 1), 'hread': (2, 1), 'hwrite': (3, 0),
     'print_char': (1,0), 'print_int': (1,0),
     '+': (2, 1), '-': (2, 1), '*': (2, 1), '/': (2, 1), '\\': (2, 1),
