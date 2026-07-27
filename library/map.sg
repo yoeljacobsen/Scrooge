@@ -1,14 +1,14 @@
 { ---- Encapsulated Key-Value Hash Map Lexicon ---- }
 
-#map_make ( buckets_size -- ptr )
+#map_make ( buckets_size:Scalar -- ptr:Ptr )
   -> [ buckets_size ] [ buckets_size 2 * hnew ]
 end
 
-#map_hash ( key buckets_size -- bucket_idx )
+#map_hash ( key:Scalar buckets_size:Scalar -- bucket_idx:Scalar )
   \ 2 *
 end
 
-#map_get ( ptr key -- val )
+#map_get ( ptr:Ptr key:Scalar -- val:Unknown )
   -> [ ptr key ] [
     ptr
     key
@@ -20,7 +20,7 @@ end
   ]
 end
 
-#map_set ( val ptr key -- )
+#map_set ( val:Unknown ptr:Ptr key:Scalar -- )
   -> [ val ptr key ] [
     val
     ptr

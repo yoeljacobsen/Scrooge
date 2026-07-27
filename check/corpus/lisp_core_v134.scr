@@ -10,50 +10,50 @@
   =================================================================== }
 
 { ---- environment ---- }
-#env_extend ( env sym val -- new_env )
+#env_extend ( env:Block sym:Scalar val:Scalar -- new_env:Block )
   -> [ env sym val ] [ sym val pair env cons ]
 end
-#lk_hit ( pr sym acc -- v ) -> [ pr sym acc ] [ pr 1 at ] end
-#lk_miss ( pr sym acc -- v ) -> [ pr sym acc ] [ acc ] end
-#lk_step ( idx acc pr sym -- acc2 )
+#lk_hit ( pr:Block sym:Scalar acc:Scalar -- v:Scalar ) -> [ pr sym acc ] [ pr 1 at ] end
+#lk_miss ( pr:Block sym:Scalar acc:Scalar -- v:Scalar ) -> [ pr sym acc ] [ acc ] end
+#lk_step ( idx:Scalar acc:Scalar pr:Block sym:Scalar -- acc2:Scalar )
   -> [ idx acc pr sym ] [ pr sym acc pr 0 at sym = ]
   cond [ lk_hit ] else [ lk_miss ] ?
 end
-#env_lookup ( env sym -- val )
+#env_lookup ( env:Block sym:Scalar -- val:Scalar )
   -> [ env sym ] [ sym env [fold| idx acc pr ctx | idx acc pr ctx lk_step from -1 ] ]
 end
 
 { ---- tag dispatch helpers ---- }
-#tag_of ( node -- t ) -> [ node ] [ node 0 at ] end
-#payload_of ( node -- p ) -> [ node ] [ node 1 at ] end
+#tag_of ( node:Block -- t:Scalar ) -> [ node ] [ node 0 at ] end
+#payload_of ( node:Block -- p:Unknown ) -> [ node ] [ node 1 at ] end
 
 { ---- primitive application: op arg1 arg2 ---- }
-#prim_add ( op a b -- r ) -> [ op a b ] [ a b + ] end
-#prim_mul ( op a b -- r ) -> [ op a b ] [ a b * ] end
-#prim_eq  ( op a b -- r ) -> [ op a b ] [ a b = ] end
-#prim_mul_or_eq ( op a b -- r )
+#prim_add ( op:Scalar a:Scalar b:Scalar -- r:Scalar ) -> [ op a b ] [ a b + ] end
+#prim_mul ( op:Scalar a:Scalar b:Scalar -- r:Scalar ) -> [ op a b ] [ a b * ] end
+#prim_eq  ( op:Scalar a:Scalar b:Scalar -- r:Scalar ) -> [ op a b ] [ a b = ] end
+#prim_mul_or_eq ( op:Scalar a:Scalar b:Scalar -- r:Scalar )
   -> [ op a b ] [ op a b op 1 = ]
   cond [ prim_mul ] else [ prim_eq ] ?
 end
-#prim_apply ( op a b -- r )
+#prim_apply ( op:Scalar a:Scalar b:Scalar -- r:Scalar )
   -> [ op a b ] [ op a b op 0 = ]
   cond [ prim_add ] else [ prim_mul_or_eq ] ?
 end
 
 { ---- eval: number / symbol / if / prim ---- }
-#eval_num ( env node -- v ) -> [ env node ] [ node payload_of ] end
-#eval_sym ( env node -- v ) -> [ env node ] [ env node payload_of env_lookup ] end
+#eval_num ( env:Block node:Block -- v:Scalar ) -> [ env node ] [ node payload_of ] end
+#eval_sym ( env:Block node:Block -- v:Scalar ) -> [ env node ] [ env node payload_of env_lookup ] end
 
-#if_then ( env branches -- v ) -> [ env branches ] [ env branches 0 at eval ] end
-#if_else ( env branches -- v ) -> [ env branches ] [ env branches 1 at eval ] end
-#eval_if ( env node -- v )
+#if_then ( env:Block branches:Block -- v:Scalar ) -> [ env branches ] [ env branches 0 at eval ] end
+#if_else ( env:Block branches:Block -- v:Scalar ) -> [ env branches ] [ env branches 1 at eval ] end
+#eval_if ( env:Block node:Block -- v:Scalar )
   -> [ env node ] [ env node payload_of ]
   -> [ env p ] [ env p 1 at env p 0 at eval ]
   -> [ env branches test ] [ env branches test 0 != ]
   cond [ if_then ] else [ if_else ] ?
 end
 
-#eval_prim ( env node -- v )
+#eval_prim ( env:Block node:Block -- v:Scalar )
   -> [ env node ] [ env node payload_of ]
   -> [ env p ] [ p 0 at env p 1 at ]
   -> [ op env args ] [ op env args 0 at eval env args 1 at eval ]
@@ -61,15 +61,15 @@ end
 end
 
 { ---- eval dispatch by tag (0 num,1 sym,2 if,3 prim) ---- }
-#eval_if_or_prim ( env node -- v )
+#eval_if_or_prim ( env:Block node:Block -- v:Scalar )
   -> [ env node ] [ env node node tag_of 2 = ]
   cond [ eval_if ] else [ eval_prim ] ?
 end
-#eval_sym_or_up ( env node -- v )
+#eval_sym_or_up ( env:Block node:Block -- v:Scalar )
   -> [ env node ] [ env node node tag_of 1 = ]
   cond [ eval_sym ] else [ eval_if_or_prim ] ?
 end
-#eval ( env node -- v )
+#eval ( env:Block node:Block -- v:Scalar )
   -> [ env node ] [ env node node tag_of 0 = ]
   cond [ eval_num ] else [ eval_sym_or_up ] ?
 end

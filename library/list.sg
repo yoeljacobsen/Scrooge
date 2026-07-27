@@ -1,6 +1,6 @@
 { ---- Growable Mutable List Lexicon ---- }
 
-#lst_make ( initial_capacity -- ptr )
+#lst_make ( initial_capacity:Scalar -- ptr:Ptr )
   -> [ initial_capacity ] [
     initial_capacity
     3 hnew
@@ -13,15 +13,15 @@
   ]
 end
 
-#lst_get ( ptr idx -- val )
+#lst_get ( ptr:Ptr idx:Scalar -- val:Unknown )
   -> [ ptr idx ] [ ptr 2 hread idx hread ]
 end
 
-#lst_set ( val ptr idx -- )
+#lst_set ( val:Unknown ptr:Ptr idx:Scalar -- )
   -> [ val ptr idx ] [ val ptr 2 hread idx hwrite ]
 end
 
-#lst_push ( val ptr -- )
+#lst_push ( val:Unknown ptr:Ptr -- )
   -> [ val ptr ] [
     ptr 1 hread ptr 0 hread <
   ]

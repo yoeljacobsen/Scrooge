@@ -4,6 +4,11 @@ Operational guide for generating Scrooge that passes the checker on the first
 try. The spec defines the language; this defines the method. Empirically, most
 failures come from a small set of mistakes listed in §4 — internalize those.
 
+## 0. Preparation: Learn Spec & Library
+
+1. **Learn before development**: Before starting development, learn the language thoroughly by reading the spec files in `spec/` and the library files in `library/`.
+2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`) before writing custom helpers. Import and use existing library words with `use "<module>"` rather than reinventing them.
+
 ## 1. Method: decompose into small words
 
 Scrooge rewards many small words over one big word. This is not style — a word
@@ -56,6 +61,7 @@ These are the mistakes that actually recur. Scan your output against them:
 12. Whitespace: brackets are tokens — `[ 1 2 ]`, `x ]`, never `[1 2]`, `x]`.
 13. In-place swap that overwrites before reading — read both cells first.
 14. Forgetting a word is defined before its caller.
+15. Reinventing library words — check `library/` and import existing words with `use "..."` instead of rewriting them.
 
 ## 5. Loops
 
@@ -81,7 +87,14 @@ lives on the heap; reach for it deliberately, not by default.
 5. Any code block nested in a code block?
 6. Every library word covered by a `use`?
 7. Every helper defined before its caller?
+8. Is any custom helper actually a pre-existing library word that should be imported instead?
 
 Passing the checker proves the program is well-formed, not that it is correct.
 After it checks, re-read the logic against the task: a balanced, well-typed
 word can still compute the wrong answer.
+
+## 8. Verification and Compilation
+
+For all verification and compilation tasks, use ONLY the static binary `scroogec_fast_x86-64` (located at `compiler/scroogec_fast_x86-64`). Do not use any other binary or compiler implementation.
+
+

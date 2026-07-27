@@ -23,6 +23,14 @@ TYPE_MAP = {
     'Unknown': U
 }
 
+def parse_sig_type(inp):
+    if ':' in inp:
+        tname = inp.split(':')[-1]
+        return TYPE_MAP.get(tname, U)
+    if inp in TYPE_MAP:
+        return TYPE_MAP[inp]
+    return U
+
 class TypeError_(Exception): pass
 
 # (input types bottom..top, output types) ; None = any/unknown allowed
@@ -32,7 +40,7 @@ PRIM_TYPES = {
     '=':([U,U],[S]), '!=':([U,U],[S]), '>':([S,S],[S]), '<':([S,S],[S]),
     'not':([S],[S]),
     'hnew':([S],[P]), 'hread':([P,S],[U]), 'hwrite':([U,P,S],[]),
-    'len':([B],[S]), 'cons':([U,B],[B]), 'pair':([U,U],[B]),
+    'len':([U],[S]), 'cons':([U,B],[B]), 'pair':([U,U],[B]),
     'fill':([S,U],[B]),
     'print_char':([S],[]), 'print_int':([S],[]),
     'bitand':([S,S],[S]), 'bitor':([S,S],[S]), 'bitxor':([S,S],[S]),
@@ -46,12 +54,18 @@ class TC:
         self.errors = []
 
     def macro_out_types(self, m):
-        # crude: infer from signature output count as Unknown unless name hints
-        return [U]*len(m.outputs)
+        return [parse_sig_type(o) for o in m.outputs]
 
     def check(self, m):
-        # type stack; frame aliases -> type
-        in_t = [TYPE_MAP.get(i.split(':')[-1] if ':' in i else i, U) for i in m.inputs]
+        in_t = [parse_sig_type(i) for i in m.inputs]
+        if m.body and m.body[0][0] == 'frame':
+            entry_vars = m.body[0][1]
+            if len(entry_vars) != len(m.inputs):
+                self.errors.append(
+                    f"#{m.name}: ArityMismatchError: signature declares {len(m.inputs)} inputs, "
+                    f"but entry frame binds {len(entry_vars)} variables ({entry_vars})"
+                )
+                return
         self._walk(m.body, f"#{m.name}", in_t, {})
 
     def _walk(self, nodes, where, tstack, env):
@@ -114,7 +128,6 @@ class TC:
             i += 1
 
     def _init_type(self, initnodes):
-        # v1.29: fold return type = type of its inline init literal
         if not initnodes:
             return U
         n = initnodes[0]
@@ -127,19 +140,24 @@ class TC:
         return U
 
     def _word(self, w, nodes, i, where, tstack, scope):
+        if w == 'nil':
+            tstack.append(B); return
+        if w in ('.', '%', '$', '@', ';', ':'):
+            self.errors.append(f"{where}: SyntaxError: Retired symbol '{w}' is invalid in Scrooge v1.47 (use keywords dup, drop, swap, rot, over, at)")
+            return
         if w in scope:
             tstack.append(scope[w]); return
         if w in ('to',):
             tstack.append(U); return
-        if w in (':', 'at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at'):
+        if w in ('at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at'):
             if len(tstack)>=2:
                 idx=tstack.pop(); blk=tstack.pop()
                 if blk == P:
-                    self.errors.append(f"{where}: '{w}' index into Ptr (should be hread)")
+                    self.errors.append(f"{where}: TypeError: '{w}' index into Ptr (should be hread)")
                 elif blk == R:
-                    self.errors.append(f"{where}: '{w}' index into Record (records are heterogeneous, use _get)")
+                    self.errors.append(f"{where}: TypeError: '{w}' index into Record (records are heterogeneous, use _get)")
                 elif blk == S:
-                    self.errors.append(f"{where}: '{w}' index into Scalar (not indexable)")
+                    self.errors.append(f"{where}: TypeError: '{w}' index into Scalar (not indexable)")
                 tstack.append(U)
             return
         if w in ('array_get', 'arr_get', 'list_get', 'lst_get', 'map_get', 'record_get', 'rec_get', 'block_get'):
@@ -152,16 +170,16 @@ class TC:
                 val=tstack.pop(); key=tstack.pop(); coll=tstack.pop()
                 tstack.append(coll if coll in (B, R, M) else B)
             return
-        if w in ('.','dup','$','swap','@','rot',';','over','roll','pk','pick'):
+        if w in ('dup', 'swap', 'rot', 'over', 'roll', 'pk', 'pick'):
             # structural, keep types roughly; simplistic
-            if w in ('.', 'dup'): tstack.append(tstack[-1] if tstack else U)
-            elif w in (';', 'over'): tstack.append(tstack[-2] if len(tstack)>=2 else U)
+            if w == 'dup': tstack.append(tstack[-1] if tstack else U)
+            elif w == 'over': tstack.append(tstack[-2] if len(tstack)>=2 else U)
             elif w in ('pk', 'pick'):
                 if tstack: tstack.pop()
                 tstack.append(U)
-            # $,swap,@,rot,roll: leave as-is (coarse)
+            # swap,rot,roll: leave as-is (coarse)
             return
-        if w in ('%', 'drop'):
+        if w == 'drop':
             if tstack: tstack.pop()
             return
         if w in PRIM_TYPES:
@@ -179,7 +197,8 @@ class TC:
             m=self.macros[w]
             for _ in m.inputs:
                 if tstack: tstack.pop()
-            for _ in m.outputs: tstack.append(U)
+            outs = [parse_sig_type(o) for o in m.outputs]
+            for o in outs: tstack.append(o)
             return
         tstack.append(U)
 

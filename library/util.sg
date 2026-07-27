@@ -1,43 +1,43 @@
-#reverse ( block -- reversed )
+#reverse ( block:Block -- reversed:Block )
   [fold| idx acc val _ | val acc cons from nil ]
 end
-#length ( block -- n )
+#length ( block:Block -- n:Scalar )
   [fold| idx acc val _ | acc 1 + from 0 ]
 end
-#nth ( block idx -- val )
+#nth ( block:Block idx:Scalar -- val:Unknown )
   at
 end
-#sum ( block -- total )
+#sum ( block:Block -- total:Scalar )
   [fold| idx acc val _ | acc val + from 0 ]
 end
-#contains ( block target -- flag )
+#contains ( block:Block target:Scalar -- flag:Scalar )
   -> [ block target ] [ target block [fold| idx acc val ctx | acc val ctx = or from 0 ] ]
 end
-#feq_step ( idx acc val ctx -- acc2 )
+#feq_step ( idx:Scalar acc:Block val:Scalar ctx:Scalar -- acc2:Block )
   -> [ idx acc val ctx ] [ val ctx = ]
   cond [ val acc cons ] else [ acc ] ?
 end
-#filter_eq ( block target -- filtered )
+#filter_eq ( block:Block target:Scalar -- filtered:Block )
   -> [ block target ] [
     target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
   ]
   reverse
 end
-#idx_step ( idx acc val ctx -- acc2 )
+#idx_step ( idx:Scalar acc:Scalar val:Scalar ctx:Scalar -- acc2:Scalar )
   -> [ idx acc val ctx ] [ acc -1 = val ctx = and ]
   cond [ idx ] else [ acc ] ?
 end
-#index_of ( block target -- idx )
+#index_of ( block:Block target:Scalar -- idx:Scalar )
   -> [ block target ] [ target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ] ]
 end
-#concat ( block1 block2 -- joined )
+#concat ( b1:Block b2:Block -- joined:Block )
   -> [ b1 b2 ] [ b1 reverse [fold| idx acc val _ | val acc cons from b2 ] ]
 end
 
-#>= ( a b -- bool )
+#>= ( a:Scalar b:Scalar -- bool:Scalar )
   < not
 end
 
-#<= ( a b -- bool )
+#<= ( a:Scalar b:Scalar -- bool:Scalar )
   > not
 end

@@ -1,0 +1,11 @@
+#read_head ( head:Block -- val:Unknown )
+  -> [ head ] [ head 0 at ]
+end
+
+#process_buf ( buf:Block i:Scalar -- val:Unknown )
+  -> [ buf i ] [ buf i at ]
+end
+
+#transform_src ( src:Block -- val:Unknown )
+  -> [ src ] [ src 0 at ]
+end

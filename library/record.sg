@@ -1,13 +1,13 @@
 { ---- Encapsulated Explicit Record Lexicon ---- }
 
-#rec_make ( size -- ptr )
+#rec_make ( size:Scalar -- ptr:Ptr )
   hnew
 end
 
-#rec_get ( ptr field_offset -- val )
+#rec_get ( ptr:Ptr field_offset:Scalar -- val:Unknown )
   hread
 end
 
-#rec_set ( val ptr field_offset -- )
+#rec_set ( val:Unknown ptr:Ptr field_offset:Scalar -- )
   hwrite
 end

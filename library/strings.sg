@@ -4,38 +4,38 @@
 { ---- what strings need beyond generic blocks: I/O, char predicates, int<->str. ---- }
 
 { ---- Print a whole string to stdout ---- }
-#sp_step ( idx acc val ctx -- acc2 )
+#sp_step ( idx:Scalar acc:Scalar val:Scalar ctx:Scalar -- acc2:Scalar )
   -> [ idx acc val ctx ] [ val print_char acc ]
 end
-#str_print ( str -- )
+#str_print ( str:Block -- )
   -> [ str ] [ str [fold| idx acc val _ | idx acc val 0 sp_step from 0 ] drop ]
 end
 
 { ---- Character predicates (fixed comparisons; return 1/0) ---- }
-#is_digit ( ch -- flag )
+#is_digit ( ch:Scalar -- flag:Scalar )
   -> [ ch ] [ ch 47 > ch 58 < and ]
 end
-#is_space ( ch -- flag )
+#is_space ( ch:Scalar -- flag:Scalar )
   -> [ ch ] [ ch 32 = ch 9 = or ch 10 = or ch 13 = or ]
 end
-#is_upper ( ch -- flag )
+#is_upper ( ch:Scalar -- flag:Scalar )
   -> [ ch ] [ ch 64 > ch 91 < and ]
 end
-#is_lower ( ch -- flag )
+#is_lower ( ch:Scalar -- flag:Scalar )
   -> [ ch ] [ ch 96 > ch 123 < and ]
 end
 
 { ---- Integer -> string (non-negative)dup Replaces manual base-10 formatting. ---- }
-#its_loop ( n acc -- result )
+#its_loop ( n:Scalar acc:Block -- result:Block )
   -> [ n acc ] [ n 0 = ]
   cond [ acc ] else [ n 10 / n 10 \ 48 + acc cons its_loop ] ?
 end
-#int_to_str ( n -- str )
+#int_to_str ( n:Scalar -- str:Block )
   -> [ n ] [ n 0 = ]
   cond [ "0" ] else [ n nil its_loop ] ?
 end
 
 { ---- Print an integer via string conversion, then newline ---- }
-#print_line ( n -- )
+#print_line ( n:Scalar -- )
   -> [ n ] [ n int_to_str str_print 10 print_char ]
 end

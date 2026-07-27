@@ -476,17 +476,19 @@ class Interp:
     # ------------------------------------------------------------------
     def do_prim(self, w, stack):
         s = stack
-        if w in ('.', 'dup'):
+        if w in ('.', '%', '$', '@', ';', ':'):
+            raise ScroogeError(f"SyntaxError: Retired symbol '{w}' is invalid in Scrooge v1.47 (use keywords dup, drop, swap, rot, over, at)")
+        elif w == 'dup':
             s.append(s[-1])
-        elif w in ('%', 'drop'):
+        elif w == 'drop':
             s.pop()
-        elif w in ('$', 'swap'):
+        elif w == 'swap':
             s[-1], s[-2] = s[-2], s[-1]
-        elif w in ('@', 'rot'):
+        elif w == 'rot':
             # x y z -> y z x   (rotate top three)
             z = s.pop(); y = s.pop(); x = s.pop()
             s.append(y); s.append(z); s.append(x)
-        elif w in (';', 'over'):
+        elif w == 'over':
             s.append(s[-2])  # over
         elif w == 'roll':
             n = s.pop()
@@ -500,7 +502,7 @@ class Interp:
         elif w == 'pair':
             cdr = s.pop(); car = s.pop()
             s.append([car, cdr])
-        elif w in (':', 'at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at'):
+        elif w in ('at', 'array_at', 'arr_at', 'list_at', 'lst_at', 'block_at'):
             top = s.pop()
             block_or_start = s.pop()
             if isinstance(block_or_start, _SliceStart):

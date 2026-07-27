@@ -163,13 +163,32 @@ def extract_words(parsed_items):
 # Type checking categories
 primitives = {
     "+", "-", "*", "/", "\\", "and", "or", "not", "=", "!=", ">", "<", "<=", ">=",
-    ".", "%", "$", "@", ";", "dup", "drop", "swap", "rot", "over", "roll", "pk", "pick", "hnew", "hread", "hwrite",
-    "cons", "pair", ":", "at", "to", "select", "nil", "len", "slice", "wrap",
+    "dup", "drop", "swap", "rot", "over", "roll", "pk", "pick", "hnew", "hread", "hwrite",
+    "cons", "pair", "at", "array_at", "arr_at", "list_at", "block_at",
+    "array_get", "arr_get", "list_get", "map_get", "record_get", "rec_get", "block_get",
+    "array_set", "arr_set", "list_set", "map_set", "record_set", "rec_set", "block_set",
+    "to", "select", "nil", "len", "slice", "wrap",
     "is_list", "is_string", "exp", "log", "pow", "sqrt", "abs", "max", "min", "fill", "seed", "rand",
     "bitand", "bitor", "bitxor", "bitshl", "bitshr", "bitnot",
     "print_char", "print_int",
     "?", "!", ","
 }
+
+def parse_sig_type(inp):
+    if ':' in inp:
+        tname = inp.split(':')[-1]
+        if tname in ("Ptr", "ptr", "p"): return "Ptr"
+        if tname in ("Scalar", "float", "int", "s"): return "Scalar"
+        if tname in ("Block", "Array", "List", "arr", "lst", "b"): return "Block"
+        if tname in ("Record", "rec", "r"): return "Record"
+        if tname in ("Map", "map"): return "Map"
+        return "Unknown"
+    if inp in ("Ptr", "ptr"): return "Ptr"
+    if inp in ("Scalar", "float", "int"): return "Scalar"
+    if inp in ("Block", "Array", "List"): return "Block"
+    if inp in ("Record", "rec"): return "Record"
+    if inp in ("Map", "map"): return "Map"
+    return "Unknown"
 
 def is_type_compatible(t1, t2):
     if t1 == "Unknown" or t2 == "Unknown":
@@ -177,8 +196,8 @@ def is_type_compatible(t1, t2):
     return t1 == t2
 
 def verify_word(name, data, word_definitions):
-    inputs = data["inputs"]
-    outputs = data["outputs"]
+    inputs = [parse_sig_type(inp) for inp in data["inputs"]]
+    outputs = [parse_sig_type(out) for out in data["outputs"]]
     body = data["body"]
     
     # Track 1 & 2: Arity and Coarse Type Checker
@@ -467,15 +486,19 @@ def verify_block(elements, initial_stack, scope, word_definitions):
                         stack.pop()
                         stack.append("Block")
                         
-                    elif name in (":", "at"):
+                    elif name in ("at", "array_at", "arr_at", "list_at", "block_at"):
                         if len(stack) < 2:
                             raise RuntimeError(f"Stack underflow for retrieval operator '{name}'")
                         idx_t = stack.pop()
                         lst_t = stack.pop()
+                        if lst_t == "Ptr":
+                            raise RuntimeError(f"'{name}' index into Ptr (should be hread)")
+                        if lst_t == "Record":
+                            raise RuntimeError(f"'{name}' index into Record (records are heterogeneous, use _get)")
+                        if lst_t == "Scalar":
+                            raise RuntimeError(f"'{name}' index into Scalar (not indexable)")
                         if not is_type_compatible(idx_t, "Scalar"):
                             raise RuntimeError(f"retrieval expects Scalar index, got {idx_t}")
-                        if lst_t != "Block" and lst_t != "Ptr" and lst_t != "Unknown":
-                            raise RuntimeError(f"retrieval expects Block or Ptr, got {lst_t}")
                         stack.append("Unknown")
                         
                     elif name == "to":

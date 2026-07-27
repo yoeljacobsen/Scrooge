@@ -20,12 +20,10 @@ rejected. Everything below serves that guarantee. Study the worked examples
 - Comments: `{` and `}` as standalone whitespace-isolated tokens.
 
 ═══ 2. Words and frames ═══
-- Define: `#name ( inputs -- outputs ) body end`. The signature declares arity
-  and types; it does not bind names.
-- Bind names with an arrow frame: `-> [ a b ] [ body ]`. It pops as many values
-  as aliases (first alias = deepest), binding them for the body.
-- BOTH brackets are required: `-> [ x ] [ x 1 + ]`. `-> [ x ] x 1 +` is a parse
-  error.
+- Define: `#name ( inputs -- outputs ) body end`. Every signature MUST explicitly declare the type of each input and output parameter—either positionally (`#foo ( Ptr Scalar -- Scalar )`) or as tagged parameters (`#foo ( src:Ptr i:Scalar -- d:Scalar )`).
+- Recognized type tags: Ptr, Block, Scalar, Record, Map, Unknown.
+- Bind names with an arrow frame: `-> [ a b ] [ body ]`. The frame pops as many values as declared inputs, binding them for the body. The frame variables inherit the exact types declared in the signature positionally or via tags.
+- BOTH brackets are required: `-> [ x ] [ x 1 + ]`. `-> [ x ] x 1 +` is a parse error.
 - Scope: consecutive sibling frames inherit earlier unshadowed aliases; a
   trailing `cond` sees the active frame's aliases.
 - Call a word by bare name (no `#`): `... fact_iter`. Define a helper BEFORE its
@@ -118,12 +116,12 @@ Tail-recursive loop (helper defined first; call omits '#'; trailing cond sees fr
 
 Array vs record access (the distinction that matters):
     { array: homogeneous -> use _at }
-    #third ( arr -- v ) -> [ arr ] [ arr 2 array_at ] end
+    #third ( arr:Block -- v:Scalar ) -> [ arr ] [ arr 2 array_at ] end
     { record: mixed types -> use _get, never _at }
-    #name_of ( rec -- v ) -> [ rec ] [ rec :name record_get ] end
+    #name_of ( rec:Record -- v:Scalar ) -> [ rec ] [ rec :name record_get ] end
 
 Heap read/write:
-    #store_read ( -- v )
+    #store_read ( -- v:Scalar )
       3 hnew -> [ p ] [ 10 p 0 hwrite 20 p 1 hwrite p 1 hread ]
     end
 
