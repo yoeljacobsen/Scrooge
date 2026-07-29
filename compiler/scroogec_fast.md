@@ -1,28 +1,57 @@
-# scroogec_fast_x86-64
+# scroogec_fast / scroogec_fast_x86-64
 
-`scroogec_fast_x86-64` is a high-performance, statically-linked native binary for verifying, type-checking, and analyzing Scrooge source code (`.sg`) on x86-64 Linux architectures.
+`scroogec_fast` (and its statically-linked build `scroogec_fast_x86-64`) is a high-performance, single-tool native compiler, static shape-gate verifier, and metrics analyzer for the Scrooge programming language (`.sg`).
 
 ## Overview
 
-Compiled from `scroogec_fast.nim`, `scroogec_fast_x86-64` serves as the primary compiler and static checker for the Scrooge language. It operates as a self-contained, zero-dependency binary that tokenizes source code, loads standard library manifests (`manifest.sm`), enforces language safety rules, and generates static code metrics.
+Compiled from `scroogec_fast.nim`, `scroogec_fast` operates as a **100% self-contained, zero-dependency unified tool** that:
+- Performs static verification, shape-gate validation, arity checking, stack effect analysis, and type checking.
+- Directly compiles Scrooge source code (`.sg`) into standalone native ELF 64-bit x86-64 executables without requiring external Python tools or runtime script files.
+- Bundles the full Scrooge C runtime environment and automatically compiles native binaries via `gcc`.
+- Resolves imported standard library modules (`use "strings"`, `use "util"`, etc.) automatically.
 
 ## Usage
 
 ```bash
-scroogec_fast_x86-64 [--stage2] [--metrics] <file.sg>
+scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [-o <outBinary>] <file.sg>
 ```
 
-### Parameters & Options
+### Options & Flags
 
-- `<file.sg>` *(Required)*: Path to the Scrooge source file to check or analyze.
+- `<file.sg>` *(Required)*: Path to the Scrooge source file to check, verify, or compile.
+- `-L <dir>`, `--lib <dir>`, `--library-dir <dir>`: Specifies a custom directory path for resolving standard library lexicons (e.g., `strings.sg`, `util.sg`, `manifest.sm`).
+- `-o <outBinary>`, `--output <outBinary>`: Specifies the output native executable binary name (default: `<basename>` derived from `<file.sg>`).
+- `--check-only`: Only performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
-- `--metrics`: Calculates transitive metrics for the entry point macro and outputs a JSON summary.
+- `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.
 
 ## Modes of Operation
 
-### 1. Verification Mode (Default)
+### 1. Direct Native Binary Compilation (Default)
 
-Performs static verification, checking for syntax errors, stack imbalance, type mismatches, reserved word violations, and structural constraints.
+Performs static verification. If the code passes verification (`ACCEPT`), `scroogec_fast` automatically compiles the program and all imported library modules into a native ELF executable:
+
+```bash
+# Compiles app.sg to native executable ./app
+./scroogec_fast app.sg
+
+# Execute native binary directly
+./app
+```
+
+To specify a custom output binary name:
+```bash
+./scroogec_fast app.sg -o my_app
+```
+
+To specify a custom library search directory:
+```bash
+./scroogec_fast -L /path/to/library app.sg -o my_app
+```
+
+### 2. Static Verification Mode (`--check-only`)
+
+Performs static verification only without compiling a binary executable:
 
 - **Success Output:**
   ```text
@@ -32,9 +61,9 @@ Performs static verification, checking for syntax errors, stack imbalance, type 
   ```text
   REJECT <ErrorClass> <WordName>
   ```
-  *(Example: `REJECT UnknownWordError foo`)*
+  *(Example: `REJECT TypeError at`)*
 
-### 2. Metrics Mode (`--metrics`)
+### 3. Metrics Mode (`--metrics`)
 
 Calculates static execution metrics for the entry word in the target file and outputs formatted JSON:
 
@@ -47,6 +76,6 @@ Calculates static execution metrics for the entry word in the target file and ou
 
 ## Key Characteristics
 
-- **Statically Linked**: Zero dynamic runtime library dependencies (`libc`, `libm` statically bundled).
-- **Manifest Resolution**: Automatically searches for library signatures in `./library/manifest.sm` or `../library/manifest.sm`.
-- **Primary Tooling**: Specified in `spec/scrooge_skill.md` as the sole binary for Scrooge code verification and compilation.
+- **100% Self-Contained**: Operates without external Python scripts (`scroogec.py`, `scrooge2c.py`).
+- **Statically Linked**: `scroogec_fast_x86-64` has zero external runtime library dependencies.
+- **Library Module Resolution**: Automatically resolves imported library modules from specified or standard library locations (`library/`, `../Scrooge/library/`).
