@@ -176,7 +176,11 @@ end
           acc 0 array_at reverse parse_int acc 1 array_at cons -> [ next_nums ] [
             nil next_nums pair
           ]
-        ] else [ acc ] ?
+        ] else [
+          0 acc 1 array_at cons -> [ next_nums ] [
+            nil next_nums pair
+          ]
+        ] ?
       ] else [ acc ] ?
     ] ?
   ]
@@ -198,7 +202,7 @@ end
 
 #map_slot_step ( idx:Scalar acc:Scalar val:Scalar ctx:Block -- acc2:Scalar )
   -> [ idx acc val ctx ] [
-    ctx 0 array_at 0 array_at idx nth ctx 1 array_at = cond [
+    val ctx 1 array_at = cond [
       ctx 0 array_at 1 array_at idx nth
     ] else [ acc ] ?
   ]
@@ -229,7 +233,7 @@ end
 end
 
 #scrooge_init_db ( -- tbl:Ptr )
-  100 db_table_create
+  2000 db_table_create
 end
 
 #db_table_insert ( row:Block tbl:Ptr -- )

@@ -64,4 +64,20 @@ This document records all compiler, parser, AST transformer, and C code generato
 
 - **Symptom**: Calling `db_table_insert` passed `row` then `tbl`, but signature was declared `( tbl:Ptr row:Block -- )`, causing heap pointers and blocks to swap at runtime.
 - **Root Cause**: Signature declared parameters in opposite order from argument pushing order on stack.
-- **Fix**: Corrected signature to `#db_table_insert ( row:Block tbl:Ptr -- )` in `impl_scrooge_select1.sg`.
+- **Fix**: Corrected signature to `#db_table_insert ( row:Block tbl:Ptr -- )` in SQL test suites.
+
+---
+
+## Bug 9: NULL Value Token Handling in `parse_int_list_step`
+
+- **Symptom**: SQL statements containing `NULL` values (e.g. `INSERT INTO t1(e,c,b,d,a) VALUES(NULL,102,NULL,101,104)`) resulted in `Fatal: get (:) index out of range (idx=4, len=3)`.
+- **Root Cause**: Non-digit characters in `NULL` were ignored during ASCII digit accumulation. When `,` or `)` was encountered, `parse_int_list_step` skipped empty tokens instead of pushing `0` for `NULL`, returning 3 items instead of 5.
+- **Fix**: Updated `parse_int_list_step` to push `0` for empty token accumulators when `,` or `)` is reached.
+
+---
+
+## Bug 10: Fixed Table Capacity Overflow in Large SQL Suites
+
+- **Symptom**: Executing `impl_scrooge_select5.sg` (containing 1,000+ `INSERT` statements) resulted in `Fatal: hwrite offset out of range (off=100, len=100)`.
+- **Root Cause**: `scrooge_init_db` allocated standard db tables with a hardcoded capacity of `100`.
+- **Fix**: Increased initial capacity in `scrooge_init_db` from `100` to `2000`.
