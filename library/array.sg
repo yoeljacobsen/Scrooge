@@ -38,3 +38,9 @@ end
     val ptr ptr coords_block arr_offset hwrite
   ]
 end
+
+#nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )
+  -> [ arr idx default ] idx 0 < not idx arr len < and
+  cond [ arr idx at ] else [ default ] ?
+end
+

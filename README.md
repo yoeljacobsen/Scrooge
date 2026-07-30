@@ -1,76 +1,76 @@
-# Scrooge Mono-Repo (v1.41 Postfix Stack Language)
+# Scrooge Programming Language (v1.48)
 
-This repository contains the unified specification, compiler, static checker, and standard library for **Scrooge v1.41**, a purely functional, postfix stack-oriented programming language designed for extreme token economy, copy-on-write immutability, and stateless stack operations.
+Repository status: **Scrooge v1.48**.
 
-Scrooge v1.41 strictly conforms only to the **postfix stack-based** design. All deprecated infix or imperative-style structural remnants (such as `fn`, `ret`, `for`, `while`, `.push`, or `.pop`) have been completely decommissioned.
-
----
-
-## Directory Structure
-
-The mono-repo is organized into clean, isolated components:
-
-- **`spec/`**: Contains the frozen system specification prompts used to align downstream coding agents.
-  - `system_prompt_v1.41.txt`: The definitive Scrooge v1.41 language definition and primitive registry.
-- **`compiler/`**: The core transpilation and style checking tools.
-  - `transpiler.py`: Compiles Scrooge postfix stack code into Python executable targets (supporting TCO, block iterators, and division semantics).
-  - `linter.py`: Pre-compilation static linter enforcing syntax constraints and keywords.
-- **`check/`**: The static checker toolchain and conformance test assets.
-  - `scrooge_check.py`: The unified verification runner coordinating dual-track static analysis.
-  - `scrooge.py`: Reference interpreter and tokenizer.
-  - `verify.py`: Track 1 arity checker.
-  - `typecheck.py`: Track 2 coarse type validator.
-  - `manifest.sm`: Checker's MCP module import signatures manifest.
-  - `corpus/`: Complex Scrooge files used to test checker conformance.
-- **`library/`**: Verified standard library lexicon sources.
-  - `array.sg`, `list.sg`, `map.sg`, `memory.sg`, `record.sg`, `strings.sg`, `util.sg`
-  - `manifest.sm`: Standard library MCP master manifest.
-  - `manifest_check.py`: Manifest drift detection script.
-- **`programs/`** & **`samples/`**: Postfix Scrooge application programs and benchmark samples.
+This repository contains the Scrooge static compiler, standard library, language specifications, automated test harness, and benchmark suite.
 
 ---
 
-## Getting Started
+## 1. Compiler Toolchain & Binary Executable
 
-### Local Verification
-To statically check and verify any Scrooge postfix program against the Track 1 & 2 validators, execute:
+The Nim static compiler executable `./scroogec_fast` (and its statically-linked binary `compiler/scroogec_fast_x86-64`) is the sole static verifier, type checker, and C code generation compiler for Scrooge v1.48 in this environment.
+
+### Quick Commands
+
 ```bash
-python3 check/scrooge_check.py <file>
+# Rebuild static compiler binary from source
+nim c -d:release scroogec_fast.nim
+
+# Perform static verification only (outputs ACCEPT or REJECT)
+./scroogec_fast --check-only my_program.sg
+
+# Compile Scrooge source file into a native ELF executable
+./scroogec_fast -L library -o my_program my_program.sg
+
+# Dump generated intermediate C source code
+./scroogec_fast --dump-c out.c -L library my_program.sg
 ```
 
-To run the full checker conformance test suite:
+For complete technical documentation on compiler architecture, C codegen optimizations (`make_int_array`), AST line-number tracking (`lineNum: int`), and diagnostic formats, refer to [`compiler/scroogec_fast.md`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/compiler/scroogec_fast.md).
+
+---
+
+## 2. Language Specification & Skill Guide
+
+- **Core Language Specification**: [`spec/scrooge_spec_v1_48.txt`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/spec/scrooge_spec_v1_48.txt) (defines v1.48 syntax, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
+- **System Prompt**: [`spec/system_prompt_v1.48.txt`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/spec/system_prompt_v1.48.txt) (system prompt for LLM generation).
+
+---
+
+## 3. Standard Library & Discovery Manifest
+
+Standard library lexicon modules reside in `library/`:
+- `library/strings.sg`: Signed integer formatting (`int_to_str`), string printing (`str_print`), character predicates (`is_digit`, `is_space`, `is_upper`, `is_lower`).
+- `library/util.sg`: Block equality (`block_eq`), stable sorting (`block_sort`), reversal (`reverse`), length (`length`), sum (`sum`), search (`contains`, `index_of`), filtering (`filter_eq`), concatenation (`concat`), comparisons (`>=`, `<=`).
+- `library/array.sg`: Safe indexing (`nth_or_default`), N-dimensional heap arrays (`arr_make`, `arr_get`, `arr_set`, `arr_offset`, `arr_size`).
+- `library/memory.sg`: Heap operations (`hclear`, `hloop_fill`, `hloop_add`, `h_find_val`).
+- `library/list.sg`, `library/map.sg`, `library/record.sg`: Growable lists, hash maps, static records.
+
+The v1.48 discovery manifest is synchronized at [`library/manifest.sm`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/library/manifest.sm). Verify 100% manifest synchronization with:
 ```bash
-python3 check/scrooge_check.py --suite
-```
-
-### Transpiling and Running
-To transpile and run Scrooge code via the Python compiler backend:
-```python
-import sys
-import os
-sys.path.insert(0, 'compiler')
-import transpiler
-
-scrooge_code = '[ "Hi, Scrooge!\n" str_print ]'
-# Note: For programs using libraries, prepend standard library files
-# e.g., library/util.sg, library/strings.sg
-```
-
-### Running Performance Benchmarks
-To run the benchmarks and profile execution metrics:
-```bash
-python3 run_comparisons.py
+python3 manifest_check.py
 ```
 
 ---
 
-## Release Alignment Invariant
+## 4. Automated Test Suite (Gates A through J)
 
-The repository tag (e.g., **`v1.41`**) locks the **System Prompt**, **Compiler**, **Checker**, and **Standard Library** in absolute, unyielding lockstep. Any changes to primitive semantics, compiler behaviors, or static constraints are synchronously propagated across all four layers to prevent drift.
+Execute the standard automated test harness to verify compiler correctness, inter-macro type validation, decimal float support, signed string formatting, and manifest integrity:
 
----
+```bash
+python3 scratch/test_gates_a_j.py
+```
 
-## Authors & License
-
-- **Author**: Yoel Jacobsen (<yoel.jacobsen@gmail.com>)
-- **License**: MIT License - see the [LICENSE](LICENSE) file for details.
+### Test Gate Coverage
+- **Gate A**: Heuristic eradication (`Block` parameter named `src` PASSES).
+- **Gate B**: Positional signature rejection (`Ptr` with `at` REJECTED statically).
+- **Gate C**: Tagged signature rejection (`data:Ptr` with `at` REJECTED statically).
+- **Gate D**: Arity mismatch guard (Frame vs signature input mismatch REJECTED).
+- **Gate E**: Local provenance rejection (`hnew -> [ p ] [ p 0 at ]` REJECTED statically).
+- **Gate F**: Local block provenance acceptance (`nil -> [ b ] [ b 0 at ]` PASSES).
+- **Gate G1**: Call-site macro parameter order swap (Passing `Block` to tagged `Ptr` REJECTED statically).
+- **Gate G2**: Correct call-site macro parameter order (PASSES).
+- **Gate H**: Bare decimal float literal compilation & execution (`3.14` PASSES).
+- **Gate I**: Signed string formatting (`int_to_str` on `-42` outputs `"-42"` PASSES).
+- **Gate J**: Library manifest 100% synchronization check (PASSES).

@@ -41,3 +41,38 @@ end
 #<= ( a:Scalar b:Scalar -- bool:Scalar )
   > not
 end
+
+#block_eq_step ( idx:Scalar acc:Scalar val:Unknown ctx:Block -- acc2:Scalar )
+  -> [ idx acc val ctx ] acc 0 =
+  cond [ 0 ] else [ val ctx idx at = ] ?
+end
+#block_eq ( b1:Block b2:Block -- equal:Scalar )
+  -> [ b1 b2 ] b1 len b2 len =
+  cond [ b2 b1 [fold| idx acc val ctx | idx acc val ctx block_eq_step from 1 ] ] else [ 0 ] ?
+end
+
+#insert_sort_step ( idx:Scalar acc:Block val:Unknown ctx:Unknown -- acc2:Block )
+  -> [ idx acc val ctx ] acc 0 at
+  cond [
+    val acc 1 at cons acc 0 at swap pair
+  ] else [
+    ctx val <
+    cond [
+      val ctx acc 1 at cons cons 1 swap pair
+    ] else [
+      val acc 1 at cons 0 swap pair
+    ] ?
+  ] ?
+end
+#insert_sorted ( val:Unknown blk:Block -- result:Block )
+  -> [ val blk ] [
+    val blk [fold| idx acc elem x | idx acc elem x insert_sort_step from [ 0 nil ] ]
+    -> [ res_pair ] res_pair 0 at 0 =
+    cond [ val res_pair 1 at cons ] else [ res_pair 1 at ] ?
+    reverse
+  ]
+end
+#block_sort ( blk:Block -- sorted:Block )
+  [fold| idx acc val _ | val acc insert_sorted from nil ]
+end
+
