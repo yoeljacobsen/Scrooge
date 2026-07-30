@@ -96,3 +96,39 @@ Calculates static execution metrics for the entry word in the target file and ou
 - **Statically Linked**: `scroogec_fast_x86-64` has zero external runtime library dependencies.
 - **Intermediate Inspection**: Built-in support for inspecting intermediate C and bytecode output.
 - **Library Module Resolution**: Automatically resolves imported library modules from specified or standard library locations (`library/`, `../Scrooge/library/`).
+
+## Bug Fixes & Resolved Issues Log
+
+The following key compiler, C code generator, and parser bugs were identified, debugged, and resolved during this session:
+
+### 1. Intermediate C Code Line Bloat & Compilation Time Reduction
+- **Issue**: Large programs containing many string literals (such as SQL test suites) generated 300,000+ lines of imperative `malloc`/`push`/`pop` C instructions in a single function body, causing `gcc -O2` compilation to take 30+ seconds.
+- **Fix**: Added `make_int_array` in `EMBEDDED_RUNTIME_C` and compact `isPureIntBlock` static array formatting. Reduced generated C line count from **311,614 lines down to 5,364 lines** (98.3% reduction) and reduced GCC compile time from **30+ seconds down to 1.35 seconds**.
+
+### 2. String Literal Leak in `use` Import Statements
+- **Issue**: `use "strings"` directives left the ASCII string block `[ 115 116 114 ... ]` sitting on top of the stack upon program completion.
+- **Fix**: Updated `parseNodes` to skip the entire block argument following `use` directives during AST construction.
+
+### 3. Executable-Relative Library File Resolution
+- **Issue**: Executing the compiler binary from arbitrary working directories (e.g. `./Scrooge/compiler/scroogec_fast_x86-64`) failed to resolve library modules if `./library/` was not present in current working directory.
+- **Fix**: Added executable installation path (`getAppDir() / ".." / "library"`) resolution to `findLibraryFile`.
+
+### 4. Correct Operand Pop Sequence for `nkFold` Constructs
+- **Issue**: `nkFold` (`[fold| idx acc val ctx | body from init ]`) threw a runtime `Fatal: Stack underflow` during execution despite passing static verification (`ACCEPT`).
+- **Fix**: Reordered `nkFold` pop sequence in C generation to pop `acc_val` (`init`) first, then `arr_val`, then `ctx_val`.
+
+### 5. `-> [ vars ]` Frame Scope Extension in Macro Bodies
+- **Issue**: Macros with trailing expressions after the first body block (such as `#find_char_step` ending with `cond [ idx ] else [ acc ] ?`) closed the frame scope (`leave_frame()`) prematurely, causing variable references (`idx`, `acc`) to fail silently and emit empty `if/else` statements.
+- **Fix**: Updated `parseNodes` to scope `-> [ vars ]` across all remaining expressions in the macro body until `end` or block closing.
+
+### 6. Token Index Mismatch After `use` Block Parsing
+- **Issue**: In `use [ ... ]` directive block skipping, `parseNodes` assigned `i = idx` (index of `]`) instead of `i = endIdx` (after `]`), causing `if t == "]": break` to terminate parsing top-level nodes before reaching main entry macro.
+- **Fix**: Updated `parseNodes` index assignment to `i = endIdx`.
+
+### 7. Missing C Code Generator Handlers for `abs`, `min`, and `max` Primitives
+- **Issue**: Source code using `abs`, `min`, or `max` primitives threw `Compilation error: Unknown word / primitive: min` during C code generation.
+- **Fix**: Added `op_abs`, `op_min`, and `op_max` C runtime implementations to `EMBEDDED_RUNTIME_C` and added primitive cases in `emitNode`.
+
+### 8. Parameter Signature Order Mismatch in `db_table_insert`
+- **Issue**: `impl_scrooge_select1.sg` caller passed `row` then `tbl`, but `#db_table_insert` signature was defined as `( tbl:Ptr row:Block -- )`, causing heap pointers and blocks to swap at runtime.
+- **Fix**: Corrected signature to `#db_table_insert ( row:Block tbl:Ptr -- )` in `impl_scrooge_select1.sg`.
