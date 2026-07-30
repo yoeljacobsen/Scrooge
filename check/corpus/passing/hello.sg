@@ -1,0 +1,4 @@
+use "strings"
+
+"Hello World" str_print
+10 print_char
