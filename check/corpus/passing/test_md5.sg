@@ -1,0 +1,303 @@
+use "util"
+use "strings"
+use "memory"
+use "list"
+use "map"
+
+#u32 ( x:Scalar -- y:Scalar )
+  -> [ x ] [ x 4294967295 bitand ]
+end
+
+#rot_left_32 ( x:Scalar n:Scalar -- res:Scalar )
+  -> [ x n ] [
+    x n bitshl
+    x 32 n - bitshr
+    bitor u32
+  ]
+end
+
+#nibble_to_hex ( n:Scalar -- ch:Scalar )
+  -> [ n ] [
+    n 10 < cond [ n 48 + ] else [ n 10 - 97 + ] ?
+  ]
+end
+
+#byte_to_hex_pair ( b:Scalar -- pair_blk:Block )
+  -> [ b ] [
+    b 16 / 15 bitand nibble_to_hex
+    b 15 bitand nibble_to_hex
+    nil cons cons
+  ]
+end
+
+#byte_at ( val:Scalar shift:Scalar -- b:Scalar )
+  -> [ val shift ] [ val shift bitshr 255 bitand ]
+end
+
+#word_to_hex_le ( val:Scalar -- hex8:Block )
+  -> [ val ] [
+    val 0 byte_at byte_to_hex_pair
+    val 8 byte_at byte_to_hex_pair concat
+    val 16 byte_at byte_to_hex_pair concat
+    val 24 byte_at byte_to_hex_pair concat
+  ]
+end
+
+#word_to_bytes_le ( val:Scalar -- blk:Block )
+  -> [ val ] [
+    val 0 byte_at
+    val 8 byte_at
+    val 16 byte_at
+    val 24 byte_at
+    nil cons cons cons cons
+  ]
+end
+
+#zeros_step ( n:Scalar acc:Block -- res:Block )
+  -> [ n acc ] [ n 0 = ]
+  cond [ acc ] else [ n 1 - 0 acc cons zeros_step ] ?
+end
+
+#make_zeros ( n:Scalar -- blk:Block )
+  -> [ n ] [ n nil zeros_step ]
+end
+
+#md5_pad ( msg:Block -- padded:Block )
+  -> [ msg ] [
+    msg length -> [ msg_len ] [
+      msg [ 128 ] concat -> [ with_marker ] [
+        msg_len 1 + 64 \ -> [ rem ] [
+          rem 56 <= cond [ 56 rem - ] else [ 120 rem - ] ? -> [ pad_len ] [
+            with_marker pad_len make_zeros concat -> [ with_zeros ] [
+              msg_len 8 * u32 word_to_bytes_le -> [ lo4 ] [
+                with_zeros lo4 [ 0 0 0 0 ] concat concat
+              ]
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+end
+
+#word_from_bytes ( chunk:Block base:Scalar -- w:Scalar )
+  -> [ chunk base ] [
+    chunk base array_at
+    chunk base 1 + array_at 8 bitshl bitor
+    chunk base 2 + array_at 16 bitshl bitor
+    chunk base 3 + array_at 24 bitshl bitor
+  ]
+end
+
+#md5_extract_words ( chunk:Block -- m:Block )
+  -> [ chunk ] [
+    chunk 0 word_from_bytes
+    chunk 4 word_from_bytes
+    chunk 8 word_from_bytes
+    chunk 12 word_from_bytes
+    chunk 16 word_from_bytes
+    chunk 20 word_from_bytes
+    chunk 24 word_from_bytes
+    chunk 28 word_from_bytes
+    chunk 32 word_from_bytes
+    chunk 36 word_from_bytes
+    chunk 40 word_from_bytes
+    chunk 44 word_from_bytes
+    chunk 48 word_from_bytes
+    chunk 52 word_from_bytes
+    chunk 56 word_from_bytes
+    chunk 60 word_from_bytes
+    nil cons cons cons cons cons cons cons cons cons cons cons cons cons cons cons cons
+  ]
+end
+
+#md5_F0 ( b:Scalar c:Scalar d:Scalar -- f:Scalar )
+  -> [ b c d ] [
+    b c bitand
+    b bitnot u32 d bitand
+    bitor
+  ]
+end
+
+#md5_F1 ( b:Scalar c:Scalar d:Scalar -- f:Scalar )
+  -> [ b c d ] [
+    d b bitand
+    d bitnot u32 c bitand
+    bitor
+  ]
+end
+
+#md5_F2 ( b:Scalar c:Scalar d:Scalar -- f:Scalar )
+  -> [ b c d ] [ b c bitxor d bitxor ]
+end
+
+#md5_F3 ( b:Scalar c:Scalar d:Scalar -- f:Scalar )
+  -> [ b c d ] [
+    b d bitnot u32 bitor c bitxor
+  ]
+end
+
+#md5_F ( idx:Scalar b:Scalar c:Scalar d:Scalar -- f:Scalar )
+  -> [ idx b c d ] [
+    idx 16 < cond [
+      b c d md5_F0
+    ] else [
+      idx 32 < cond [
+        b c d md5_F1
+      ] else [
+        idx 48 < cond [
+          b c d md5_F2
+        ] else [
+          b c d md5_F3
+        ] ?
+      ] ?
+    ] ?
+  ]
+end
+
+#md5_g ( idx:Scalar -- g:Scalar )
+  -> [ idx ] [
+    idx 16 < cond [
+      idx
+    ] else [
+      idx 32 < cond [
+        5 idx * 1 + 16 \
+      ] else [
+        idx 48 < cond [
+          3 idx * 5 + 16 \
+        ] else [
+          7 idx * 16 \
+        ] ?
+      ] ?
+    ] ?
+  ]
+end
+
+#md5_K_table ( -- t:Block )
+  [ 3614090360 3905402710 606105819 3250441966 4118548399 1200080426 2821735955 4249261313 1770035416 2336552879 4294925233 2304563134 1804603682 4254626195 2792965006 1236535329 4129170786 3225465664 643717713 3921069994 3593408605 38016083 3634488961 3889429448 568446438 3275163606 4107603335 1163531501 2850285829 4243563512 1735328473 2368359562 4294588738 2272392833 1839030562 4259657740 2763975236 1272893353 4139469664 3200236656 681279174 3936430074 3572445317 76029189 3654602809 3873151461 530742520 3299628645 4096336452 1126891415 2878612391 4237533241 1700485571 2399980690 4293915773 2240044497 1873313359 4264355552 2734768916 1309151649 4149444226 3174756917 718787259 3951481745 ]
+end
+
+#md5_S_table ( -- t:Block )
+  [ 7 12 17 22 7 12 17 22 7 12 17 22 7 12 17 22 5 9 14 20 5 9 14 20 5 9 14 20 5 9 14 20 4 11 16 23 4 11 16 23 4 11 16 23 4 11 16 23 6 10 15 21 6 10 15 21 6 10 15 21 6 10 15 21 ]
+end
+
+#range64 ( -- t:Block )
+  [ 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 ]
+end
+
+#md5_K ( idx:Scalar -- k:Scalar )
+  -> [ idx ] [ md5_K_table idx array_at ]
+end
+
+#md5_S ( idx:Scalar -- s:Scalar )
+  -> [ idx ] [ md5_S_table idx array_at ]
+end
+
+#md5_round_step ( idx:Scalar state:Block m:Block -- state2:Block )
+  -> [ idx state m ] [
+    state 0 array_at -> [ a ] [
+      state 1 array_at -> [ b ] [
+        state 2 array_at -> [ c ] [
+          state 3 array_at -> [ d ] [
+            idx b c d md5_F -> [ fv ] [
+              m idx md5_g array_at -> [ mw ] [
+                a fv + idx md5_K + mw + u32 -> [ f2 ] [
+                  b f2 idx md5_S rot_left_32 + u32 -> [ newb ] [
+                    d newb b c nil cons cons cons cons
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+end
+
+#md5_apply_rounds ( state:Block m:Block -- state2:Block )
+  -> [ state m ] [
+    m range64 [fold| idx acc val ctx | idx acc ctx md5_round_step from state ]
+  ]
+end
+
+#md5_add_state ( orig:Block newst:Block -- combined:Block )
+  -> [ orig newst ] [
+    orig 0 array_at newst 0 array_at + u32
+    orig 1 array_at newst 1 array_at + u32
+    orig 2 array_at newst 2 array_at + u32
+    orig 3 array_at newst 3 array_at + u32
+    nil cons cons cons cons
+  ]
+end
+
+#md5_process_block ( state:Block m:Block -- state2:Block )
+  -> [ state m ] [
+    state m md5_apply_rounds -> [ newstate ] [
+      state newstate md5_add_state
+    ]
+  ]
+end
+
+#sub_block_step ( idx:Scalar acc:Block val:Scalar ctx:Block -- acc2:Block )
+  -> [ idx acc val ctx ] [
+    idx ctx 0 array_at >= idx ctx 1 array_at < and
+  ]
+  cond [ val acc cons ] else [ acc ] ?
+end
+
+#pair ( a:Unknown b:Unknown -- blk:Block )
+  -> [ a b ] [
+    b nil cons a swap cons
+  ]
+end
+
+#extract_sub_block ( str:Block start:Scalar stop:Scalar -- sub:Block )
+  -> [ str start stop ] [
+    start stop pair -> [ range_ctx ] [
+      range_ctx str [fold| idx acc val ctx_in | idx acc val ctx_in sub_block_step from nil ] reverse
+    ]
+  ]
+end
+
+#md5_process_all ( padded:Block num_chunks:Scalar idx:Scalar state:Block -- state2:Block )
+  -> [ padded num_chunks idx state ] [ idx num_chunks = ]
+  cond [
+    state
+  ] else [
+    idx 64 * -> [ start ] [
+      padded start start 64 + extract_sub_block -> [ chunk ] [
+        chunk md5_extract_words -> [ m ] [
+          state m md5_process_block -> [ newstate ] [
+            padded num_chunks idx 1 + newstate md5_process_all
+          ]
+        ]
+      ]
+    ]
+  ] ?
+end
+
+#md5_hash ( msg:Block -- hex:Block )
+  -> [ msg ] [
+    msg md5_pad -> [ padded ] [
+      padded length 64 / -> [ num_chunks ] [
+        padded num_chunks 0 [ 1732584193 4023233417 2562383102 271733878 ] md5_process_all -> [ finalstate ] [
+          finalstate 0 array_at word_to_hex_le
+          finalstate 1 array_at word_to_hex_le concat
+          finalstate 2 array_at word_to_hex_le concat
+          finalstate 3 array_at word_to_hex_le concat
+        ]
+      ]
+    ]
+  ]
+end
+
+#run_test ( -- )
+  "" md5_hash str_print 10 print_char
+  "abc" md5_hash str_print 10 print_char
+  "message digest" md5_hash str_print 10 print_char
+  "abcdefghijklmnopqrstuvwxyz" md5_hash str_print 10 print_char
+  "The quick brown fox jumps over the lazy dog" md5_hash str_print 10 print_char
+end
+
+run_test
