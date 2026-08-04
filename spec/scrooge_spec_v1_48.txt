@@ -37,7 +37,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 ═══ 3. Control Flow & Iterators ═══
 - Conditional: `flag cond [ true-body ] else [ false-body ] ?`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out).
 - `select` chooses a value with no branching: `vt vf flag select` -> vt if flag nonzero else vf. Both operands are always evaluated.
-- No loop keyword. Write loops as tail-recursive words (self- or mutual-recursion in terminal position is optimized to iteration).
+- No loop keyword. Write loops as tail-recursive words. Only DIRECT self-recursion in terminal position is optimized to iteration; mutual recursion (word A's terminal call to word B, which terminally calls back to A) is not converted, still nests one stack frame per call, and is bounded by MAX_FRAMES (65536).
 - Iterators over a Block:
     `[map|  idx val ctx | body ]`          body effect: ( idx val -- val' )
     `[fold| idx acc val ctx | body from init ]`  body effect: ( idx acc val -- acc' )
@@ -51,12 +51,13 @@ A Block is an index-typed anonymous record: an ordered set of typed slots.
 
 Access is a fixed per-type protocol (NOT one polymorphic operator). Each collection type provides the same shape of words:
     <s>_get ( <s> key -- val )          keyed / static-slot read
-    <s>_set ( <s> key val -- <s>' )     replace a slot value (same type only)
+    <s>_set ( <s> key val -- <s>' )     functional update: arity (3, 1), net effect -2
     <s>_at  ( <s> idx -- val )          integer-indexed read — OPTIONAL
 
+- `_set` is a FUNCTIONAL update, not an in-place mutation: it copies the collection, writes the one slot, and returns the new value. The original value is unchanged and remains valid to use. Never change a slot's shape or type (see §10).
 - `_at` exists ONLY on homogeneous collections (arrays/lists/blocks), where the result type is known regardless of index. Records do NOT provide `_at`.
 - Use `_get` (static key/slot) for records; `_at` (integer index) for arrays.
-- Pick operation by structure: `array_at`, `list_at`, `block_at` for sequences; `record_get`, `map_get` for keyed data.
+- Primitive spellings: `_at`: `at`, `array_at`, `arr_at`, `list_at`, `block_at`. `_get`: `block_get`, `array_get`, `list_get`, `record_get`. `_set`: `block_set`, `array_set`, `list_set`, `record_set`. (`arr_get`/`arr_set`/`map_get`/`map_set`/`rec_get`/`rec_set` are library words defined in `array.sg`/`map.sg`/`record.sg` — see §8 — not compiler primitives; a local `#word` definition using any of the primitive spellings above is rejected as `DuplicateWordError`, but the six library spellings are exactly what those lexicons are for.)
 
 ═══ 5. Heap & Memory Protocol ═══
 - `size hnew -> ptr` allocate cells. `ptr idx hread -> val`. `val ptr idx hwrite`.
@@ -70,23 +71,23 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 
 ═══ 7. Primitives ═══
 - Explicit Float Cast: `to_float` ( Scalar -- Scalar ).
-- Absolute Value: `abs` ( Scalar -- Scalar ).
+- Absolute Value: `abs` ( Scalar -- Scalar ). Min/Max: `min`, `max` ( Scalar Scalar -- Scalar ).
 - Stack Shufflers: `dup` ( x -- x x ) | `drop` ( x -- ) | `swap` ( x y -- y x ) | `rot` ( x y z -- y z x ) | `over` ( x y -- x y x ).
-- Static-Index Shufflers: `roll` (depth N to top), `pk` (depth N to top). INDEX MUST BE A LITERAL: `1 pk` ok; `idx pk` is a compile error.
 - Block Build: `cons` ( x block -- block' ) | `pair` ( a b -- [a b] ) | `nil` ( -- [] ) | `len` ( block -- n ).
 - Math: `+`, `-`, `*` | `/` (floor if both int, float if either is float) | `\` (modulo).
+- Bitwise (integer operands only): `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr` ( Scalar Scalar -- Scalar ) | `bitnot` ( Scalar -- Scalar ).
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`).
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
 - I/O: `print_char` ( ascii -- ) | `print_int` ( int -- ).
 
 ═══ 8. Standard Library Modules (import with `use "lexicon"`) ═══
 Import at file top; names resolve only for imported lexicons.
-- `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, block_sort.
+- `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, block_sort, insert_sorted.
 - `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line.
 - `memory`: hclear, hloop_fill, hloop_add, h_find_val.
 - `array`: arr_make, arr_size, arr_offset, arr_get, arr_set, nth_or_default.
 - `list`: lst_make, lst_get, lst_set, lst_push.
-- `map`: map_make, map_get, map_set.
+- `map`: map_make, map_hash, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══
@@ -96,17 +97,18 @@ Static checker enforces:
 - `UnknownWordError`: Invocation of an undeclared word or primitive.
 - `ParseError`: Unterminated brackets, missing signature parentheses, nested code blocks (depth > 1 cap), or unbracketed frame.
 - `ReservedWordIdentifierError`: Reserved keyword used as parameter name or frame alias.
-- `DuplicateWordError`: Local `#word` definition shadowing a `use`-imported lexicon word or duplicate local word definition.
+- `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
 - Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int.
+  - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
-- `roll`/`pk` take LITERAL indices only.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
 - `cond` branches MUST match in count and type.
 - No code block nested inside a code block (depth-1 cap).
 - `_at` only on homogeneous collections; never index a record.
-- `_set` may replace a value with the same type only — never change shape or type.
+- `_get`/`_set` only on `Block`/`Record`; never on `Ptr` or `Scalar`.
+- `_set` may replace a slot's value only with a value of the SAME type — never change shape or type. Enforced by Track 2 wherever both the slot's current type and the incoming value's type are statically known; unchecked when either is `Unknown`.
 - Pointers are opaque — no pointer arithmetic (`ptr 1 +`).
 - `and`/`or` are eager — guard risky paths with `cond`, not `and`/`or`.
 
