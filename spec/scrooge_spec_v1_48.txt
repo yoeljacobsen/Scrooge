@@ -27,12 +27,12 @@ rejected. Everything below serves that guarantee. Study the worked examples
 ═══ 2. Words, Tagged Parameter Signatures & Entry Frames ═══
 - Define: `#name ( inputs -- outputs ) body end`. Every signature MUST explicitly declare input and output parameter types—either positionally (`#foo ( Ptr Scalar -- Scalar )`) or as tagged parameters (`#foo ( src:Ptr i:Scalar -- d:Scalar )`).
 - Recognized type tags: Ptr, Block, Scalar, Record, Map, Unknown.
-- Inter-Macro Tagged Parameter Validation: Parameter type tags are strictly validated at call sites. Passing incorrect types triggers a static `TypeError`.
+- Inter-Word Tagged Parameter Validation: Parameter type tags are strictly validated at call sites. Passing incorrect types triggers a static `TypeError`.
 - Arity Drift Protection: Entry frame `-> [ ... ]` variable count MUST match declared signature input count exactly.
 - Bind names with an arrow frame: `-> [ a b ] [ body ]`. The frame pops as many values as declared inputs in reverse order, binding them for the body. Frame variables inherit types declared in the signature.
 - BOTH bracket pairs are mandatory: `-> [ x ] [ x 1 + ]`. `-> [ x ] x 1 +` is a parse error.
 - Scope: Consecutive sibling frames inherit unshadowed aliases; a trailing `cond` sees active frame aliases.
-- Pre-declaration: Define helper macros BEFORE caller words. Call words by bare name (no `#`): `... fact_iter`.
+- Pre-declaration: Define helper words BEFORE caller words. Call words by bare name (no `#`): `... fact_iter`.
 
 ═══ 3. Control Flow & Iterators ═══
 - Conditional: `flag cond [ true-body ] else [ false-body ] ?`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out).
@@ -65,7 +65,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - In-place swap: read BOTH cells before writing EITHER, or the first write overwrites the value the second needs.
 
 ═══ 6. Zero-Nesting Rule ═══
-- A bracketed block containing any operator, word call, or binding (frame, cond branch, iterator) is CODE. Code may not nest inside code beyond depth 1. Extract inner loops/conditionals into named helper macros.
+- A bracketed block containing any operator, word call, or binding (frame, cond branch, iterator) is CODE. Code may not nest inside code beyond depth 1. Extract inner loops/conditionals into named helper words.
 - A bracketed block containing ONLY scalars/spaces/other data blocks is a DATA literal and may nest freely: `[ 1 [ 2 3 ] ]` is valid.
 
 ═══ 7. Primitives ═══
