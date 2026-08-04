@@ -1,7 +1,20 @@
 { ---- Encapsulated Key-Value Hash Map Lexicon ---- }
+{ ---- ptr is a 2-cell header: [0]=buckets_size, [1]=data_ptr (the actual  ---- }
+{ ---- buckets_size*2 bucket storage). map_get/map_set can't recover      ---- }
+{ ---- buckets_size via `len` on ptr -- ptr is a Ptr, not a Block, and    ---- }
+{ ---- len only operates on Blocks -- so the bucket count is stored      ---- }
+{ ---- explicitly here instead, matching list.sg's lst_make header.      ---- }
 
 #map_make ( buckets_size:Scalar -- ptr:Ptr )
-  -> [ buckets_size ] [ buckets_size 2 * hnew ]
+  -> [ buckets_size ] [
+    buckets_size 2 * hnew -> [ data_ptr ] [
+      2 hnew -> [ hdr ] [
+        buckets_size hdr 0 hwrite
+        data_ptr hdr 1 hwrite
+        hdr
+      ]
+    ]
+  ]
 end
 
 #map_hash ( key:Scalar buckets_size:Scalar -- bucket_idx:Scalar )
@@ -10,25 +23,25 @@ end
 
 #map_get ( ptr:Ptr key:Scalar -- val:Unknown )
   -> [ ptr key ] [
-    ptr
+    ptr 1 hread
     key
-    key ptr len 2 / map_hash
+    key ptr 0 hread map_hash
   ]
-  -> [ ptr key bucket_idx ] [
-    ptr bucket_idx hread key =
-    cond [ ptr bucket_idx 1 + hread ] else [ -1 ] ?
+  -> [ data_ptr key bucket_idx ] [
+    data_ptr bucket_idx hread key =
+    cond [ data_ptr bucket_idx 1 + hread ] else [ -1 ] ?
   ]
 end
 
 #map_set ( val:Unknown ptr:Ptr key:Scalar -- )
   -> [ val ptr key ] [
     val
-    ptr
+    ptr 1 hread
     key
-    key ptr len 2 / map_hash
+    key ptr 0 hread map_hash
   ]
-  -> [ val ptr key bucket_idx ] [
-    key ptr bucket_idx hwrite
-    val ptr bucket_idx 1 + hwrite
+  -> [ val data_ptr key bucket_idx ] [
+    key data_ptr bucket_idx hwrite
+    val data_ptr bucket_idx 1 + hwrite
   ]
 end
