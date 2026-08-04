@@ -99,12 +99,12 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
 ## 7. Failure Checklist (Check Before Emitting Code)
 
 1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`).
-2. **Lexicon Shadowing**: Never define a macro `#word` that shadows a `use`-imported word or standard primitive.
+2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ] ?`).
 4. **Literal `roll`/`pk` Index**: Use literal indices only (`1 pk`, `2 roll`).
 5. **No Code Nesting**: Depth-1 cap on code blocks inside code blocks.
 6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles.
-7. **Every Helper Defined Before Caller**: Order macros from dependencies to caller.
+7. **Every Helper Defined Before Caller**: Order words from dependencies to caller.
 
 ---
 
