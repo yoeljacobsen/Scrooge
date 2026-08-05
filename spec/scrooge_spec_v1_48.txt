@@ -64,6 +64,14 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Ptr is opaque: `ptr 1 +` is a static `TypeError`. Compute integer offset first as Scalar, then pass it: `ptr offset hread`.
 - Block access (`_at`/`_get`) and heap access (`hread`) are different: `_at`/`_get` index a Block value; `hread` reads a heap Ptr. They are NOT interchangeable.
 - In-place swap: read BOTH cells before writing EITHER, or the first write overwrites the value the second needs.
+- `hmark ( -- mark:Scalar )` / `hrelease ( mark:Scalar -- )`: bound heap growth. `hrelease` frees every heap cell allocated since the matching `hmark` and rewinds the allocator. Caller obligation, unchecked by the checker: any `Ptr` obtained between the `hmark` and its `hrelease` is invalid afterward. Do not read, write, or store such a `Ptr` past the release.
+- Typed-heap-wrapper idiom: `hread` is typed `Unknown`, so raw heap access is a type-erasure boundary. Confine that erasure to a handful of named wrapper words whose declared signature states the real result type, which the checker trusts at the call site instead of re-deriving it:
+  ```scrooge
+  #row_at ( tbl:Ptr idx:Scalar -- row:Block )
+    -> [ tbl idx ] [ tbl idx hread ]
+  end
+  ```
+  This is an unchecked assertion, exactly like any other signature: if the heap cell does not actually hold a `Block`, downstream code type-checks against a lie. Prefer this over spreading bare `hread` calls across the program.
 
 ═══ 6. Zero-Nesting Rule ═══
 - A bracketed block containing any operator, word call, or binding (frame, cond branch, iterator) is CODE. Code may not nest inside code beyond depth 1. Extract inner loops/conditionals into named helper words.
@@ -79,6 +87,8 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`).
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
 - I/O: `print_char` ( ascii -- ) | `print_int` ( int -- ).
+- Heap Arena: `hmark` ( -- mark:Scalar ) | `hrelease` ( mark:Scalar -- ). See §5.
+- Abort: `abort` ( Block -- ), never returns. Prints its Block argument to stderr as characters and terminates the process with a nonzero exit status. A cond branch whose terminal call is `abort` is exempt from the "branches MUST match in count and type" rule (§10): the checker unifies on the OTHER branch's stack effect/type instead, since the aborting branch never produces a value.
 
 ═══ 8. Standard Library Modules (import with `use "lexicon"`) ═══
 Import at file top; names resolve only for imported lexicons.
@@ -100,11 +110,11 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int abort hmark hrelease.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
-- `cond` branches MUST match in count and type.
+- `cond` branches MUST match in count and type, except when exactly one branch's terminal call is `abort`: that branch is exempt, and the other branch's effect/type is used (§7).
 - No code block nested inside a code block (depth-1 cap).
 - `_at` only on homogeneous collections; never index a record.
 - `_get`/`_set` only on `Block`/`Record`; never on `Ptr` or `Scalar`.
@@ -149,5 +159,30 @@ Float conversion before division:
 ```scrooge
 #avg_calc ( total:Scalar count:Scalar -- avg:Scalar )
   -> [ total count ] [ total to_float count to_float / ]
+end
+```
+
+Typed-heap-wrapper (confines the `hread` type-erasure boundary to one named word, per §5):
+```scrooge
+#row_at ( tbl:Ptr idx:Scalar -- row:Block )
+  -> [ tbl idx ] [ tbl idx hread ]
+end
+```
+
+Abort on an unreachable branch (per §7/§10, the aborting branch is exempt from the cond stack-effect match):
+```scrooge
+#safe_div ( a:Scalar b:Scalar -- r:Scalar )
+  -> [ a b ] b 0 =
+  cond [ [ 68 105 118 32 98 121 32 122 101 114 111 ] abort ] else [ a b / ] ?
+end
+```
+
+Bound heap growth around a unit of work with `hmark`/`hrelease` (per §5):
+```scrooge
+#process_query ( -- )
+  hmark -> [ mark ] [
+    10 hnew drop
+    mark hrelease
+  ]
 end
 ```
