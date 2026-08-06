@@ -96,8 +96,8 @@ Import at file top; names resolve only for imported lexicons.
 - `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line.
 - `memory`: hclear, hloop_fill, hloop_add, h_find_val.
 - `array`: arr_make, arr_size, arr_offset, arr_get, arr_set, nth_or_default.
-- `list`: lst_make, lst_get, lst_set, lst_push.
-- `map`: map_make, map_hash, map_get, map_set.
+- `list`: lst_make, lst_get, lst_set, lst_push, lst_try_push, lst_new_cap, lst_grow.
+- `map`: map_make, map_hash, map_find, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══

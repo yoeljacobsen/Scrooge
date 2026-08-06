@@ -21,6 +21,24 @@ end
   \ 2 *
 end
 
+#map_find ( ptr:Ptr key:Scalar -- val:Unknown found:Scalar )
+  -> [ ptr key ] [
+    ptr 1 hread
+    key
+    key ptr 0 hread map_hash
+  ]
+  -> [ data_ptr key bucket_idx ] [
+    data_ptr bucket_idx hread key =
+    cond [
+      data_ptr bucket_idx 1 + hread
+      1
+    ] else [
+      0
+      0
+    ] ?
+  ]
+end
+
 #map_get ( ptr:Ptr key:Scalar -- val:Unknown )
   -> [ ptr key ] [
     ptr 1 hread
@@ -29,11 +47,21 @@ end
   ]
   -> [ data_ptr key bucket_idx ] [
     data_ptr bucket_idx hread key =
-    cond [ data_ptr bucket_idx 1 + hread ] else [ -1 ] ?
+    cond [
+      data_ptr bucket_idx 1 + hread
+    ] else [
+      [ 75 101 121 32 110 111 116 32 102 111 117 110 100 ] abort
+    ] ?
   ]
 end
 
-#map_set ( val:Unknown ptr:Ptr key:Scalar -- )
+{ map_set returns ok=0 rather than silently overwriting when the bucket }
+{ already holds a DIFFERENT key: this map is direct-mapped (buckets_size }
+{ fixed slots, no chaining/probing per map_hash), so a write that clobbers }
+{ an unrelated existing key is the closest analogue this structure has to }
+{ "the table is full" -- the alternative (silently overwriting) would }
+{ corrupt the other key's entry with no signal to the caller. }
+#map_set ( val:Unknown ptr:Ptr key:Scalar -- ok:Scalar )
   -> [ val ptr key ] [
     val
     ptr 1 hread
@@ -41,7 +69,18 @@ end
     key ptr 0 hread map_hash
   ]
   -> [ val data_ptr key bucket_idx ] [
+    val
+    data_ptr
+    key
+    bucket_idx
+    data_ptr bucket_idx hread
+  ]
+  -> [ val data_ptr key bucket_idx existing_key ] [
+    existing_key key = existing_key 0 = or
+  ]
+  cond [
     key data_ptr bucket_idx hwrite
     val data_ptr bucket_idx 1 + hwrite
-  ]
+    1
+  ] else [ 0 ] ?
 end
