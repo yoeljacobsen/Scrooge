@@ -92,12 +92,12 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 
 ═══ 8. Standard Library Modules (import with `use "lexicon"`) ═══
 Import at file top; names resolve only for imported lexicons.
-- `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, block_sort, insert_sorted.
-- `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line, str_to_int, find_sub, fs_matches_at.
+- `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, insert_sorted, block_sort.
+- `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line, str_to_int, fs_matches_at, find_sub.
 - `memory`: hclear, hloop_fill, hloop_add, h_find_val.
-- `array`: arr_make, arr_size, arr_offset, arr_get, arr_set, nth_or_default.
-- `bitset`: bs_add, bs_test, bs_union, bs_inter, bs_minus, bs_first, bs_count.
-- `list`: lst_make, lst_get, lst_set, lst_push, lst_try_push, lst_new_cap, lst_grow.
+- `array`: arr_size, arr_make, arr_offset, arr_get, arr_set, nth_or_default.
+- `bitset`: bs_add, bs_test, bs_union, bs_inter, bs_minus, bs_count, bs_first.
+- `list`: lst_make, lst_get, lst_set, lst_new_cap, lst_grow, lst_push, lst_try_push.
 - `map`: map_make, map_hash, map_find, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
 
