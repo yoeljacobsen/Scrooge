@@ -1,0 +1,53 @@
+{ ---- 64-bit Bitset Lexicon, built on the bitand/bitor/bitxor/bitshl/    ---- }
+{ ---- bitshr/bitnot primitives. A "set" is a plain Scalar (64-bit int);   ---- }
+{ ---- bit i is the (1 << i) place. No allocation, no Ptr -- everything    ---- }
+{ ---- here is pure Scalar arithmetic.                                    ---- }
+
+#bs_add ( set:Scalar i:Scalar -- set2:Scalar )
+  -> [ set i ] [ set 1 i bitshl bitor ]
+end
+
+#bs_test ( set:Scalar i:Scalar -- present:Scalar )
+  -> [ set i ] [ set 1 i bitshl bitand 0 != ]
+end
+
+#bs_union ( a:Scalar b:Scalar -- c:Scalar )
+  -> [ a b ] [ a b bitor ]
+end
+
+#bs_inter ( a:Scalar b:Scalar -- c:Scalar )
+  -> [ a b ] [ a b bitand ]
+end
+
+#bs_minus ( a:Scalar b:Scalar -- c:Scalar )
+  -> [ a b ] [ a b bitnot bitand ]
+end
+
+#bs_count_step ( set:Scalar i:Scalar acc:Scalar -- set2:Scalar i2:Scalar acc2:Scalar )
+  -> [ set i acc ] [
+    set
+    i 1 +
+    acc set i bs_test +
+  ]
+end
+#bs_count_loop ( set:Scalar i:Scalar acc:Scalar -- acc2:Scalar )
+  -> [ set i acc ] [ i 64 < ]
+  cond [ set i acc bs_count_step bs_count_loop ] else [ acc ] ?
+end
+#bs_count ( set:Scalar -- n:Scalar )
+  -> [ set ] [ set 0 0 bs_count_loop ]
+end
+
+#bs_first_step ( set:Scalar i:Scalar -- set2:Scalar i2:Scalar )
+  -> [ set i ] [ set i 1 + ]
+end
+#bs_first_loop ( set:Scalar i:Scalar -- i2:Scalar found:Scalar )
+  -> [ set i ] [ i 64 = ]
+  cond [ 0 0 ] else [
+    set i bs_test
+    cond [ i 1 ] else [ set i bs_first_step bs_first_loop ] ?
+  ] ?
+end
+#bs_first ( set:Scalar -- i:Scalar found:Scalar )
+  -> [ set ] [ set 0 bs_first_loop ]
+end
