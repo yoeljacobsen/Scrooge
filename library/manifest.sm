@@ -55,3 +55,6 @@ tool "strings" name "is_upper" sig "( ch -- flag )" desc "1 if char code is A-Z,
 tool "strings" name "is_lower" sig "( ch -- flag )" desc "1 if char code is a-z, else 0."
 tool "strings" name "int_to_str" sig "( n -- str )" desc "Converts a signed integer to its digit-character block."
 tool "strings" name "print_line" sig "( n -- )" desc "Prints an integer followed by a newline."
+tool "strings" name "str_to_int" sig "( chars start end -- n ok )" desc "Multi-digit signed parse of [start,end); ok=0 if not entirely digits (plus an optional leading '-')."
+tool "strings" name "find_sub" sig "( hay needle from -- pos found )" desc "First index >= from where needle occurs in hay; found=0 if absent."
+tool "strings" name "fs_matches_at" sig "( hay needle i nlen -- match )" desc "1 if needle occurs in hay starting exactly at i."

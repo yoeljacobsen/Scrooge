@@ -93,7 +93,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 ═══ 8. Standard Library Modules (import with `use "lexicon"`) ═══
 Import at file top; names resolve only for imported lexicons.
 - `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, block_sort, insert_sorted.
-- `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line.
+- `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line, str_to_int, find_sub, fs_matches_at.
 - `memory`: hclear, hloop_fill, hloop_add, h_find_val.
 - `array`: arr_make, arr_size, arr_offset, arr_get, arr_set, nth_or_default.
 - `bitset`: bs_add, bs_test, bs_union, bs_inter, bs_minus, bs_first, bs_count.

@@ -39,3 +39,86 @@ end
 #print_line ( n:Scalar -- )
   -> [ n ] [ n int_to_str str_print 10 print_char ]
 end
+
+{ ---- String -> integer (multi-digit, signed, found-flag rather than a  ---- }
+{ ---- sentinel). ok=0 for an empty range or any non-digit character in  ---- }
+{ ---- [start,end) other than a single optional leading '-'.            ---- }
+#s2i_step ( chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar -- chars2:Block idx2:Scalar stop2:Scalar acc2:Scalar ok2:Scalar )
+  -> [ chars idx stop acc ok ] [
+    chars idx array_at -> [ ch ] [
+      ch is_digit
+      cond [
+        chars idx 1 + stop acc 10 * ch 48 - + 1
+      ] else [
+        chars stop stop acc 0
+      ] ?
+    ]
+  ]
+end
+#s2i_loop ( chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar -- acc2:Scalar ok2:Scalar )
+  -> [ chars idx stop acc ok ] [ idx stop < ]
+  cond [ chars idx stop acc ok s2i_step s2i_loop ] else [ acc ok ] ?
+end
+{ Note: the parameter is documented as `end` in the signature (harmless --
+  signature scanning stops at `)`, not the "end" keyword) but bound as
+  `stop` in every frame below. `end` is the reserved word that terminates a
+  `#word ... end` definition; using it as an actual FRAME variable name
+  makes the parser's body-scanner stop at that token, truncating the word
+  right there (a raw, unlocatable "unterminated [ block" ParseError, not a
+  ReservedWordIdentifierError -- the reserved-word check that would catch
+  this runs on parsed nodes, after the body-scanner has already cut the
+  word short on the literal token match). Confirmed by bisection: this
+  word fails to compile with `end` bound here, and compiles cleanly with
+  `stop`. }
+#str_to_int ( chars:Block start:Scalar end:Scalar -- n:Scalar ok:Scalar )
+  -> [ chars start stop ] [
+    chars
+    start
+    stop
+    start stop < cond [ chars start array_at 45 = ] else [ 0 ] ?
+  ]
+  -> [ chars start stop neg ] [
+    neg
+    chars
+    neg cond [ start 1 + ] else [ start ] ?
+    stop
+    0
+    0
+    s2i_loop
+  ]
+  -> [ neg acc ok ] [
+    neg cond [ 0 acc - ] else [ acc ] ?
+    ok
+  ]
+end
+
+{ ---- Substring search: hay[i..i+len(needle)) == needle for the first    ---- }
+{ ---- i >= from. Compares characters in place (no substring is ever      ---- }
+{ ---- materialized); found=0, pos=0 if there is no such i.               ---- }
+#fs_cmp_step ( hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar -- hay2:Block needle2:Block i2:Scalar j2:Scalar nlen2:Scalar ok2:Scalar )
+  -> [ hay needle i j nlen ok ] [
+    hay needle i
+    hay i j + array_at needle j array_at =
+    cond [ j 1 + nlen 1 ] else [ nlen nlen 0 ] ?
+  ]
+end
+#fs_cmp_loop ( hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar -- match:Scalar )
+  -> [ hay needle i j nlen ok ] [ j nlen < ok and ]
+  cond [ hay needle i j nlen ok fs_cmp_step fs_cmp_loop ] else [ ok ] ?
+end
+#fs_matches_at ( hay:Block needle:Block i:Scalar nlen:Scalar -- match:Scalar )
+  -> [ hay needle i nlen ] [ hay needle i 0 nlen 1 fs_cmp_loop ]
+end
+#fs_scan_step ( hay:Block needle:Block i:Scalar hlen:Scalar nlen:Scalar -- hay2:Block needle2:Block i2:Scalar hlen2:Scalar nlen2:Scalar )
+  -> [ hay needle i hlen nlen ] [ hay needle i 1 + hlen nlen ]
+end
+#fs_scan_loop ( hay:Block needle:Block i:Scalar hlen:Scalar nlen:Scalar -- pos:Scalar found:Scalar )
+  -> [ hay needle i hlen nlen ] [ i nlen + hlen > not ]
+  cond [
+    hay needle i nlen fs_matches_at
+    cond [ i 1 ] else [ hay needle i hlen nlen fs_scan_step fs_scan_loop ] ?
+  ] else [ 0 0 ] ?
+end
+#find_sub ( hay:Block needle:Block from:Scalar -- pos:Scalar found:Scalar )
+  -> [ hay needle from ] [ hay needle from hay len needle len fs_scan_loop ]
+end
