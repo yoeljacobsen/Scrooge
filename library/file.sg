@@ -1,0 +1,135 @@
+{ ---- Sequential File I/O Lexicon ---- }
+{ ---- A File is the opaque handle produced by the `fopen` primitive; the  ---- }
+{ ---- checker rejects arithmetic, hread/hwrite and _at/_get on it, so a   ---- }
+{ ---- handle can only ever reach the six file primitives (spec Sec.12).   ---- }
+{ ---- Handles 0/1/2 are the pre-opened standard streams, so every word    ---- }
+{ ---- here reads stdin or writes stdout/stderr just as readily as a file. ---- }
+{ ---- A "string" here is a Block of character codes, exactly as in        ---- }
+{ ---- strings.sg -- no separate string type is introduced.                ---- }
+
+{ ---- Open modes: fopen's second argument, named so no caller has to     ---- }
+{ ---- remember which integer means what.                                 ---- }
+#f_read ( -- mode:Scalar )
+  0
+end
+#f_write ( -- mode:Scalar )
+  1
+end
+#f_append ( -- mode:Scalar )
+  2
+end
+
+{ ---- The three pre-opened standard streams. Each body pushes a plain     ---- }
+{ ---- Scalar while the signature declares File: the same one-word         ---- }
+{ ---- type-assertion idiom the spec prescribes for hread wrappers         ---- }
+{ ---- (Sec.5), confined to three words here instead of spread across      ---- }
+{ ---- every caller.                                                      ---- }
+#f_stdin ( -- fh:File )
+  0
+end
+#f_stdout ( -- fh:File )
+  1
+end
+#f_stderr ( -- fh:File )
+  2
+end
+
+{ ---- Open helpers, one per mode. ok=0 means the open failed (no such    ---- }
+{ ---- file, no permission, or the 61 openable slots are all in use) and   ---- }
+{ ---- the returned handle must not be used.                              ---- }
+#f_open_read ( path:Block -- fh:File ok:Scalar )
+  -> [ path ] [ path f_read fopen ]
+end
+#f_open_write ( path:Block -- fh:File ok:Scalar )
+  -> [ path ] [ path f_write fopen ]
+end
+#f_open_append ( path:Block -- fh:File ok:Scalar )
+  -> [ path ] [ path f_append fopen ]
+end
+
+{ ---- Private: reverse and concatenate Blocks. Duplicated from util.sg's ---- }
+{ ---- `reverse`/`concat` rather than imported, because every lexicon in   ---- }
+{ ---- library/ is self-contained (none of them `use` another). Both are   ---- }
+{ ---- folds, not hand-written tail recursion, deliberately: a hand-written---- }
+{ ---- loop holding a Block parameter unchanged while growing a cons       ---- }
+{ ---- accumulator is Bug 13's leak class.                                ---- }
+#f_rev_loop ( str:Block -- reversed:Block )
+  [fold| idx acc val _ | val acc cons from nil ]
+end
+#f_cat_loop ( a:Block b:Block -- joined:Block )
+  -> [ a b ] [ a f_rev_loop [fold| idx acc val _ | val acc cons from b ] ]
+end
+
+{ ---- Sequential write. `fwrite` moves the whole Block in one C-level    ---- }
+{ ---- pass, so this is O(len) rather than a word call per character;      ---- }
+{ ---- ok=0 means fewer characters were written than the string holds.     ---- }
+#f_write_str ( str:Block fh:File -- ok:Scalar )
+  -> [ str fh ] [ str len str fh fwrite = ]
+end
+#f_write_line ( str:Block fh:File -- ok:Scalar )
+  -> [ str fh ] [ str fh f_write_str 10 fh fputc and ]
+end
+
+{ ---- Bulk sequential read: pull chunks until an empty one signals end   ---- }
+{ ---- of input. The chunk size DOUBLES each round (up to a cap), which is ---- }
+{ ---- what keeps the whole read linear: a fixed chunk size would need     ---- }
+{ ---- length/chunk concatenations, each copying everything read so far,   ---- }
+{ ---- i.e. quadratic in the file size. Doubling makes that a logarithmic  ---- }
+{ ---- number of concatenations whose copy cost sums to about twice the    ---- }
+{ ---- file -- the same reason lst_grow doubles instead of adding a        ---- }
+{ ---- constant. The cap keeps fread's up-front byte buffer bounded no     ---- }
+{ ---- matter how large the input turns out to be.                        ---- }
+#f_chunk ( -- n:Scalar )
+  65536
+end
+#f_next_chunk ( n:Scalar -- n2:Scalar )
+  -> [ n ] [ n 2 * 4194304 min ]
+end
+#f_read_all_loop ( fh:File acc:Block n:Scalar -- str:Block )
+  -> [ fh acc n ] [ fh acc n fh n fread ]
+  -> [ fh acc n chunk ] chunk len 0 =
+  cond [ acc ] else [ fh acc chunk f_cat_loop n f_next_chunk f_read_all_loop ] ?
+end
+#f_read_all ( fh:File -- str:Block )
+  -> [ fh ] [ fh nil f_chunk f_read_all_loop ]
+end
+
+{ ---- Line-at-a-time sequential read. This one must stop exactly at the  ---- }
+{ ---- newline rather than over-read, so it goes through `fgetc` and pays  ---- }
+{ ---- a cons per character: fine for line-structured text, wrong tool for ---- }
+{ ---- a single enormous line (use f_read_all for bulk). The newline is    ---- }
+{ ---- consumed and not returned. got=0 means end of input was reached     ---- }
+{ ---- with nothing left to read, which is how an empty last line is told  ---- }
+{ ---- apart from no line at all -- the same found-flag convention         ---- }
+{ ---- str_to_int and find_sub use.                                       ---- }
+#f_read_line_loop ( fh:File acc:Block got:Scalar -- rev:Block got2:Scalar )
+  -> [ fh acc got ] [ fh acc got fh fgetc ]
+  -> [ fh acc got ch ok ] ok not
+  cond [ acc got ] else [
+    ch 10 =
+    cond [ acc 1 ] else [ fh ch acc cons 1 f_read_line_loop ] ?
+  ] ?
+end
+#f_read_line ( fh:File -- line:Block got:Scalar )
+  -> [ fh ] [ fh nil 0 f_read_line_loop ]
+  -> [ rev got ] [ rev f_rev_loop got ]
+end
+
+{ ---- Whole-file convenience: open, transfer, close. ok=0 means the open ---- }
+{ ---- or the close failed; on a failed open the result is the empty       ---- }
+{ ---- Block, never a partial file passed off as complete.                 ---- }
+#f_read_file ( path:Block -- str:Block ok:Scalar )
+  -> [ path ] [ path f_open_read ]
+  -> [ fh ok ] ok not
+  cond [ nil 0 ] else [ fh f_read_all fh fclose ] ?
+end
+#f_write_file ( str:Block path:Block -- ok:Scalar )
+  -> [ str path ] [ str path f_open_write ]
+  -> [ str fh ok ] ok not
+  cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
+end
+#f_append_file ( str:Block path:Block -- ok:Scalar )
+  -> [ str path ] [ str path f_open_append ]
+  -> [ str fh ok ] ok not
+  cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
+end

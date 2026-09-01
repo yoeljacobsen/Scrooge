@@ -19,6 +19,10 @@ rejected. Everything below serves that guarantee. Study the worked examples
   - Ptr: Opaque handle to a heap allocation.
   - Record: Key-indexed heterogeneous record structure.
   - Map: Key-value dictionary structure.
+  - File: Opaque handle to an open file or standard stream. Produced only by
+    `fopen`; accepted only by the file primitives (§12). Arithmetic on it,
+    `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all
+    static `TypeError`s.
   - Unknown: Produced by stack shufflers (`dup`, `swap`, `rot`, `over`); bypasses Track 2 type checks.
   - Mixed int/float math promotes to float.
 - String Literals: `"Hi"` expands at tokenization to a Block of ASCII integer scalars `[ 72 105 ]`.
@@ -26,7 +30,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 
 ═══ 2. Words, Tagged Parameter Signatures & Entry Frames ═══
 - Define: `#name ( inputs -- outputs ) body end`. Every signature MUST explicitly declare input and output parameter types—either positionally (`#foo ( Ptr Scalar -- Scalar )`) or as tagged parameters (`#foo ( src:Ptr i:Scalar -- d:Scalar )`).
-- Recognized type tags: Ptr, Block, Scalar, Record, Map, Unknown.
+- Recognized type tags: Ptr, Block, Scalar, Record, Map, File, Unknown.
 - Inter-Word Tagged Parameter Validation: Parameter type tags are strictly validated at call sites. Passing incorrect types triggers a static `TypeError`.
 - Arity Drift Protection: Entry frame `-> [ ... ]` variable count MUST match declared signature input count exactly.
 - Bind names with an arrow frame: `-> [ a b ] [ body ]`. The frame pops as many values as declared inputs in reverse order, binding them for the body. Frame variables inherit types declared in the signature.
@@ -86,7 +90,8 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Bitwise (integer operands only): `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr` ( Scalar Scalar -- Scalar ) | `bitnot` ( Scalar -- Scalar ).
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`).
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
-- I/O: `print_char` ( ascii -- ) | `print_int` ( int -- ).
+- I/O: `print_char` ( ascii -- ) | `print_int` ( int -- )
+- Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ). See §12..
 - Heap Arena: `hmark` ( -- mark:Scalar ) | `hrelease` ( mark:Scalar -- ). See §5.
 - Abort: `abort` ( Block -- ), never returns. Prints its Block argument to stderr as characters and terminates the process with a nonzero exit status. A cond branch whose terminal call is `abort` is exempt from the "branches MUST match in count and type" rule (§10): the checker unifies on the OTHER branch's stack effect/type instead, since the aborting branch never produces a value.
 
@@ -100,6 +105,7 @@ Import at file top; names resolve only for imported lexicons.
 - `list`: lst_make, lst_get, lst_set, lst_new_cap, lst_grow, lst_push, lst_try_push.
 - `map`: map_make, map_hash, map_find, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
+- `file`: f_read, f_write, f_append, f_stdin, f_stdout, f_stderr, f_open_read, f_open_write, f_open_append, f_write_str, f_write_line, f_chunk, f_next_chunk, f_read_all, f_read_line, f_read_file, f_write_file, f_append_file.
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══
 Static checker enforces:
@@ -111,7 +117,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int abort hmark hrelease.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
@@ -178,6 +184,21 @@ Abort on an unreachable branch (per §7/§10, the aborting branch is exempt from
 end
 ```
 
+Sequential file I/O, whole-file and character-at-a-time (per §12):
+```scrooge
+use "file"
+#count_lines_loop ( fh:File n:Scalar -- total:Scalar )
+  -> [ fh n ] [ fh n fh fgetc ]
+  -> [ fh n ch ok ] ok not
+  cond [ n ] else [ fh n ch 10 = + count_lines_loop ] ?
+end
+#copy_file ( src:Block dst:Block -- ok:Scalar )
+  -> [ src dst ] [ dst src f_read_file ]
+  -> [ dst text ok ] ok not
+  cond [ 0 ] else [ text dst f_write_file ] ?
+end
+```
+
 Bound heap growth around a unit of work with `hmark`/`hrelease` (per §5):
 ```scrooge
 #process_query ( -- )
@@ -187,3 +208,50 @@ Bound heap growth around a unit of work with `hmark`/`hrelease` (per §5):
   ]
 end
 ```
+
+═══ 12. File I/O Protocol ═══
+- A `File` is an opaque handle, exactly as a `Ptr` is (§5): the checker rejects
+  arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into
+  it. It is produced only by `fopen` and consumed only by the six file
+  primitives. The value is not a memory address and carries no length.
+- Open: `path mode fopen -> fh ok`. `path` is a Block of character codes (a
+  string literal is exactly that). `mode` is 0 read, 1 write (truncating), 2
+  append. ok=0 means the open failed -- the file does not exist, permission
+  was refused, or every openable handle is already in use -- and `fh` must not
+  be used. Prefer `library/file.sg`'s named `f_open_read`/`f_open_write`/
+  `f_open_append` over a bare mode integer.
+- Close: `fh fclose -> ok`. ok=0 means the handle was already closed, or names
+  a standard stream (which this process does not own). Closing flushes.
+- Handles 0, 1 and 2 are pre-opened as stdin, stdout and stderr, so the same
+  read and write words serve the standard streams; `file.sg` names them
+  `f_stdin`/`f_stdout`/`f_stderr`. `fputc`/`fwrite` to stdout or stderr flush
+  per call, matching `print_char`, so output interleaves in order; a real file
+  stays buffered until it is closed or the process exits normally.
+- Sequential read, two granularities:
+    `fh fgetc -> ch ok`        one character; ok=0 at end of input (ch=0)
+    `fh n fread -> str`        up to n characters as a Block; `str len` is how
+                               many were actually read, and an empty Block
+                               means end of input
+  Use `fgetc` when the read must stop exactly at a delimiter. Use `fread` for
+  throughput: it moves the whole chunk in one pass, where a Scrooge-level
+  per-character loop pays a word call and a `cons` copy per character.
+- Sequential write, the same two granularities:
+    `ch fh fputc -> ok`        one character; ok=0 on a write error
+    `str fh fwrite -> written` every character of str; written < `str len`
+                               means the write failed part way
+- Partiality is always reported through a Scalar flag or a length, never by
+  aborting -- the same convention as `lst_try_push`, `map_set` and
+  `str_to_int`. Only an outright protocol violation is fatal: a non-File where
+  a File is required, a closed handle, a non-Block path, or a negative `fread`
+  count. This mirrors `hread`/`hwrite`.
+- Reads and writes are sequential only. There is no seek, no tell and no
+  random access: a handle advances and never rewinds. Reading a file twice
+  means opening it twice.
+- Cost model: a file read into a Block costs one Block slot per character, and
+  a Block slot is considerably wider than a byte. `f_read_all` materializes an
+  entire file that way, which is the right thing for configuration and data
+  files and the wrong thing for something far larger than memory -- stream
+  such input with `fread` a chunk at a time instead of accumulating it.
+- The number of simultaneously open handles is fixed and small (61 beyond the
+  three standard streams). Close what you open; exhaustion surfaces as
+  `fopen`'s ok=0, not as a crash.

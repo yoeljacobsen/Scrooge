@@ -46,10 +46,13 @@ Standard library lexicon modules reside in `library/`:
 - `library/array.sg`: Safe indexing (`nth_or_default`), N-dimensional heap arrays (`arr_make`, `arr_get`, `arr_set`, `arr_offset`, `arr_size`).
 - `library/memory.sg`: Heap operations (`hclear`, `hloop_fill`, `hloop_add`, `h_find_val`).
 - `library/list.sg`, `library/map.sg`, `library/record.sg`: Growable lists, hash maps, static records.
+- `library/bitset.sg`: 64-bit bitsets as plain Scalars (`bs_add`, `bs_test`, `bs_union`, `bs_inter`, `bs_minus`, `bs_count`, `bs_first`).
+- `library/file.sg`: Sequential file I/O over the opaque `File` handle -- whole-file transfer (`f_read_file`, `f_write_file`, `f_append_file`), explicit open/close (`f_open_read`/`f_open_write`/`f_open_append`), streaming reads and writes (`f_read_all`, `f_read_line`, `f_write_str`, `f_write_line`), and the pre-opened standard streams (`f_stdin`, `f_stdout`, `f_stderr`).
 
-The v1.48 discovery manifest is synchronized at [`library/manifest.sm`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/library/manifest.sm). Verify 100% manifest synchronization with:
+The v1.48 discovery manifest is synchronized at [`library/manifest.sm`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/library/manifest.sm). It is generated, not hand-maintained: `tools/build_manifest.py` is the single canonical source of truth, deriving every entry (and the matching spec §8 lexicon word-lists) directly from `library/*.sg`. Regenerate it after any library change, or just verify it's in sync:
 ```bash
-python3 manifest_check.py
+python3 tools/build_manifest.py          # regenerate manifest.sm + spec §8
+python3 tools/build_manifest.py --check  # verify only; exit 1 if out of sync
 ```
 
 ---
@@ -73,4 +76,21 @@ python3 scratch/test_gates_a_j.py
 - **Gate G2**: Correct call-site macro parameter order (PASSES).
 - **Gate H**: Bare decimal float literal compilation & execution (`3.14` PASSES).
 - **Gate I**: Signed string formatting (`int_to_str` on `-42` outputs `"-42"` PASSES).
-- **Gate J**: Library manifest 100% synchronization check (PASSES).
+- **Gate J**: Library manifest + spec §8 100% synchronization check (PASSES).
+
+### File I/O Gate (Gate K)
+
+File I/O has its own harness, covering the static guarantees the `File` type provides, the runtime behaviour of all six file primitives and every public word in `library/file.sg`, and a memory regression test for Bug 17:
+
+```bash
+python3 scratch/test_gates_file_io.py
+```
+
+- **Gate K1-K4**: Static rejection of `File` misuse (arithmetic, `hread`, `_at`, swapped `fputc` arguments).
+- **Gate K5**: Whole-file read/write round trip, byte for byte.
+- **Gate K6**: Line-at-a-time round trip, empty lines preserved.
+- **Gate K7**: `stdin` to `stdout` copy through `f_stdin`/`f_stdout`.
+- **Gate K8**: Every partial outcome reported through a flag, never a crash (missing file, append, closing a standard stream, double close).
+- **Gate K9**: `fread` partial/short/at-EOF results and `fwrite`'s written count.
+- **Gate K10**: `--selftest` primitive-surface exhaustiveness across both backends.
+- **Gate K11**: Bug 17 regression -- a chained-frame tail-recursive accumulator stays flat in memory under a 256MB cap.

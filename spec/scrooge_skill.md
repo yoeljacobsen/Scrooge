@@ -7,7 +7,7 @@ Operational guide for generating Scrooge code that passes static verification on
 ## 0. Preparation & Standard Library Rules
 
 1. **Learn before development**: Study language specifications (`spec/scrooge_spec_v1_48.txt`) and library modules in `library/`.
-2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`) before writing custom helpers. Import existing library words with `use "<module>"` (e.g., `use "util"`).
+2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`, `bitset.sg`, `file.sg`) before writing custom helpers. Import existing library words with `use "<module>"` (e.g., `use "util"`).
 
 ---
 
@@ -41,6 +41,7 @@ Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional st
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `array_at` / `list_at` / `block_at` or `at`.
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
+- **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 
 ---
 
@@ -96,14 +97,39 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
 
 ---
 
+## 6b. Sequential File I/O (`file.sg`)
+
+A file is read and written as a Block of character codes -- the same representation `strings.sg` uses -- through an opaque `File` handle. Handles 0/1/2 are pre-opened as stdin/stdout/stderr, so the same words serve the standard streams (`f_stdin`, `f_stdout`, `f_stderr`).
+
+**Reach for the whole-file words first.** They open, transfer and close in one step, and report every failure through an `ok` Scalar:
+```scrooge
+use "file"
+#save_report ( text:Block -- ok:Scalar )
+  -> [ text ] [ text "report.txt" f_write_file ]
+end
+```
+- `f_read_file ( path:Block -- str:Block ok:Scalar )` / `f_write_file ( str:Block path:Block -- ok:Scalar )` / `f_append_file ( str:Block path:Block -- ok:Scalar )`.
+
+**Open explicitly when one handle serves several operations.** Use the named mode helpers, never a bare mode integer:
+- `f_open_read` / `f_open_write` / `f_open_append` `( path:Block -- fh:File ok:Scalar )`, then `fclose ( fh:File -- ok:Scalar )`.
+- `f_read_all ( fh:File -- str:Block )`, `f_read_line ( fh:File -- line:Block got:Scalar )`, `f_write_str ( str:Block fh:File -- ok:Scalar )`, `f_write_line ( str:Block fh:File -- ok:Scalar )`.
+
+**Check the flag, always.** Nothing in this lexicon aborts on a missing file, a full handle table or a short write -- it returns `ok=0`, `got=0`, or a written count below `str len`. A `cond` on that flag is not optional politeness; skipping it means using a handle that was never opened.
+
+**Choose the granularity deliberately.** `fread`/`fwrite` move a whole chunk in one C-level pass. `fgetc`/`fputc` move one character and cost a word call plus a `cons` copy each, so use them only where the read must stop exactly at a delimiter (which is what `f_read_line` does). Never hand-write a per-character loop to do what `f_write_str` or `f_read_all` already does.
+
+**Mind the width.** One character read into a Block occupies a full Block slot, considerably wider than a byte. `f_read_all` is right for configuration and data files; stream anything much larger with `fread` a chunk at a time rather than accumulating the whole input.
+
+---
+
 ## 7. Failure Checklist (Check Before Emitting Code)
 
-1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`).
+1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`).
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ] ?`).
 4. **Literal `roll`/`pk` Index**: Use literal indices only (`1 pk`, `2 roll`).
 5. **No Code Nesting**: Depth-1 cap on code blocks inside code blocks.
-6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles.
+6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles, `fgetc`/`fread` for file handles.
 7. **Every Helper Defined Before Caller**: Order words from dependencies to caller.
 
 ---

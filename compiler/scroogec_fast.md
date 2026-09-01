@@ -64,7 +64,41 @@ push(make_int_array((const long long[]){72LL, 101LL, 108LL, 108LL, 111LL}, 5));
 
 ---
 
+## 2b. File I/O Runtime
+
+The six file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`; spec §12) are backed by a fixed `FILE*` table in `EMBEDDED_RUNTIME_C`:
+
+- `MAX_FILES` is 64. Slots 0/1/2 are pre-opened by `init_files()` (called from `init_runtime()`) as `stdin`/`stdout`/`stderr`, leaving 61 slots that `fopen` allocates from by first-free scan. Exhaustion is reported through `fopen`'s `ok` flag, never by growing the table or writing past it.
+- A `File` value is that slot index. There is no `VAL_FILE` runtime type: `File` is a static type tag, exactly as `Map` and `Record` are, so `f_stdin`-style one-word type assertions in `library/file.sg` work the same way the spec's `hread` wrapper idiom does. Runtime safety comes from `file_slot()`, which validates the index is in range and the slot is open before every read or write.
+- `FILE_PATH_MAX` is 4096. `op_fopen` converts the path Block into a C string, validating every slot is an integer, and releases the Block's reference (`block_decref`) since the value came off the stack.
+- `op_fread` buffers into `unsigned char[want]` and only converts what was actually read into `ScroogeValue` slots, so an oversized count costs one byte per requested character up front rather than sixteen.
+- `op_fputc`/`op_fwrite` flush when the target is slot 1 or 2, matching `print_char`, so `print_char` and file-word output to a standard stream interleave in source order. A real file stays buffered until `fclose` or normal process exit.
+
+### Adding a primitive
+
+A new primitive must be added in **seven** places or it breaks in one of two silent ways. `--selftest` catches the first four; nothing catches the fifth automatically.
+
+1. `RESERVED` -- so it cannot be used as a parameter name or frame alias.
+2. `PRIM_EFFECT` (module level) -- arity for the Track 1 checker.
+3. `ALL_EMITTER_PRIM_WORDS` -- the hand-maintained mirror `--selftest` checks against.
+4. `emitNode` and `emitBCNode` -- one case arm each; a spelling in `PRIM_EFFECT` without both is the ACCEPT-then-fails-to-build class `--selftest` exists to eliminate.
+5. `PRIM_TYPES` (inside `wordTC`) -- Track 2 types. **A missing entry here does not error.** The word falls through to the trailing `tstack.add("Unknown")`, which pushes a result without popping the operands, desyncing the type stack by the input count and mis-typing every call site after it in the same word. This is Bug 18 in `SCROOGEC_FAST_BUG_HISTORY.md`.
+6. `analyzeStack`'s local `PRIM_EFFECT` copy -- `--metrics` stack-depth accounting.
+7. Spec §7 -- `tools/spec_sync_check` requires every backticked token there to be a `PRIM_EFFECT` key.
+
+---
+
 ## 3. AST & Scope Mechanics
+
+### Tail-Call Rewriting and Frame Unwinding
+
+A word whose entry frame binds exactly its declared inputs and whose body ends in a direct self-call is rewritten into a `goto word_loop_start` loop rather than a C call (`terminalSelfCalls`). The rewrite must **unwind** every frame entered since the loop head through `leave_frame()`:
+
+```c
+while (frames_cnt > tco_frames_cnt) { leave_frame(); }
+```
+
+Rewinding `frames_cnt`/`current_frame_idx`/`frame_storage_top` directly -- as the codegen originally did -- abandons every Block reference stored in an inner frame's slots without decref'ing it. Since the ordinary multi-step idiom (`-> [ a b ] [ ... ] -> [ a b c ] ...`) parses into a *nested* frame, that leaked one accumulator reference per iteration, so any such loop's accumulator was never freed: quadratic memory. See Bug 17.
 
 ### Frame Scoping Rules
 An arrow frame `-> [ vars ] [ body ]` binds variables popped from the stack for the duration of its body block:
