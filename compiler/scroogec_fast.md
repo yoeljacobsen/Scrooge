@@ -76,15 +76,28 @@ The six file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`;
 
 ### Adding a primitive
 
-A new primitive must be added in **seven** places or it breaks in one of two silent ways. `--selftest` catches the first four; nothing catches the fifth automatically.
+A new primitive must be added in **seven** places. `--selftest` now mechanically catches an omission in five of them (2-5); the remaining two are caught by `tools/spec_sync_check` and by nothing respectively.
 
-1. `RESERVED` -- so it cannot be used as a parameter name or frame alias.
-2. `PRIM_EFFECT` (module level) -- arity for the Track 1 checker.
-3. `ALL_EMITTER_PRIM_WORDS` -- the hand-maintained mirror `--selftest` checks against.
-4. `emitNode` and `emitBCNode` -- one case arm each; a spelling in `PRIM_EFFECT` without both is the ACCEPT-then-fails-to-build class `--selftest` exists to eliminate.
-5. `PRIM_TYPES` (inside `wordTC`) -- Track 2 types. **A missing entry here does not error.** The word falls through to the trailing `tstack.add("Unknown")`, which pushes a result without popping the operands, desyncing the type stack by the input count and mis-typing every call site after it in the same word. This is Bug 18 in `SCROOGEC_FAST_BUG_HISTORY.md`.
-6. `analyzeStack`'s local `PRIM_EFFECT` copy -- `--metrics` stack-depth accounting.
+1. `RESERVED` -- so it cannot be used as a parameter name or frame alias. **Not automatically checked.**
+2. `PRIM_EFFECT` (module level) -- arity for the Track 1 checker. This table is what `--selftest` treats as the definition of the primitive surface; everything else is held against it.
+3. `ALL_EMITTER_PRIM_WORDS` -- the hand-maintained mirror of the emitters' `case` arms.
+4. `emitNode` and `emitBCNode` -- one case arm each. A spelling in `PRIM_EFFECT` without both is the ACCEPT-then-fails-to-build class `--selftest` was created to eliminate.
+5. `PRIM_TYPES` (module level) -- Track 2 operand and result types. A word with no entry here *and* no early-return branch in `wordTC` falls through to that proc's trailing `tstack.add("Unknown")`, which pushes a result without popping the operands: the type stack desyncs by the input count and every later call site in the same word is checked against shifted operands. That was Bug 18, and `--selftest` now rejects it.
+6. `analyzeStack`'s local `PRIM_EFFECT` copy -- `--metrics` stack-depth accounting. **Not automatically checked.**
 7. Spec §7 -- `tools/spec_sync_check` requires every backticked token there to be a `PRIM_EFFECT` key.
+
+### What `--selftest` guarantees about the primitive surface
+
+Six assertions, all bidirectional, all against `PRIM_EFFECT` as the definition:
+
+- Every `PRIM_EFFECT` key compiles without raising through **both** emitters (a synthesized minimal program per key).
+- Every entry in `ALL_EMITTER_PRIM_WORDS` has a `PRIM_EFFECT` entry, and vice versa.
+- Every `PRIM_EFFECT` key is type-checked *somewhere*: either it has a `PRIM_TYPES` entry, or it appears in `WORDTC_EARLY_BRANCH_WORDS`.
+- Every `PRIM_TYPES` key has a `PRIM_EFFECT` entry, so the type table cannot describe a primitive that does not exist.
+- Every `WORDTC_EARLY_BRANCH_WORDS` entry has a `PRIM_EFFECT` entry.
+- No word appears in **both** `PRIM_TYPES` and `WORDTC_EARLY_BRANCH_WORDS`. The early return wins, so a word in both has a dead type entry whose operand checks never run -- which is exactly how `to_float` came to accept a `Block` (Bug 19).
+
+`WORDTC_EARLY_BRANCH_WORDS` is the Track 2 counterpart of `ALL_EMITTER_PRIM_WORDS` and exists for the same reason: Nim cannot introspect the `if` branches at the top of `wordTC`, so the list stands in for them and must be kept in lockstep. The pass line reports the split, e.g. `58 primitives ... (40 typed + 18 early-branch)` -- those two numbers summing to the primitive count is the invariant.
 
 ---
 
