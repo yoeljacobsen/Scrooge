@@ -94,3 +94,15 @@ python3 scratch/test_gates_file_io.py
 - **Gate K9**: `fread` partial/short/at-EOF results and `fwrite`'s written count.
 - **Gate K10**: `--selftest` primitive-surface exhaustiveness across both backends.
 - **Gate K11**: Bug 17 regression -- a chained-frame tail-recursive accumulator stays flat in memory under a 256MB cap.
+
+### Refcount Leak Gate (Gate L)
+
+Per-primitive refcount leak gates, one probe per op:
+
+```bash
+python3 scratch/test_gates_leak.py
+```
+
+The contract each probe enforces: a value popped off the stack carries a reference, and the op that popped it must **return** it, **store** it into a structure, or **release** it. An op doing none of the three leaks permanently, in proportion to its call count. Every probe allocates a *fresh* Block each iteration and asserts peak RSS is flat across a 16x range of iteration counts -- the freshness matters, since leaking a reference to one long-lived Block costs no memory.
+
+Ten ops pass flat (`len`, `at`, `block_get`, `=`, `!=`, both `select` branches, plus `cons`, `block_set` and `hwrite` as known-correct controls). Three probes are tracked as known-cause `XFAIL`s: `block_decref` does not recurse into Block-typed elements, so `pair`, a nested `cons`, and a Block written into a heap cell and then `hrelease`d all leak their elements. That is a separate ownership question, recorded in `BUGFIX_TASK_PLAN.md` as Task 9.
