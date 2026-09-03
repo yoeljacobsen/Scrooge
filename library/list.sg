@@ -1,5 +1,32 @@
 { ---- Growable Mutable List Lexicon ---- }
 
+{ ---- Accepted, bounded leak: lst_grow orphans one heap slot per growth. ---- }
+{ ---- `heap[]` has no per-cell free -- hmark/hrelease is a bulk LIFO         ---- }
+{ ---- rewind that cannot reclaim one arbitrary earlier slot without         ---- }
+{ ---- invalidating everything after it -- so the buffer lst_grow replaces   ---- }
+{ ---- stays allocated for the life of the process.                          ---- }
+{ ----                                                                       ---- }
+{ ---- Measured, not estimated: orphans per list = ceil(log2(n/initial_cap)), ---- }
+{ ---- exactly. Pushing n elements into a capacity-16 list leaves            ---- }
+{ ---- 2 + ceil(log2(n/16)) live slots (2 being the header and the current   ---- }
+{ ---- buffer):                                                              ---- }
+{ ----     n =     16   17   33  100  1000  10000  100000                    ---- }
+{ ----   live =      2    3    4    5     8     12      15                   ---- }
+{ ---- So it is LOGARITHMIC in list length, not linear. Against the          ---- }
+{ ---- 1,000,000-slot budget, exhausting it through lst_grow alone would      ---- }
+{ ---- take roughly 77,000 separate long-lived lists each grown to 100,000    ---- }
+{ ---- elements. For reference, the whole real select4.test dataset -- every  ---- }
+{ ---- CREATE TABLE and INSERT, 9 tables, plus 10 real queries -- finishes    ---- }
+{ ---- with 63 live slots out of 1,000,000, of which roughly 36 are these     ---- }
+{ ---- orphans.                                                              ---- }
+{ ----                                                                       ---- }
+{ ---- Recorded as accepted rather than fixed: a real per-cell free (hfree,   ---- }
+{ ---- or a free-list inside op_hnew) would add a use-after-free shape the    ---- }
+{ ---- checker cannot see -- the Bug 12/13 class -- to reclaim 13 slots per   ---- }
+{ ---- 100,000-element list. If a caller's lists really are short-lived,      ---- }
+{ ---- bracket their construction with hmark/hrelease instead. See Task 6 in  ---- }
+{ ---- BUGFIX_TASK_PLAN.md and PHASE2_HANDOFF.md task #21.                    ---- }
+
 #lst_make ( initial_capacity:Scalar -- ptr:Ptr )
   -> [ initial_capacity ] [
     initial_capacity
