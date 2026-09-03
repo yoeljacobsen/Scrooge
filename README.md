@@ -96,6 +96,16 @@ python3 scratch/test_gates_file_io.py
 - **Gate K10**: `--selftest` primitive-surface exhaustiveness across both backends.
 - **Gate K11**: Bug 17 regression -- a chained-frame tail-recursive accumulator stays flat in memory under a 256MB cap.
 
+### Lexicon Gate (Gate M)
+
+Every standard-library lexicon must pass the checker standalone:
+
+```bash
+python3 scratch/test_gates_lexicon.py
+```
+
+Library source is concatenated into a program for *codegen* but never reaches `checkSource` -- `reservedWordPass`, `checkNesting`, the Track 1 arity analyzer and Track 2 all see only the user's file, with lexicon words supplied as pre-typed externs from `manifest.sm`. So `library/*.sg` was the one place in the tree where "code either passes the checker or is rejected" did not hold. Running each lexicon as a top-level source file puts library code under the same rules as everything else; all nine pass.
+
 ### Refcount Leak Gate (Gate L)
 
 Per-primitive refcount leak gates, one probe per op:

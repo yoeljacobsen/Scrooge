@@ -66,7 +66,7 @@ tool "strings" name "int_to_str" sig "( n:Scalar -- str:Block )" desc "Converts 
 tool "strings" name "print_line" sig "( n:Scalar -- )" desc "Prints an integer followed by a newline."
 tool "strings" name "str_to_int" sig "( chars:Block start:Scalar end:Scalar -- n:Scalar ok:Scalar )" desc "Multi-digit signed parse of [start,end); ok=0 if not entirely digits (plus an optional leading '-')."
 tool "strings" name "fs_matches_at" sig "( hay:Block needle:Block i:Scalar nlen:Scalar -- match:Scalar )" desc "1 if needle occurs in hay starting exactly at i."
-tool "strings" name "find_sub" sig "( hay:Block needle:Block from:Scalar -- pos:Scalar found:Scalar )" desc "First index >= from where needle occurs in hay; found=0 if absent."
+tool "strings" name "find_sub" sig "( hay:Block needle:Block start:Scalar -- pos:Scalar found:Scalar )" desc "First index >= from where needle occurs in hay; found=0 if absent."
 
 tool "util" name "reverse" sig "( block:Block -- reversed:Block )" desc "Reverses an immutable block."
 tool "util" name "length" sig "( block:Block -- n:Scalar )" desc "Counts elements in a block."

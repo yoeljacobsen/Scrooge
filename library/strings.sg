@@ -119,6 +119,12 @@ end
     cond [ i 1 ] else [ hay needle i hlen nlen fs_scan_step fs_scan_loop ] ?
   ] else [ 0 0 ] ?
 end
-#find_sub ( hay:Block needle:Block from:Scalar -- pos:Scalar found:Scalar )
-  -> [ hay needle from ] [ hay needle from hay len needle len fs_scan_loop ]
+{ Note: the search-start parameter is `start`, not `from`. `from` is the
+  reserved word that introduces a fold's initial accumulator, so binding it
+  as a frame alias is a ReservedWordIdentifierError -- the same family of
+  trap as `end` in str_to_int above. It went unnoticed for as long as it did
+  because lexicon source was never run through the checker at all; a gate now
+  requires every library/*.sg to pass --check-only standalone. }
+#find_sub ( hay:Block needle:Block start:Scalar -- pos:Scalar found:Scalar )
+  -> [ hay needle start ] [ hay needle start hay len needle len fs_scan_loop ]
 end
