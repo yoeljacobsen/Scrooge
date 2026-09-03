@@ -246,11 +246,10 @@ end
   cond [ val acc cons ] else [ acc ] ?
 end
 
-#pair ( a:Unknown b:Unknown -- blk:Block )
-  -> [ a b ] [
-    b nil cons a swap cons
-  ]
-end
+{ The local #pair that used to sit here was deleted: `pair` is a builtin
+  primitive, and a local definition shadowing one is a DuplicateWordError
+  under v1.48. It was redundant anyway -- `b nil cons a swap cons` builds
+  exactly the `[ a b ]` that the builtin `pair ( a b -- [a b] )` returns. }
 
 #extract_sub_block ( str:Block start:Scalar stop:Scalar -- sub:Block )
   -> [ str start stop ] [

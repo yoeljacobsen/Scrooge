@@ -96,6 +96,16 @@ python3 scratch/test_gates_file_io.py
 - **Gate K10**: `--selftest` primitive-surface exhaustiveness across both backends.
 - **Gate K11**: Bug 17 regression -- a chained-frame tail-recursive accumulator stays flat in memory under a 256MB cap.
 
+### Corpus Gate (Gate N)
+
+Every file in `check/corpus/passing/` must actually pass the checker:
+
+```bash
+python3 scratch/test_gates_corpus.py
+```
+
+The directory name is a claim, and for four of its seven files it was false -- three obsolete pre-lexicon engine forks plus one program with a redundant local `#pair`, all rejected under v1.48's `DuplicateWordError` rules and all left behind by the v1.48 upgrade. The forks now live in `check/corpus/legacy_pre_v148/` (with a README explaining why they no longer compile and which maintained engines superseded them), and that directory is deliberately not gated.
+
 ### Lexicon Gate (Gate M)
 
 Every standard-library lexicon must pass the checker standalone:
