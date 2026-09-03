@@ -30,7 +30,13 @@ rejected. Everything below serves that guarantee. Study the worked examples
 
 ═══ 2. Words, Tagged Parameter Signatures & Entry Frames ═══
 - Define: `#name ( inputs -- outputs ) body end`. Every signature MUST explicitly declare input and output parameter types—either positionally (`#foo ( Ptr Scalar -- Scalar )`) or as tagged parameters (`#foo ( src:Ptr i:Scalar -- d:Scalar )`).
-- Recognized type tags: Ptr, Block, Scalar, Record, Map, File, Unknown.
+- Recognized type tags: Ptr, Block, Scalar, Record, Map, File, Unknown. These
+  exact spellings and no others: a tag the checker does not recognize (`n:Sclaar`,
+  `p:ptr`) is a static `TypeError`, not a silent `Unknown`. A bare tag declares a
+  type in a positional signature (`( Ptr Scalar -- Scalar )`); an untagged token
+  that is not one of these spellings is a parameter NAME and declares nothing, so
+  `#f ( ptr -- n:Scalar )` constrains its input no more than `#f ( thing -- n:Scalar )`
+  does. Write the tag if you want the check.
 - Inter-Word Tagged Parameter Validation: Parameter type tags are strictly validated at call sites. Passing incorrect types triggers a static `TypeError`.
 - Arity Drift Protection: Entry frame `-> [ ... ]` variable count MUST match declared signature input count exactly.
 - Bind names with an arrow frame: `-> [ a b ] [ body ]`. The frame pops as many values as declared inputs in reverse order, binding them for the body. Frame variables inherit types declared in the signature.
@@ -110,7 +116,7 @@ Import at file top; names resolve only for imported lexicons.
 ═══ 9. Track 2 Static Verification & Error Classes ═══
 Static checker enforces:
 - `ArityMismatch`: Signature vs body net effect mismatch, signature vs frame input count mismatch, or unequal cond branches.
-- `TypeError`: Tagged parameter call-site type mismatch, or `_at` indexing into `Ptr`/`Record`/`Scalar`.
+- `TypeError`: Tagged parameter call-site type mismatch, `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
 - `UnknownWordError`: Invocation of an undeclared word or primitive.
 - `ParseError`: Unterminated brackets, missing signature parentheses, nested code blocks (depth > 1 cap), or unbracketed frame.
 - `ReservedWordIdentifierError`: Reserved keyword used as parameter name or frame alias.

@@ -74,6 +74,7 @@ python3 scratch/test_gates_a_j.py
 - **Gate F**: Local block provenance acceptance (`nil -> [ b ] [ b 0 at ]` PASSES).
 - **Gate G1**: Call-site macro parameter order swap (Passing `Block` to tagged `Ptr` REJECTED statically).
 - **Gate G2**: Correct call-site macro parameter order (PASSES).
+- **Gate G3**: Library call-site type checking at parity with local (a library word called with swapped arguments must be rejected with the *same number* of `TypeError`s as an identically-shaped local word -- guards against `manifest.sm` losing its type tags again).
 - **Gate H**: Bare decimal float literal compilation & execution (`3.14` PASSES).
 - **Gate I**: Signed string formatting (`int_to_str` on `-42` outputs `"-42"` PASSES).
 - **Gate J**: Library manifest + spec §8 100% synchronization check (PASSES).
