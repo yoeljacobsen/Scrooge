@@ -1,5 +1,10 @@
 { ---- Scrooge Core Standard Library MCP Discovery Manifest ---- }
 
+tool "args" name "arg_prog" sig "( -- name:Block )" desc "The program as invoked, i.e. `0 argv`."
+tool "args" name "arg_or" sig "( i:Scalar default:Block -- arg:Block )" desc "The argument at a C index, or default when there is none; removes the ok flag from the call site."
+tool "args" name "arg_tail" sig "( -- args:Block )" desc "Every argument except the program name, in order, as a Block of Blocks."
+tool "args" name "arg_find" sig "( name:Block -- i:Scalar found:Scalar )" desc "C index of the first argument equal to name, searching from 1; found=0 when absent."
+
 tool "array" name "arr_size" sig "( shape_block:Block -- total_cells:Scalar )" desc "..."
 tool "array" name "arr_make" sig "( shape_block:Block -- ptr:Ptr )" desc "..."
 tool "array" name "arr_offset" sig "( ptr:Ptr coords_block:Block -- flat_offset:Scalar )" desc "..."

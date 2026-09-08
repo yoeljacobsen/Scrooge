@@ -74,6 +74,24 @@ The six file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`;
 - `op_fread` buffers into `unsigned char[want]` and only converts what was actually read into `ScroogeValue` slots, so an oversized count costs one byte per requested character up front rather than sixteen.
 - `op_fputc`/`op_fwrite` flush when the target is slot 1 or 2, matching `print_char`, so `print_char` and file-word output to a standard stream interleave in source order. A real file stays buffered until `fclose` or normal process exit.
 
+## 2c. Command-Line Argument Runtime
+
+The `argc`/`argv` primitives (spec §13) are backed by two file-scope globals in `EMBEDDED_RUNTIME_C`, set once from `main`:
+
+```c
+static int scrooge_argc = 0;
+static char** scrooge_argv = NULL;
+static inline void init_args(int argc, char** argv) { ... }
+```
+
+- **The generated `main` signature changed** from `int main()` to `int main(int argc, char** argv)`, and now calls `init_args(argc, argv)` immediately after `init_runtime()`. Anything that parses or diffs `--dump-c` output across compiler versions will see that line move.
+- **Nothing is materialized up front.** `op_argv` converts one argument to a Block on demand, so a program that never asks pays nothing and one that asks for argument 3 allocates that one string. `library/args.sg`'s `arg_tail` is the only thing that deliberately builds all of them.
+- **The indexing is C's, unchanged**: `argv[0]` is the program as invoked, the first real argument is index 1, and `argc` counts both. Re-basing it in the runtime would make the language disagree with the `argc`/`argv` every reader already knows, invisibly at the call site.
+- Out-of-range (either direction) reports `ok=0` with an empty Block rather than aborting — it is the ordinary way to ask whether an argument was supplied. A *present but empty* argument returns an empty Block with `ok=1`; present-and-empty is deliberately distinguishable from absent. Only a non-integer index is fatal, matching `hread`/`fread`.
+- Arguments are read-only, and there is no environment access.
+
+---
+
 ### Adding a primitive
 
 A new primitive must be added in **seven** places. `--selftest` now mechanically catches an omission in five of them (2-5); the remaining two are caught by `tools/spec_sync_check` and by nothing respectively.

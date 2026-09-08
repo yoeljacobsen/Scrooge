@@ -48,6 +48,7 @@ Standard library lexicon modules reside in `library/`:
 - `library/list.sg`, `library/map.sg`, `library/record.sg`: Growable lists, hash maps, static records.
 - `library/bitset.sg`: 64-bit bitsets as plain Scalars (`bs_add`, `bs_test`, `bs_union`, `bs_inter`, `bs_minus`, `bs_count`, `bs_first`).
 - `library/file.sg`: Sequential file I/O over the opaque `File` handle -- whole-file transfer (`f_read_file`, `f_write_file`, `f_append_file`), explicit open/close (`f_open_read`/`f_open_write`/`f_open_append`), streaming reads and writes (`f_read_all`, `f_read_line`, `f_write_str`, `f_write_line`), and the pre-opened standard streams (`f_stdin`, `f_stdout`, `f_stderr`).
+- `library/args.sg`: Command-line arguments over the `argc`/`argv` primitives -- the program name (`arg_prog`), a total accessor taking a default (`arg_or`), the arguments without the program name as a Block of Blocks (`arg_tail`), and flag scanning (`arg_find`).
 
 The v1.48 discovery manifest is synchronized at [`library/manifest.sm`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/library/manifest.sm). It is generated, not hand-maintained: `tools/build_manifest.py` is the single canonical source of truth, deriving every entry (and the matching spec §8 lexicon word-lists) directly from `library/*.sg`. Regenerate it after any library change, or just verify it's in sync:
 ```bash
@@ -95,6 +96,14 @@ python3 scratch/test_gates_file_io.py
 - **Gate K9**: `fread` partial/short/at-EOF results and `fwrite`'s written count.
 - **Gate K10**: `--selftest` primitive-surface exhaustiveness across both backends.
 - **Gate K11**: Bug 17 regression -- a chained-frame tail-recursive accumulator stays flat in memory under a 256MB cap.
+
+### Command-Line Argument Gate (Gate O)
+
+```bash
+python3 scratch/test_gates_args.py
+```
+
+Covers the static guarantees (`argv`'s index must be a `Scalar`; its result is a `Block`, not a `Scalar` or a `File`), the C indexing `argc`/`argv` promise (`argc == 1` with no arguments, `argv[0]` is the program as invoked), arguments preserved verbatim including spaces and an empty one, out-of-range in both directions giving `ok=0`, the **present-but-empty** case that must give `ok=1` rather than `ok=0`, and every public word in `library/args.sg`.
 
 ### Corpus Gate (Gate N)
 

@@ -7,7 +7,7 @@ Operational guide for generating Scrooge code that passes static verification on
 ## 0. Preparation & Standard Library Rules
 
 1. **Learn before development**: Study language specifications (`spec/scrooge_spec_v1_48.txt`) and library modules in `library/`.
-2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`, `bitset.sg`, `file.sg`) before writing custom helpers. Import existing library words with `use "<module>"` (e.g., `use "util"`).
+2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`, `bitset.sg`, `file.sg`, `args.sg`) before writing custom helpers. Import existing library words with `use "<module>"` (e.g., `use "util"`).
 
 ---
 
@@ -42,6 +42,7 @@ Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional st
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
+- **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.
 
 ---
 
@@ -119,6 +120,28 @@ end
 **Choose the granularity deliberately.** `fread`/`fwrite` move a whole chunk in one C-level pass. `fgetc`/`fputc` move one character and cost a word call plus a `cons` copy each, so use them only where the read must stop exactly at a delimiter (which is what `f_read_line` does). Never hand-write a per-character loop to do what `f_write_str` or `f_read_all` already does.
 
 **Mind the width.** One character read into a Block occupies a full Block slot, considerably wider than a byte. `f_read_all` is right for configuration and data files; stream anything much larger with `fread` a chunk at a time rather than accumulating the whole input.
+
+---
+
+## 6c. Command-Line Arguments (`args.sg`)
+
+`argc` and `argv` use C's indexing exactly: `0 argv` is the program as invoked, the first real argument is `1 argv`, and `argc` counts both -- so `argc` is 1 for a program run with no arguments. An argument is a `Block` of character codes, so it prints and compares like any other string.
+
+**Prefer `arg_or` over a bare `argv`.** It takes a default and returns just the argument, keeping the ok flag out of your call site:
+```scrooge
+use "args"
+#output_path ( -- path:Block )
+  1 "out.txt" arg_or
+end
+```
+
+**Iterate with `arg_tail`.** It gives the arguments *without* the program name, as a `Block` of `Block`s -- the shape a `[fold| ... ]` wants. It is also the only word here that materializes every argument, so ask for one argument by index when that is all you need.
+
+**Scan flags with `arg_find`.** `"-v" arg_find` answers "was `-v` passed, and at which index", using the same found-flag convention as `find_sub`. The search starts at index 1, so the program name can never match.
+
+**Distinguish absent from empty.** `argv` reports a missing index as `ok=0`, but an argument that was supplied and is empty (`prog ""`) is `ok=1` with an empty `Block`. Do not treat length 0 as "not given".
+
+**Read `programs/args_demo.sg`** for the whole shape of a command-line program: flags separated from operands, the program named in a diagnostic, and standard input used when no operands were given.
 
 ---
 

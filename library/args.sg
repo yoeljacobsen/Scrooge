@@ -1,0 +1,102 @@
+{ ---- Command-Line Argument Lexicon ---- }
+{ ---- Built on the `argc` and `argv` primitives (spec Sec.13). An         ---- }
+{ ---- argument is a Block of character codes, exactly as in strings.sg    ---- }
+{ ---- and file.sg -- no separate string type is introduced.               ---- }
+{ ----                                                                    ---- }
+{ ---- INDEXING. The primitives use C's indexing exactly: `0 argv` is the  ---- }
+{ ---- program as invoked and the first real argument is `1 argv`, with    ---- }
+{ ---- `argc` counting both. Every word here keeps that indexing, so an    ---- }
+{ ---- index means the same thing whether it is handed to `argv` or to     ---- }
+{ ---- `arg_or`. `arg_tail` is the one word that takes the other view, and ---- }
+{ ---- it is named for it: it returns the arguments WITHOUT the program    ---- }
+{ ---- name, and takes no index at all.                                   ---- }
+{ ----                                                                    ---- }
+{ ---- `argv` reports a missing index through ok=0 rather than aborting,   ---- }
+{ ---- because asking for an argument that may not have been supplied is   ---- }
+{ ---- the normal case, not an error. The words here either pass that flag ---- }
+{ ---- on (arg_find) or make it unnecessary by taking a default (arg_or).  ---- }
+
+{ ---- The program as invoked, i.e. `0 argv`. Empty if the process was     ---- }
+{ ---- started with no argv at all, which POSIX does not require of a      ---- }
+{ ---- caller and which no shell does.                                    ---- }
+#arg_prog ( -- name:Block )
+  0 argv drop
+end
+
+{ ---- Total accessor: the argument at a C index, or `default` when there  ---- }
+{ ---- is none. This is the word to reach for -- it removes the flag from  ---- }
+{ ---- the call site, in the spirit of array.sg's nth_or_default.          ---- }
+#arg_or ( i:Scalar default:Block -- arg:Block )
+  -> [ i default ] [ default i argv ]
+  -> [ default a ok ] ok
+  cond [ a ] else [ a drop default ] ?
+end
+
+{ ---- Private: build the argument list from the tail backwards, so each   ---- }
+{ ---- cons lands in front and the result comes out in command-line order  ---- }
+{ ---- with no reversal pass.                                             ---- }
+#atl_step ( i:Scalar acc:Block -- i2:Scalar acc2:Block )
+  -> [ i acc ] [
+    i 1 -
+    i argv -> [ a ok ] [ ok cond [ a acc cons ] else [ a drop acc ] ? ]
+  ]
+end
+#atl_loop ( i:Scalar acc:Block -- args:Block )
+  -> [ i acc ] i 1 <
+  cond [ acc ] else [ i acc atl_step atl_loop ] ?
+end
+
+{ ---- Every argument except the program name, in order, as a Block of     ---- }
+{ ---- Blocks -- the shape a `[fold| ... ]` wants. Empty when the program  ---- }
+{ ---- was given no arguments.                                            ---- }
+{ ----                                                                    ---- }
+{ ---- This materializes all of them, and a Block whose elements are       ---- }
+{ ---- Blocks leaks those elements when it is released (block_decref does  ---- }
+{ ---- not recurse -- see Task 9 in BUGFIX_TASK_PLAN.md). For a handful of ---- }
+{ ---- command-line arguments that is a handful of small allocations and   ---- }
+{ ---- not worth avoiding; a program that only wants argument 2 should ask ---- }
+{ ---- for argument 2 with `arg_or` and allocate nothing else.             ---- }
+#arg_tail ( -- args:Block )
+  argc 1 - nil atl_loop
+end
+
+{ ---- Private: Block equality, on character codes. Duplicated from        ---- }
+{ ---- util.sg's block_eq rather than imported, because every lexicon in   ---- }
+{ ---- library/ is self-contained (none of them `use` another).            ---- }
+#ae_step ( a:Block b:Block idx:Scalar acc:Scalar -- a2:Block b2:Block idx2:Scalar acc2:Scalar )
+  -> [ a b idx acc ] [ a b idx 1 + a idx at b idx at = acc and ]
+end
+#ae_loop ( a:Block b:Block idx:Scalar acc:Scalar -- equal:Scalar )
+  -> [ a b idx acc ] [ idx a len < acc and ]
+  cond [ a b idx acc ae_step ae_loop ] else [ acc ] ?
+end
+#ae_eq_check ( a:Block b:Block -- equal:Scalar )
+  -> [ a b ] a len b len =
+  cond [ a b 0 1 ae_loop ] else [ 0 ] ?
+end
+
+{ ---- Private: does the argument at this index equal `name`? A missing    ---- }
+{ ---- index is simply not a match.                                       ---- }
+#af_match_check ( name:Block idx:Scalar -- flag:Scalar )
+  -> [ name idx ] [
+    idx argv -> [ a ok ] [ ok cond [ a name ae_eq_check ] else [ a drop 0 ] ? ]
+  ]
+end
+#af_loop ( name:Block idx:Scalar -- i:Scalar found:Scalar )
+  -> [ name idx ] idx argc =
+  cond [ 0 0 ] else [
+    name idx af_match_check
+    cond [ idx 1 ] else [ name idx 1 + af_loop ] ?
+  ] ?
+end
+
+{ ---- The C index of the first argument equal to `name`, searching from 1 ---- }
+{ ---- so the program name can never match. found=0 (i=0) when absent --   ---- }
+{ ---- the same found-flag convention as strings.sg's find_sub, and the    ---- }
+{ ---- reason i=0 is safe as the not-found value: 0 is the program name's  ---- }
+{ ---- index and so is never a real answer.                               ---- }
+{ ---- This is the flag-scanning primitive: `"-v" arg_find` answers        ---- }
+{ ---- "was -v passed, and where".                                        ---- }
+#arg_find ( name:Block -- i:Scalar found:Scalar )
+  -> [ name ] [ name 1 af_loop ]
+end

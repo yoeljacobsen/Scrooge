@@ -97,7 +97,8 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`).
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
 - I/O: `print_char` ( ascii -- ) | `print_int` ( int -- )
-- Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ). See §12..
+- Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ). See §12.
+- Command line: `argc` ( -- n:Scalar ) | `argv` ( i:Scalar -- arg:Block ok:Scalar ). See §13..
 - Heap Arena: `hmark` ( -- mark:Scalar ) | `hrelease` ( mark:Scalar -- ). See §5.
 - Abort: `abort` ( Block -- ), never returns. Prints its Block argument to stderr as characters and terminates the process with a nonzero exit status. A cond branch whose terminal call is `abort` is exempt from the "branches MUST match in count and type" rule (§10): the checker unifies on the OTHER branch's stack effect/type instead, since the aborting branch never produces a value.
 
@@ -112,6 +113,7 @@ Import at file top; names resolve only for imported lexicons.
 - `map`: map_make, map_hash, map_find, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
 - `file`: f_read, f_write, f_append, f_stdin, f_stdout, f_stderr, f_open_read, f_open_write, f_open_append, f_write_str, f_write_line, f_chunk, f_next_chunk, f_read_all, f_read_line, f_read_file, f_write_file, f_append_file.
+- `args`: arg_prog, arg_or, arg_tail, arg_find.
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══
 Static checker enforces:
@@ -123,7 +125,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
@@ -261,3 +263,46 @@ end
 - The number of simultaneously open handles is fixed and small (61 beyond the
   three standard streams). Close what you open; exhaustion surfaces as
   `fopen`'s ok=0, not as a crash.
+
+═══ 13. Command-Line Arguments ═══
+- `argc ( -- n:Scalar )` is the number of command-line arguments, and
+  `argv ( i:Scalar -- arg:Block ok:Scalar )` is the i-th one as a Block of
+  character codes. A string literal is exactly such a Block, so an argument
+  compares and prints like any other string.
+- **The indexing is C's, exactly.** `0 argv` is the program as invoked; the
+  first real argument is `1 argv`; `argc` counts both, so it is 1 for a
+  program run with no arguments. Nothing is re-based: an index means the same
+  thing here as in the `argc`/`argv` of the process itself.
+- ok=0 means there is no argument at that index (and the Block is empty). That
+  is the ordinary way to ask "was this argument supplied?", so it is a flag
+  rather than an abort, exactly as with `fopen`/`fgetc` (§12). A negative index
+  is likewise ok=0, not an error. An argument that was supplied but is empty --
+  `prog ""` -- returns an empty Block with **ok=1**: present and empty is not
+  the same as absent.
+- Only a non-integer index is fatal, matching `hread`/`fread`.
+- Nothing is materialized up front. A program that never asks pays nothing;
+  one that asks for argument 3 allocates that one string. `library/args.sg`'s
+  `arg_tail` is the word that deliberately materializes all of them.
+- Arguments are read-only. There is no way to alter them, and no environment
+  access.
+- `library/args.sg` (§8) adds the words worth having on top: `arg_prog`,
+  `arg_or` (a total accessor taking a default, so no flag reaches the call
+  site), `arg_tail` (the arguments without the program name, as a Block of
+  Blocks, for `[fold| ... ]`), and `arg_find` (the C index of the first
+  argument equal to a given string -- flag scanning).
+
+Worked example -- greet each argument, or the world if there are none:
+```scrooge
+use "args"
+use "strings"
+#greet_step ( idx:Scalar acc:Scalar val:Block ctx:Scalar -- acc2:Scalar )
+  -> [ idx acc val ctx ] [ "Hello, " str_print val str_print 10 print_char acc ]
+end
+#main ( -- )
+  arg_tail -> [ args ] args len 0 =
+  cond [ "Hello, world" str_print 10 print_char ] else [
+    args [fold| idx acc val _ | idx acc val 0 greet_step from 0 ] drop
+  ] ?
+end
+main
+```
