@@ -1,6 +1,22 @@
-# Scrooge Programming Language (v1.48)
+# Scrooge Programming Language (v1.49)
 
-Repository status: **Scrooge v1.48**.
+Repository status: **Scrooge v1.49**.
+
+### What changed in v1.49
+
+Every program in this project's corpus that compiled under v1.48 still compiles, to the same behaviour. Two differences are visible:
+
+- Programs no longer print a trailing `STACK: []` (see `--debug-stack` below).
+- Three things v1.48 accepted are now rejected: a shuffler name (`dup`, `drop`, `swap`, `rot`, `over`) used as a frame alias, which silently shadowed the primitive; a word or alias named `clock_ns`, now a primitive; and a last definition with no `end`, which silently swallowed the call to `main`.
+
+The rest:
+
+- **`cond` is easier to write.** The closing `?` is optional (`flag cond [ t ] else [ f ]` is complete), and the else-branch may be omitted (`flag cond [ t ]` means `else [ ]`). Old code with `?` and `else [ ]` is unchanged.
+- **Better errors.** `cond` parse errors give a line and column and name the cond they mean; a stray `?`, `else` or `end`, or a definition missing its `end`, is reported where it stands. The checker now also checks top-level code, and reports every error, in source order, each once (it stopped at 10, in arbitrary order).
+- **`clock_ns ( -- ns:Scalar )`**, a monotonic clock primitive (61 primitives).
+- **`library/manifest.sm` lists every primitive** as a typed `prim` line, checked against the compiler.
+- **One reserved-word list.** The compiler, spec Sec.10 and the skill guide now agree; `dup drop swap rot over` can no longer be used as frame aliases. `pk`/`roll` are no longer shown as callable (they are reserved but not implemented).
+- **`--debug-stack`** restores the old trailing `STACK: [...]` line, now off by default.
 
 This repository contains the Scrooge static compiler, standard library, language specifications, automated test harness, and benchmark suite.
 
@@ -8,7 +24,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The Nim static compiler executable `./scroogec_fast` (and its statically-linked binary `compiler/scroogec_fast_x86-64`) is the sole static verifier, type checker, and C code generation compiler for Scrooge v1.48 in this environment.
+The Nim static compiler executable `./scroogec_fast` (and its statically-linked binary `compiler/scroogec_fast_x86-64`) is the sole static verifier, type checker, and C code generation compiler for Scrooge v1.49 in this environment.
 
 ### Quick Commands
 
@@ -26,15 +42,15 @@ nim c -d:release scroogec_fast.nim
 ./scroogec_fast --dump-c out.c -L library my_program.sg
 ```
 
-For complete technical documentation on compiler architecture, C codegen optimizations (`make_int_array`), AST line-number tracking (`lineNum: int`), and diagnostic formats, refer to [`compiler/scroogec_fast.md`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/compiler/scroogec_fast.md).
+For complete technical documentation on compiler architecture, C codegen optimizations (`make_int_array`), AST line-number tracking (`lineNum: int`), and diagnostic formats, refer to [`compiler/scroogec_fast.md`](compiler/scroogec_fast.md).
 
 ---
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_48.txt`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/spec/scrooge_spec_v1_48.txt) (defines v1.48 syntax, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
-- **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
-- **System Prompt**: [`spec/system_prompt_v1.48.txt`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/spec/system_prompt_v1.48.txt) (system prompt for LLM generation).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_49.txt`](spec/scrooge_spec_v1_49.txt) (defines v1.49 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
+- **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
 ---
 
@@ -50,7 +66,7 @@ Standard library lexicon modules reside in `library/`:
 - `library/file.sg`: Sequential file I/O over the opaque `File` handle -- whole-file transfer (`f_read_file`, `f_write_file`, `f_append_file`), explicit open/close (`f_open_read`/`f_open_write`/`f_open_append`), streaming reads and writes (`f_read_all`, `f_read_line`, `f_write_str`, `f_write_line`), and the pre-opened standard streams (`f_stdin`, `f_stdout`, `f_stderr`).
 - `library/args.sg`: Command-line arguments over the `argc`/`argv` primitives -- the program name (`arg_prog`), a total accessor taking a default (`arg_or`), the arguments without the program name as a Block of Blocks (`arg_tail`), and flag scanning (`arg_find`).
 
-The v1.48 discovery manifest is synchronized at [`library/manifest.sm`](file:///home/yoel/Experiments/Scrooge/scrooge_dev/library/manifest.sm). It is generated, not hand-maintained: `tools/build_manifest.py` is the single canonical source of truth, deriving every entry (and the matching spec §8 lexicon word-lists) directly from `library/*.sg`. It also lists every compiler primitive as a `prim` line; those come from a table in the tool that `--check` holds against the compiler's own primitive tables (every primitive present once, matching arity and types), so they cannot drift either. The compiler reads only the `tool` lines. Regenerate it after any library change, or just verify it's in sync:
+The discovery manifest is synchronized at [`library/manifest.sm`](library/manifest.sm). It is generated, not hand-maintained: `tools/build_manifest.py` is the single canonical source of truth, deriving every entry (and the matching spec §8 lexicon word-lists) directly from `library/*.sg`. It also lists every compiler primitive as a `prim` line; those come from a table in the tool that `--check` holds against the compiler's own primitive tables (every primitive present once, matching arity and types), so they cannot drift either. The compiler reads only the `tool` lines. Regenerate it after any library change, or just verify it's in sync:
 ```bash
 python3 tools/build_manifest.py          # regenerate manifest.sm + spec §8
 python3 tools/build_manifest.py --check  # verify only; exit 1 if out of sync
