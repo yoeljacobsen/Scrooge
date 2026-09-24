@@ -40,7 +40,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 - Inter-Word Tagged Parameter Validation: Parameter type tags are strictly validated at call sites. Passing incorrect types triggers a static `TypeError`.
 - Arity Drift Protection: Entry frame `-> [ ... ]` variable count MUST match declared signature input count exactly.
 - Bind names with an arrow frame: `-> [ a b ] [ body ]`. The frame pops as many values as declared inputs in reverse order, binding them for the body. Frame variables inherit types declared in the signature.
-- BOTH bracket pairs are mandatory: `-> [ x ] [ x 1 + ]`. `-> [ x ] x 1 +` is a parse error.
+- The names bracket is mandatory, the body bracket is optional: `-> [ x ] x 1 +` means exactly `-> [ x ] [ x 1 + ]` (the same compiled code), because either way the frame's scope runs to the end of the enclosing block (see Scope). `-> x x 1 +`, with no `[ names ]`, is a parse error.
 - Scope: Consecutive sibling frames inherit unshadowed aliases; a trailing `cond` sees active frame aliases. Mechanically, a frame's scope runs to the end of the enclosing block, not to its closing `]`: `-> [ x ] [ A ] B` means `-> [ x ] [ A B ]`, so `B`, and any later frame, still sees `x`. A cond branch is different: it ends at its `]`, and nothing after it can reach inside.
 - Pre-declaration: Define helper words BEFORE caller words. Call words by bare name (no `#`): `... fact_iter`.
 
@@ -121,7 +121,7 @@ Static checker enforces:
 - `ArityMismatch`: Signature vs body net effect mismatch, signature vs frame input count mismatch, or unequal cond branches.
 - `TypeError`: Tagged parameter call-site type mismatch, `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
 - `UnknownWordError`: Invocation of an undeclared word or primitive, in a word body or in top-level code.
-- `ParseError`: Unterminated brackets, missing signature parentheses, nested code blocks (depth > 1 cap), unbracketed frame, a malformed `cond`, a stray `?`/`else` that no `cond` claims, an `end` outside any definition, or a definition with no `end`. Cond-related ParseErrors report `line L col C` and name the cond they concern.
+- `ParseError`: Unterminated brackets, missing signature parentheses, nested code blocks (depth > 1 cap), a frame with no `[ names ]` after `->`, a malformed `cond`, a stray `?`/`else` that no `cond` claims, an `end` outside any definition, or a definition with no `end`. Cond-related ParseErrors report `line L col C` and name the cond they concern.
 - `ReservedWordIdentifierError`: Reserved keyword used as parameter name or frame alias.
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
