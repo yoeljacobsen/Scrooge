@@ -10,7 +10,7 @@ Compiled from `scroogec_fast.nim`, `scroogec_fast` operates as a 100% self-conta
 
 ### CLI Syntax
 ```bash
-./scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+./scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
 ```
 
 ### Options & Flags
@@ -20,6 +20,7 @@ Compiled from `scroogec_fast.nim`, `scroogec_fast` operates as a 100% self-conta
 - `--dump-c [path]`: Performs static verification, generates intermediate C source code to `path` (or `<basename>.c`), and exits.
 - `--dump-bytecode [path]`: Performs static verification, generates intermediate binary bytecode (`.scc`) to `path` (or `<basename>.scc`), and exits.
 - `--check-only`: Performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
+- `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default (every program used to print a trailing `STACK: []`).
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.
 
