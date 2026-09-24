@@ -24,7 +24,7 @@ Scrooge rewards many small words over one large word:
 
 Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional stack shufflers (`dup`, `swap`, `rot`, `over`). Arrow frames preserve static type tags, whereas shufflers produce `Unknown` types.
 
-- **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ] ?`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ] ?` (the true branch must then have net effect 0).
+- **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A trailing `?` is optional.
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
@@ -149,12 +149,12 @@ end
 
 1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`).
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive.
-3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ] ?`).
+3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Literal `roll`/`pk` Index**: Use literal indices only (`1 pk`, `2 roll`).
 5. **No Code Nesting**: Depth-1 cap on code blocks inside code blocks.
 6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles, `fgetc`/`fread` for file handles.
 7. **Every Helper Defined Before Caller**: Order words from dependencies to caller.
-8. **Frame Scope Runs to the End of the Block**: `-> [ x ] [ A ] B` is `-> [ x ] [ A B ]`, so `B` still sees `x`. A cond branch does not extend that way: a `?` or `else` written after a branch's `]` cannot reach a cond inside it.
+8. **Frame Scope Runs to the End of the Block**: `-> [ x ] [ A ] B` is `-> [ x ] [ A B ]`, so `B` still sees `x`. A cond branch does not extend that way: an `else` written after a branch's `]` cannot reach a cond inside it.
 
 ---
 
