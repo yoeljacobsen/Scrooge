@@ -120,7 +120,7 @@ Static checker enforces:
 - `ArityMismatch`: Signature vs body net effect mismatch, signature vs frame input count mismatch, or unequal cond branches.
 - `TypeError`: Tagged parameter call-site type mismatch, `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
 - `UnknownWordError`: Invocation of an undeclared word or primitive.
-- `ParseError`: Unterminated brackets, missing signature parentheses, nested code blocks (depth > 1 cap), or unbracketed frame.
+- `ParseError`: Unterminated brackets, missing signature parentheses, nested code blocks (depth > 1 cap), unbracketed frame, a malformed `cond`, or a stray `?`/`else` that no `cond` claims. Cond-related ParseErrors report `line L col C` and name the cond they concern.
 - `ReservedWordIdentifierError`: Reserved keyword used as parameter name or frame alias.
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
