@@ -41,7 +41,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 - Arity Drift Protection: Entry frame `-> [ ... ]` variable count MUST match declared signature input count exactly.
 - Bind names with an arrow frame: `-> [ a b ] [ body ]`. The frame pops as many values as declared inputs in reverse order, binding them for the body. Frame variables inherit types declared in the signature.
 - BOTH bracket pairs are mandatory: `-> [ x ] [ x 1 + ]`. `-> [ x ] x 1 +` is a parse error.
-- Scope: Consecutive sibling frames inherit unshadowed aliases; a trailing `cond` sees active frame aliases.
+- Scope: Consecutive sibling frames inherit unshadowed aliases; a trailing `cond` sees active frame aliases. Mechanically, a frame's scope runs to the end of the enclosing block, not to its closing `]`: `-> [ x ] [ A ] B` means `-> [ x ] [ A B ]`, so `B`, and any later frame, still sees `x`. A cond branch is different: it ends at its `]`, and nothing after it can reach inside.
 - Pre-declaration: Define helper words BEFORE caller words. Call words by bare name (no `#`): `... fact_iter`.
 
 ═══ 3. Control Flow & Iterators ═══

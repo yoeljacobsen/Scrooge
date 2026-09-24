@@ -154,6 +154,7 @@ end
 5. **No Code Nesting**: Depth-1 cap on code blocks inside code blocks.
 6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles, `fgetc`/`fread` for file handles.
 7. **Every Helper Defined Before Caller**: Order words from dependencies to caller.
+8. **Frame Scope Runs to the End of the Block**: `-> [ x ] [ A ] B` is `-> [ x ] [ A B ]`, so `B` still sees `x`. A cond branch does not extend that way: a `?` or `else` written after a branch's `]` cannot reach a cond inside it.
 
 ---
 
