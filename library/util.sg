@@ -1,8 +1,11 @@
 #reverse ( block:Block -- reversed:Block )
   [fold| idx acc val _ | val acc cons from nil ]
 end
+{ `len` is O(1). This word used to count by folding over every element --
+  a frame entered and left per element -- and was 94% of the instructions
+  of the curated select4 regression. Kept as a word so callers need not change. }
 #length ( block:Block -- n:Scalar )
-  [fold| idx acc val _ | acc 1 + from 0 ]
+  len
 end
 #nth ( block:Block idx:Scalar -- val:Unknown )
   at
