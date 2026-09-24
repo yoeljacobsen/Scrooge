@@ -45,7 +45,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 - Pre-declaration: Define helper words BEFORE caller words. Call words by bare name (no `#`): `... fact_iter`.
 
 ═══ 3. Control Flow & Iterators ═══
-- Conditional: `flag cond [ true-body ] else [ false-body ] ?`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out).
+- Conditional: `flag cond [ true-body ] else [ false-body ] ?`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out). The else-branch may be omitted: `flag cond [ true-body ] ?` means `flag cond [ true-body ] else [ ] ?`, so the true-body must then leave the stack as it found it (net effect 0).
 - `select` chooses a value with no branching: `vt vf flag select` -> vt if flag nonzero else vf. Both operands are always evaluated.
 - No loop keyword. Write loops as tail-recursive words. Only DIRECT self-recursion in terminal position is optimized to iteration; mutual recursion (word A's terminal call to word B, which terminally calls back to A) is not converted, still nests one stack frame per call, and is bounded by MAX_FRAMES (65536).
 - Iterators over a Block:
@@ -129,7 +129,7 @@ Static checker enforces:
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
-- `cond` branches MUST match in count and type, except when exactly one branch's terminal call is `abort`: that branch is exempt, and the other branch's effect/type is used (§7).
+- `cond` branches MUST match in count and type, except when exactly one branch's terminal call is `abort`: that branch is exempt, and the other branch's effect/type is used (§7). An omitted else-branch counts as `[ ]`.
 - No code block nested inside a code block (depth-1 cap).
 - `_at` only on homogeneous collections; never index a record.
 - `_get`/`_set` only on `Block`/`Record`; never on `Ptr` or `Scalar`.

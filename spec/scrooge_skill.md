@@ -24,7 +24,7 @@ Scrooge rewards many small words over one large word:
 
 Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional stack shufflers (`dup`, `swap`, `rot`, `over`). Arrow frames preserve static type tags, whereas shufflers produce `Unknown` types.
 
-- **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ] ?`. Do NOT place brackets `[` `]` around the condition expression `flag`.
+- **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ] ?`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ] ?` (the true branch must then have net effect 0).
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
