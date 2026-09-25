@@ -1,6 +1,17 @@
-# Scrooge Programming Language (v1.49)
+# Scrooge Programming Language (v1.50)
 
-Repository status: **Scrooge v1.49**.
+Repository status: **Scrooge v1.50**.
+
+### What changed in v1.50
+
+Every program in this project's corpus that compiled under v1.49 still compiles, to the same output. Nothing v1.49 accepted is rejected, except a word, parameter or alias named after one of the seven new primitives. One construct changes meaning: a string or data literal right after a frame's names (see Fixes).
+
+- **Much faster generated code.** Word variables are C locals, words compile to C functions with parameters and returns, the stack is cached in C temporaries, values are 16 bytes, and the C is built with `-O3`. The full select4 SQL test suite went from 6 h 32 min to 2 min 53 s with identical output; a sudoku solver's throughput rose 3.8x.
+- **Faster checking.** The parser is linear in the number of frames in a block: checking a 1.2 MB generated program went from 280 s and 27 GB to 0.5 s.
+- **New primitives (68):** `bitcount`, `bitctz`, `bitclz` (popcount and bit scans); `hsort` (sort heap cells in place, stable); `print_float ( x decimals -- )`; `getenv ( name -- value ok )`, read-only; `block_slice`.
+- **Library:** `block_sort` is O(n log n) (it was an O(n^2) insertion sort); `length` is O(1); `bs_count`/`bs_first` use the bit primitives; `print_fixed` and `int_to_str_pad` in `strings.sg`; `f_expand_home` in `file.sg`; `arg_flag`, `arg_value_or`, `arg_int_or` in `args.sg`.
+- **Fixes.** A string literal right after a frame's names is a value, not the frame's body. Writing over a Block held in a heap cell, or releasing a heap region holding Blocks, no longer leaks. `ArityMismatch` shows the stack depth at the end of each line of the word. The spec says what is true: a frame's body bracket is optional, and code blocks nest freely.
+- **Docs.** `.agents/rules/scrooge_rules.md` is current (it described v1.41). Old corpus files now live in `check/corpus/historical/`, labelled as not showing current style.
 
 ### What changed in v1.49
 
@@ -24,7 +35,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.49, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.50, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
@@ -47,7 +58,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_49.txt`](spec/scrooge_spec_v1_49.txt) (defines v1.49 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_50.txt`](spec/scrooge_spec_v1_50.txt) (defines v1.50 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
@@ -119,7 +130,7 @@ Every file in `check/corpus/passing/` must actually pass the checker:
 
 Run in the development repository: `python3 scratch/test_gates_corpus.py`.
 
-The directory name is a claim, and for four of its seven files it was false -- three obsolete pre-lexicon engine forks plus one program with a redundant local `#pair`, all rejected under v1.48's `DuplicateWordError` rules and all left behind by the v1.48 upgrade. The forks now live in `check/corpus/legacy_pre_v148/` (with a README explaining why they no longer compile and which maintained engines superseded them), and that directory is deliberately not gated.
+The directory name is a claim, and for four of its seven files it was false -- three obsolete pre-lexicon engine forks plus one program with a redundant local `#pair`, all rejected under v1.48's `DuplicateWordError` rules and all left behind by the v1.48 upgrade. The forks now live in `check/corpus/historical/legacy_pre_v148/` (with a README explaining why they no longer compile and which maintained engines superseded them), and that directory is deliberately not gated.
 
 ### Lexicon Gate (Gate M)
 

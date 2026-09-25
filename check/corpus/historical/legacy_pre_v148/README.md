@@ -1,5 +1,7 @@
 # Legacy corpus: pre-lexicon engine snapshots
 
+> **Historical, pre-1.48.** These files do not compile and are not examples of current Scrooge. See `../README.md`.
+
 These files are **not expected to compile** under v1.48 and are kept only as
 historical snapshots. They must not live in `check/corpus/passing/`, whose
 name is a claim that everything in it passes the checker (Gate N enforces
