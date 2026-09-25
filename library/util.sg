@@ -45,13 +45,15 @@ end
   > not
 end
 
-#block_eq_step ( idx:Scalar acc:Scalar val:Unknown ctx:Block -- acc2:Scalar )
-  -> [ idx acc val ctx ] acc 0 =
-  cond [ 0 ] else [ val ctx idx at = ] ?
-end
+{ `=` already compares Blocks element by element (same lengths, then `=`
+  on each element), which is what this word did with a fold and a frame per
+  element: 13% of the curated select4 regression. The two `len`s are not
+  redundant. The checker lets an Unknown-typed value reach a Block parameter,
+  and the old word's `len` stopped a program that passed a non-Block
+  ("Fatal: len operand must be a block/list"); `=` alone would compare it
+  and carry on. They keep that behaviour, in the same order, for O(1). }
 #block_eq ( b1:Block b2:Block -- equal:Scalar )
-  -> [ b1 b2 ] b1 len b2 len =
-  cond [ b2 b1 [fold| idx acc val ctx | idx acc val ctx block_eq_step from 1 ] ] else [ 0 ] ?
+  -> [ b1 b2 ] [ b1 len drop b2 len drop b1 b2 = ]
 end
 
 #insert_sort_step ( idx:Scalar acc:Block val:Unknown ctx:Unknown -- acc2:Block )
