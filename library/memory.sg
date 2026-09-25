@@ -28,13 +28,15 @@ end
 #hloop_add ( p:Ptr start:Scalar stop:Scalar val:Scalar -- )
   -> [ p start stop val ] [ val p start stop hadd_loop ]
 end
-#h_find_val_check ( ptr:Ptr size:Scalar val:Scalar current_idx:Scalar -- index:Scalar )
-  -> [ ptr size val current_idx ] [ ptr current_idx hread val = ]
-  cond [ current_idx ] else [ ptr size val current_idx 1 + h_find_val_loop ] ?
-end
+{ ---- One word calling itself, so it runs as a loop. It was two words   ---- }
+{ ---- calling each other, which nested a call per cell and stopped at   ---- }
+{ ---- 65,536 cells with `Fatal: Max frames exceeded`.                   ---- }
 #h_find_val_loop ( ptr:Ptr size:Scalar val:Scalar current_idx:Scalar -- index:Scalar )
-  -> [ ptr size val current_idx ] [ current_idx size = ]
-  cond [ -1 ] else [ ptr size val current_idx h_find_val_check ] ?
+  -> [ ptr size val current_idx ] current_idx size =
+  cond [ -1 ] else [
+    ptr current_idx hread val =
+    cond [ current_idx ] else [ ptr size val current_idx 1 + h_find_val_loop ]
+  ]
 end
 #h_find_val ( ptr:Ptr size:Scalar val:Scalar -- index:Scalar )
   -> [ ptr size val ] [ ptr size val 0 h_find_val_loop ]

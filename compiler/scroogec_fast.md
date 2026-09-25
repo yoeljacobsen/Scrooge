@@ -74,7 +74,7 @@ The six file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`;
 - A `File` value is that slot index. There is no `VAL_FILE` runtime type: `File` is a static type tag, exactly as `Map` and `Record` are, so `f_stdin`-style one-word type assertions in `library/file.sg` work the same way the spec's `hread` wrapper idiom does. Runtime safety comes from `file_slot()`, which validates the index is in range and the slot is open before every read or write.
 - `FILE_PATH_MAX` is 4096. `op_fopen` converts the path Block into a C string, validating every slot is an integer, and releases the Block's reference (`block_decref`) since the value came off the stack.
 - `op_fread` buffers into `unsigned char[want]` and only converts what was actually read into `ScroogeValue` slots, so an oversized count costs one byte per requested character up front rather than sixteen.
-- `op_fputc`/`op_fwrite` flush when the target is slot 1 or 2, matching `print_char`, so `print_char` and file-word output to a standard stream interleave in source order. A real file stays buffered until `fclose` or normal process exit.
+- Output to stdout is buffered. `print_char`/`print_int`/`print_float` and `op_fputc`/`op_fwrite` on slot 1 share `stdout`'s buffer, so they stay in order. Every runtime message to stderr goes through `err_printf`, which flushes stdout first; `op_fputc`/`op_fwrite` on slot 2 and reads from slot 0 flush it too, and `exit` flushes it at the end.
 
 ## 2c. Command-Line Argument Runtime
 
@@ -180,7 +180,7 @@ REJECT <ErrorClass> line X <details>
 
 5. **Lexicon Shadowing Collision**:
    ```text
-   REJECT DuplicateWordError line 5: '#word_name' collides with an imported lexicon definition
+   REJECT DuplicateWordError line 5: '#reverse' collides with 'reverse' from lexicon "util"; rename it, or drop the local definition and use the lexicon's
    ```
 
 6. **Reserved Word Violation**:

@@ -47,7 +47,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 ═══ 3. Control Flow & Iterators ═══
 - Conditional: `flag cond [ true-body ] else [ false-body ]`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out). The else-branch may be omitted: `flag cond [ true-body ]` means `flag cond [ true-body ] else [ ]`, so the true-body must then leave the stack as it found it (net effect 0). A closing `?` may follow the last branch (`... else [ false-body ] ?`, the form older code uses); it is optional and changes nothing. A `?` or `else` anywhere else is a ParseError.
 - `select` chooses a value with no branching: `vt vf flag select` -> vt if flag nonzero else vf. Both operands are always evaluated.
-- No loop keyword. Write loops as tail-recursive words. Only DIRECT self-recursion in terminal position is optimized to iteration; mutual recursion (word A's terminal call to word B, which terminally calls back to A) is not converted, still nests one call per level, and is bounded at 65536 nested calls (MAX_FRAMES; exceeding it stops the program with `Fatal: Max frames exceeded`).
+- No loop keyword. Write loops as tail-recursive words. Only DIRECT self-recursion in terminal position is optimized to iteration; mutual recursion (word A's terminal call to word B, which terminally calls back to A) is not converted, still nests one call per level, and is bounded at 65536 nested calls (MAX_FRAMES; exceeding it stops the program with `Fatal: Max frames exceeded`). The checker warns about a cycle of such terminal calls through two or more words (`WARNING MutualRecursion`, on stderr after `ACCEPT`), which is a loop that will nest; it does not reject it, and a cycle through a non-terminal call (bounded recursion such as a tree walk) is not reported.
 - Iterators over a Block:
     `[map|  idx val ctx | body ]`          body effect: ( idx val -- val' )
     `[fold| idx acc val ctx | body from init ]`  body effect: ( idx acc val -- acc' )
@@ -74,6 +74,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Ptr is opaque: `ptr 1 +` is a static `TypeError`. Compute integer offset first as Scalar, then pass it: `ptr offset hread`.
 - Block access (`_at`/`_get`) and heap access (`hread`) are different: `_at`/`_get` index a Block value; `hread` reads a heap Ptr. They are NOT interchangeable.
 - In-place swap: read BOTH cells before writing EITHER, or the first write overwrites the value the second needs.
+- Bulk cells: `hmove` ( src:Ptr soff:Scalar dst:Ptr doff:Scalar count:Scalar -- ) copies count cells from src to dst, overlapping ranges of one allocation included (as memmove); `hfill` ( v:Unknown p:Ptr start:Scalar count:Scalar -- ) stores v in every cell of the range. Both check their ranges against the allocations; a range outside one is a fatal error.
 - `hmark ( -- mark:Scalar )` / `hrelease ( mark:Scalar -- )`: bound heap growth. `hrelease` frees every heap cell allocated since the matching `hmark` and rewinds the allocator. Caller obligation, unchecked by the checker: any `Ptr` obtained between the `hmark` and its `hrelease` is invalid afterward. Do not read, write, or store such a `Ptr` past the release.
 - Typed-heap-wrapper idiom: `hread` is typed `Unknown`, so raw heap access is a type-erasure boundary. Confine that erasure to a handful of named wrapper words whose declared signature states the real result type, which the checker trusts at the call site instead of re-deriving it:
   ```scrooge
@@ -106,15 +107,16 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`). `=` and `!=` accept any two values: numbers compare by value (an integer equals a float of the same value), Blocks element by element (the same length and every pair of elements equal, recursively; a string is a Block, so this compares strings), Ptrs by identity (the same allocation), and values of different kinds are unequal. `>` and `<` compare numbers.
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
 - I/O: `print_char` ( ascii -- ) | `print_int` ( int -- ) | `print_float` ( x:Scalar decimals:Scalar -- ), a number with 0 to 17 decimals, formatted as C's printf %.*f (so -0.5 with 0 decimals prints -0). Fixed-point and zero-padded integers: print_fixed and int_to_str_pad in the strings lexicon.
-- Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ). See §12.
+- Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ) | `freadline` ( fh:File -- line:Block got:Scalar ) | `fread_into` ( fh:File p:Ptr start:Scalar count:Scalar -- got:Scalar ) | `fseek` ( fh:File pos:Scalar -- ok:Scalar ) | `ftell` ( fh:File -- pos:Scalar ). See §12.
 - Command line and environment: `argc` ( -- n:Scalar ) | `argv` ( i:Scalar -- arg:Block ok:Scalar ) | `getenv` ( name:Block -- value:Block ok:Scalar ), read-only. See §13.
 - Clock: `clock_ns` ( -- ns:Scalar ), nanoseconds from a monotonic clock. The epoch is arbitrary, so only the difference of two readings means anything: read it before and after the work and subtract.
 - Heap Arena: `hmark` ( -- mark:Scalar ) | `hrelease` ( mark:Scalar -- ) | `hsort` ( p:Ptr start:Scalar count:Scalar -- ): sorts the cells start to start+count-1 ascending, in place, stably, ordered as `<` orders; a cell that is not a number, or a range outside the allocation, is a fatal error. See §5.
+- Debugging: `trace` ( v:Unknown -- ) prints the line "trace line N: " and then the value to stderr (after flushing stdout), for a value of any type: a Block shows its first 64 elements, and as text when every element is a printable character; a Ptr shows its size. N is the line of the `trace` in the program's own file. For invariants, the util lexicon has an assert word, ( ok:Scalar msg:Block -- ), which aborts with msg when ok is 0 (§8).
 - Abort: `abort` ( Block -- ), never returns. Prints its Block argument to stderr as characters and terminates the process with a nonzero exit status. A cond branch whose terminal call is `abort` is exempt from the "branches MUST match in count and type" rule (§10): the checker unifies on the OTHER branch's stack effect/type instead, since the aborting branch never produces a value.
 
 ═══ 8. Standard Library Modules (import with `use "lexicon"`) ═══
 Import at file top; names resolve only for imported lexicons.
-- `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, insert_sorted, block_sort.
+- `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, insert_sorted, block_sort, assert.
 - `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, int_to_str_pad, print_fixed, print_line, str_to_int, fs_matches_at, find_sub.
 - `memory`: hclear, hloop_fill, hloop_add, h_find_val.
 - `array`: arr_size, arr_make, arr_offset, arr_get, arr_set, nth_or_default.
@@ -129,13 +131,13 @@ Import at file top; names resolve only for imported lexicons.
 Static checker enforces:
 - `ArityMismatch`: Signature vs body net effect mismatch, signature vs frame input count mismatch, or unequal cond branches.
 - `TypeError`: Tagged parameter call-site type mismatch, `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
-- `UnknownWordError`: Invocation of an undeclared word or primitive, in a word body or in top-level code.
+- `UnknownWordError`: Invocation of an undeclared word or primitive, in a word body or in top-level code. When a library lexicon defines the word, the message names it and the `use` line to add.
 - `ParseError`: Unterminated brackets, missing signature parentheses, a `[ ... ]` value containing code (§6), a frame with no `[ names ]` after `->`, a malformed `cond`, a stray `?`/`else` that no `cond` claims, an `end` outside any definition, or a definition with no `end`. Cond-related ParseErrors report `line L col C` and name the cond they concern.
-- `ReservedWordIdentifierError`: Reserved keyword used as parameter name or frame alias.
-- `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
+- `ReservedWordIdentifierError`: Reserved word used as a parameter name, a frame alias, or the name of a `#word` definition (when it is not a primitive; see `DuplicateWordError`).
+- `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word (the message names the lexicon), or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
@@ -242,17 +244,29 @@ end
   a standard stream (which this process does not own). Closing flushes.
 - Handles 0, 1 and 2 are pre-opened as stdin, stdout and stderr, so the same
   read and write words serve the standard streams; `file.sg` names them
-  `f_stdin`/`f_stdout`/`f_stderr`. `fputc`/`fwrite` to stdout or stderr flush
-  per call, matching `print_char`, so output interleaves in order; a real file
-  stays buffered until it is closed or the process exits normally.
+  `f_stdin`/`f_stdout`/`f_stderr`. Output to stdout is buffered: `print_char`,
+  `print_int`, `print_float` and writes to handle 1 share one buffer, so they
+  stay in order. It is flushed before anything is written to stderr (so an
+  error or `abort` message still follows the output before it), before a
+  read from stdin (so a prompt is visible), and at exit. A real file stays
+  buffered until it is closed or the process exits normally.
 - Sequential read, two granularities:
     `fh fgetc -> ch ok`        one character; ok=0 at end of input (ch=0)
     `fh n fread -> str`        up to n characters as a Block; `str len` is how
                                many were actually read, and an empty Block
                                means end of input
-  Use `fgetc` when the read must stop exactly at a delimiter. Use `fread` for
-  throughput: it moves the whole chunk in one pass, where a Scrooge-level
-  per-character loop pays a word call and a `cons` copy per character.
+    `fh freadline -> line got` the next line, in one pass; the newline is
+                               consumed, not returned; got=0 only at end of
+                               input with nothing read
+    `fh p start n fread_into -> got`
+                               up to n bytes into heap cells start.. of p, each
+                               an integer 0-255; got is how many (0 at end of
+                               input). No Block is built, so a large file can
+                               be streamed through a fixed heap buffer
+  Use `freadline` (or `f_read_line`) for line-structured text, `fread_into` or
+  `fread` for throughput, and `fgetc` only when the read must stop at some
+  other delimiter: a Scrooge-level per-character loop pays a word call and a
+  `cons` copy per character.
 - Sequential write, the same two granularities:
     `ch fh fputc -> ok`        one character; ok=0 on a write error
     `str fh fwrite -> written` every character of str; written < `str len`
@@ -260,11 +274,12 @@ end
 - Partiality is always reported through a Scalar flag or a length, never by
   aborting -- the same convention as `lst_try_push`, `map_set` and
   `str_to_int`. Only an outright protocol violation is fatal: a non-File where
-  a File is required, a closed handle, a non-Block path, or a negative `fread`
-  count. This mirrors `hread`/`hwrite`.
-- Reads and writes are sequential only. There is no seek, no tell and no
-  random access: a handle advances and never rewinds. Reading a file twice
-  means opening it twice.
+  a File is required, a closed handle, a non-Block path, a negative `fread`
+  count, a negative `fseek` position, or a `fread_into` range outside the
+  allocation. This mirrors `hread`/`hwrite`.
+- Position: `fh pos fseek -> ok` moves to an absolute byte offset (ok=0 when
+  the stream cannot seek, e.g. a pipe; a negative pos is fatal);
+  `fh ftell -> pos` is the current offset, -1 when the stream has none.
 - Cost model: a file read into a Block costs one Block slot per character, and
   a Block slot is considerably wider than a byte. `f_read_all` materializes an
   entire file that way, which is the right thing for configuration and data

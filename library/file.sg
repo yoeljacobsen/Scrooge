@@ -94,25 +94,14 @@ end
   -> [ fh ] [ fh nil f_chunk f_read_all_loop ]
 end
 
-{ ---- Line-at-a-time sequential read. This one must stop exactly at the  ---- }
-{ ---- newline rather than over-read, so it goes through `fgetc` and pays  ---- }
-{ ---- a cons per character: fine for line-structured text, wrong tool for ---- }
-{ ---- a single enormous line (use f_read_all for bulk). The newline is    ---- }
-{ ---- consumed and not returned. got=0 means end of input was reached     ---- }
-{ ---- with nothing left to read, which is how an empty last line is told  ---- }
-{ ---- apart from no line at all -- the same found-flag convention         ---- }
-{ ---- str_to_int and find_sub use.                                       ---- }
-#f_read_line_loop ( fh:File acc:Block got:Scalar -- rev:Block got2:Scalar )
-  -> [ fh acc got ] [ fh acc got fh fgetc ]
-  -> [ fh acc got ch ok ] ok not
-  cond [ acc got ] else [
-    ch 10 =
-    cond [ acc 1 ] else [ fh ch acc cons 1 f_read_line_loop ] ?
-  ] ?
-end
+{ ---- Line-at-a-time sequential read, one C pass per line (the          ---- }
+{ ---- `freadline` primitive). The newline is consumed and not returned.  ---- }
+{ ---- got=0 means end of input was reached with nothing left to read,    ---- }
+{ ---- which is how an empty last line is told apart from no line at all  ---- }
+{ ---- -- the same found-flag convention str_to_int and find_sub use.     ---- }
+{ ---- For bulk bytes into the heap, see the `fread_into` primitive.      ---- }
 #f_read_line ( fh:File -- line:Block got:Scalar )
-  -> [ fh ] [ fh nil 0 f_read_line_loop ]
-  -> [ rev got ] [ rev f_rev_loop got ]
+  freadline
 end
 
 { ---- Whole-file convenience: open, transfer, close. ok=0 means the open ---- }

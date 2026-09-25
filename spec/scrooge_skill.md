@@ -42,6 +42,7 @@ Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional st
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `array_at` / `list_at` / `block_at` or `at`.
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
+- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one. Use them instead of a per-cell loop.
 - **Heap state with named fields**: declare it with `#record Name  field Type count ...  end` (spec Sec.5) instead of hand-numbering offsets. It generates `Name_new`, `Name_size`, and a typed getter `Name_field` and setter `Name_field_set` per field (an index argument unless the count is 1): `#record Board cells Scalar 81 solved Scalar 1 end` then `Board_new -> [ b ] [ 5 b 0 Board_cells_set 1 b Board_solved_set b 0 Board_cells print_int ]`.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 - **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.
@@ -121,7 +122,7 @@ end
 
 **Check the flag, always.** Nothing in this lexicon aborts on a missing file, a full handle table or a short write -- it returns `ok=0`, `got=0`, or a written count below `str len`. A `cond` on that flag is not optional politeness; skipping it means using a handle that was never opened.
 
-**Choose the granularity deliberately.** `fread`/`fwrite` move a whole chunk in one C-level pass. `fgetc`/`fputc` move one character and cost a word call plus a `cons` copy each, so use them only where the read must stop exactly at a delimiter (which is what `f_read_line` does). Never hand-write a per-character loop to do what `f_write_str` or `f_read_all` already does.
+**Choose the granularity deliberately.** `f_read_line` (the `freadline` primitive) reads a line in one C pass. `fh p start count fread_into` reads bytes straight into heap cells, with no Block per character: stream a large file through one fixed heap buffer that way. `fread`/`fwrite` move a whole chunk as a Block. `fgetc`/`fputc` move one character and cost a word call plus a `cons` copy each, so use them only where the read must stop at some other delimiter. Never hand-write a per-character loop to do what `f_write_str`, `f_read_line` or `f_read_all` already does. `fseek`/`ftell` reposition a file (not a pipe).
 
 **Mind the width.** One character read into a Block occupies a full Block slot, considerably wider than a byte. `f_read_all` is right for configuration and data files; stream anything much larger with `fread` a chunk at a time rather than accumulating the whole input.
 
@@ -161,7 +162,7 @@ use "args"
 
 ## 7. Failure Checklist (Check Before Emitting Code)
 
-1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`). This is the list in spec Sec.10.
+1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`). This is the list in spec Sec.10.
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
@@ -180,3 +181,16 @@ compiler/scroogec_fast -L library <file.sg>
 ```
 
 **Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to inline or restructure.
+
+## 9. Debugging a Program That Runs Wrong
+
+Work from cheapest to most detailed:
+
+1. **`assert` your invariants** (`use "util"`): `count 81 <= "count past the grid" assert` stops the program with that message the first time the invariant fails, instead of minutes later with a corrupted result.
+2. **`trace` a value**: `x trace` prints `trace line N: <value>` to stderr, for any type: numbers, Blocks (the first 64 elements, and as text when they are all printable characters), and a Ptr as its size. It consumes the value, so trace a frame-bound name (`-> [ x ] [ x trace ... x ... ]`) or a `dup`. stdout is flushed first, so traces appear in order with the program's output.
+3. **`--debug-stack`** prints whatever the program left on the stack at exit.
+4. **`--profile`** (section 8) shows which words run and how often: a count that is far off what you expect is a bug, not just a hot spot.
+5. **Read the generated C** when the semantics puzzle you: `compiler/scroogec_fast -L library --dump-c prog.c prog.sg`. Each word `name` is a C function `f_name` (words with a fixed stack effect, called directly) and a stack wrapper `m_name`; characters outside `[A-Za-z0-9_]` become `_XX` hex codes, so `>=` is `f__3E_3D`. Word parameters are `p0, p1, ...` (the first is the deepest input), frame bindings are the locals `v0, v1, ...` in binding order, `t0, t1, ...` are intermediate values, and each runtime primitive is an `op_<name>` function in the preamble. You can add `fprintf(stderr, ...)` lines, build with `gcc -O3 prog.c -o prog` (what the compiler runs), and run it, but fix the Scrooge source afterwards: the C is regenerated on every build.
+
+The checker also warns (after `ACCEPT`, on stderr) when words call each other round a cycle of tail calls: that is a loop, and only direct self-recursion runs as a loop, so such a cycle over a million records dies with `Fatal: Max frames exceeded`. Make one word call itself instead (nested `cond`s inside one word are fine).
+

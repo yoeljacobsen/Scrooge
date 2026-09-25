@@ -92,6 +92,7 @@ tool "util" name "<=" sig "( a:Scalar b:Scalar -- bool:Scalar )" desc "1 if a <=
 tool "util" name "block_eq" sig "( b1:Block b2:Block -- equal:Scalar )" desc "Checks element-by-element equality of two blocks."
 tool "util" name "insert_sorted" sig "( val:Unknown blk:Block -- result:Block )" desc "Inserts a value into an already-sorted block, preserving order."
 tool "util" name "block_sort" sig "( blk:Block -- sorted:Block )" desc "Performs stable sorting on a block."
+tool "util" name "assert" sig "( ok:Scalar msg:Block -- )" desc "..."
 
 { ---- Primitives: built into the compiler, no `use` needed. Not loaded by the compiler; checked against it by tools/build_manifest.py ---- }
 
@@ -159,7 +160,14 @@ prim name "fgetc" sig "( fh:File -- ch:Scalar ok:Scalar )" desc "Read one charac
 prim name "fputc" sig "( ch:Scalar fh:File -- ok:Scalar )" desc "Write one character."
 prim name "fread" sig "( fh:File n:Scalar -- str:Block )" desc "Read up to n characters."
 prim name "fwrite" sig "( str:Block fh:File -- written:Scalar )" desc "Write a Block of characters; returns the count written."
+prim name "freadline" sig "( fh:File -- line:Block got:Scalar )" desc "Read the next line in one pass, newline consumed; got=0 only at end of input with nothing read."
+prim name "fread_into" sig "( fh:File p:Ptr start:Scalar count:Scalar -- got:Scalar )" desc "Read up to count bytes into heap cells from start, as integers; returns how many."
+prim name "fseek" sig "( fh:File pos:Scalar -- ok:Scalar )" desc "Move to an absolute byte offset; ok=0 when the stream cannot seek."
+prim name "ftell" sig "( fh:File -- pos:Scalar )" desc "Current byte offset; -1 when the stream has none (a pipe)."
 prim name "argc" sig "( -- n:Scalar )" desc "Command-line argument count, program name included (spec Sec.13)."
 prim name "argv" sig "( i:Scalar -- arg:Block ok:Scalar )" desc "Argument i, C indexing (0 is the program); ok=0 when out of range."
 prim name "getenv" sig "( name:Block -- value:Block ok:Scalar )" desc "Environment variable, read-only; ok=0 and an empty Block when unset, ok=1 (value possibly empty) when set."
+prim name "hmove" sig "( src:Ptr soff:Scalar dst:Ptr doff:Scalar count:Scalar -- )" desc "Copy count heap cells from src to dst; overlapping ranges are safe."
+prim name "hfill" sig "( v:Unknown p:Ptr start:Scalar count:Scalar -- )" desc "Store v in every heap cell of the range."
+prim name "trace" sig "( v:Unknown -- )" desc "Print the value (any type) and the trace's source line to stderr, for debugging."
 prim name "clock_ns" sig "( -- ns:Scalar )" desc "Nanoseconds from a monotonic clock; only differences between readings mean anything."
