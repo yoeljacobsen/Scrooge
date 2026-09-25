@@ -36,6 +36,31 @@ end
 end
 
 { ---- Print an integer via string conversion, then newline ---- }
+{ ---- Fixed-point and padded number output (GAPS_TASK_PLAN.md G3) ---- }
+{ int_to_str_pad pads with zeros to a total width, the sign counted in it,
+  as printf's %0Nd does: -5 3 int_to_str_pad is "-05". }
+#itsp_pad_loop ( s:Block neg:Scalar width:Scalar -- s2:Block )
+  -> [ s neg width ] s len neg + width < cond [ 48 s cons neg width itsp_pad_loop ] else [ s ]
+end
+#int_to_str_pad ( n:Scalar width:Scalar -- s:Block )
+  -> [ n width ] [ n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 swap cons ] ]
+end
+{ print_fixed prints an integer as a fixed-point number with `decimals`
+  digits after the point: 12345 3 print_fixed is 12.345, -5 2 is -0.05,
+  7 0 is 7. For times kept in integer nanoseconds, 3 gives microseconds. }
+#pf_pow10_loop ( d:Scalar acc:Scalar -- p:Scalar )
+  -> [ d acc ] d 0 = cond [ acc ] else [ d 1 - acc 10 * pf_pow10_loop ]
+end
+#print_fixed ( v:Scalar decimals:Scalar -- )
+  -> [ v d ] [
+    v 0 < cond [ 45 print_char ]
+    v abs -> [ a ] [ d 1 pf_pow10_loop -> [ sc ] [
+      a sc / print_int
+      d 0 > cond [ 46 print_char a sc \ d int_to_str_pad str_print ]
+    ] ]
+  ]
+end
+
 #print_line ( n:Scalar -- )
   -> [ n ] [ n int_to_str str_print 10 print_char ]
 end

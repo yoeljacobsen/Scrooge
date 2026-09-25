@@ -96,7 +96,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Bitwise (integer operands only): `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr` ( Scalar Scalar -- Scalar ) | `bitnot` ( Scalar -- Scalar ) | `bitcount`, `bitctz`, `bitclz` ( Scalar -- Scalar ): the number of set bits, trailing zero bits and leading zero bits of the 64-bit pattern (a negative number has bit 63 set); `bitctz` and `bitclz` of 0 are 64.
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`). `=` and `!=` accept any two values: numbers compare by value (an integer equals a float of the same value), Blocks element by element (the same length and every pair of elements equal, recursively; a string is a Block, so this compares strings), Ptrs by identity (the same allocation), and values of different kinds are unequal. `>` and `<` compare numbers.
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
-- I/O: `print_char` ( ascii -- ) | `print_int` ( int -- )
+- I/O: `print_char` ( ascii -- ) | `print_int` ( int -- ) | `print_float` ( x:Scalar decimals:Scalar -- ), a number with 0 to 17 decimals, formatted as C's printf %.*f (so -0.5 with 0 decimals prints -0). Fixed-point and zero-padded integers: print_fixed and int_to_str_pad in the strings lexicon.
 - Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ). See §12.
 - Command line: `argc` ( -- n:Scalar ) | `argv` ( i:Scalar -- arg:Block ok:Scalar ). See §13..
 - Clock: `clock_ns` ( -- ns:Scalar ), nanoseconds from a monotonic clock. The epoch is arbitrary, so only the difference of two readings means anything: read it before and after the work and subtract.
@@ -106,7 +106,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 ═══ 8. Standard Library Modules (import with `use "lexicon"`) ═══
 Import at file top; names resolve only for imported lexicons.
 - `util`: reverse, length, nth, sum, contains, filter_eq, index_of, concat, >=, <=, block_eq, insert_sorted, block_sort.
-- `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, print_line, str_to_int, fs_matches_at, find_sub.
+- `strings`: str_print, is_digit, is_space, is_upper, is_lower, int_to_str, int_to_str_pad, print_fixed, print_line, str_to_int, fs_matches_at, find_sub.
 - `memory`: hclear, hloop_fill, hloop_add, h_find_val.
 - `array`: arr_size, arr_make, arr_offset, arr_get, arr_set, nth_or_default.
 - `bitset`: bs_add, bs_test, bs_union, bs_inter, bs_minus, bs_count, bs_first.
@@ -126,7 +126,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
