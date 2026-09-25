@@ -142,7 +142,7 @@ end
 
 **Distinguish absent from empty.** `argv` reports a missing index as `ok=0`, but an argument that was supplied and is empty (`prog ""`) is `ok=1` with an empty `Block`. Do not treat length 0 as "not given".
 
-**Read `programs/args_demo.sg`** for the whole shape of a command-line program: flags separated from operands, the program named in a diagnostic, and standard input used when no operands were given.
+**Read `examples/args_demo.sg`** for the whole shape of a command-line program: flags separated from operands, the program named in a diagnostic, and standard input used when no operands were given.
 
 ---
 
@@ -152,7 +152,7 @@ end
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
-5. **No Code Nesting**: Depth-1 cap on code blocks inside code blocks.
+5. **Bracketed Values Are Data**: a `[ ... ]` used as a value may hold only literals (`[ 1 [ 2 3 ] ]`); build a Block from computed values with `cons` or `pair`. Cond branches, frame bodies and loop bodies are not values and nest freely.
 6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles, `fgetc`/`fread` for file handles.
 7. **Every Helper Defined Before Caller**: Order words from dependencies to caller.
 8. **Frame Scope Runs to the End of the Block**: `-> [ x ] [ A ] B` is `-> [ x ] [ A B ]`, so `B` still sees `x`. A cond branch does not extend that way: an `else` written after a branch's `]` cannot reach a cond inside it.
@@ -161,7 +161,7 @@ end
 
 ## 8. Verification and Compilation
 
-For all static verification, shape-gate analysis, and native executable generation, use `scroogec_fast` (or `compiler/scroogec_fast_x86-64`):
+For all static verification, shape-gate analysis, and native executable generation, use `compiler/scroogec_fast` (or the static `compiler/scroogec_fast_x86-64`), from the repository root:
 ```bash
-./scroogec_fast -L library <file.sg>
+compiler/scroogec_fast -L library <file.sg>
 ```

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Compiled from `scroogec_fast.nim`, `scroogec_fast` operates as a **100% self-contained, zero-dependency unified tool** that:
+Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fast` operates as a **100% self-contained, zero-dependency unified tool** that:
 - Performs static verification, shape-gate validation, arity checking, stack effect analysis, and type checking.
 - Directly compiles Scrooge source code (`.sg`) into standalone native ELF 64-bit x86-64 executables without requiring external Python tools or runtime script files.
 - Dumps intermediate target representation files (C source code and binary bytecode) via dedicated CLI flags.
@@ -37,7 +37,7 @@ Performs static verification. If the code passes verification (`ACCEPT`), `scroo
 
 ```bash
 # Compiles app.sg to native executable ./app
-./scroogec_fast app.sg
+compiler/scroogec_fast app.sg
 
 # Execute native binary directly
 ./app
@@ -45,12 +45,12 @@ Performs static verification. If the code passes verification (`ACCEPT`), `scroo
 
 To specify a custom output binary name:
 ```bash
-./scroogec_fast app.sg -o my_app
+compiler/scroogec_fast app.sg -o my_app
 ```
 
 To specify a custom library search directory:
 ```bash
-./scroogec_fast -L /path/to/library app.sg -o my_app
+compiler/scroogec_fast -L /path/to/library app.sg -o my_app
 ```
 
 ### 2. Intermediate File Dumping (`--dump-c` & `--dump-bytecode`)
@@ -59,11 +59,11 @@ Performs static verification (`ACCEPT`), dumps the requested intermediate repres
 
 - **Dump C Source Code:**
   ```bash
-  ./scroogec_fast --dump-c out.c app.sg
+  compiler/scroogec_fast --dump-c out.c app.sg
   ```
 - **Dump Binary Bytecode (.scc):**
   ```bash
-  ./scroogec_fast --dump-bytecode out.scc app.sg
+  compiler/scroogec_fast --dump-bytecode out.scc app.sg
   ```
 
 ### 3. Static Verification Mode (`--check-only`)
@@ -93,7 +93,7 @@ Calculates static execution metrics for the entry word in the target file and ou
 
 ## Key Characteristics
 
-- **100% Self-Contained**: Operates without external Python scripts (`scroogec.py`, `scrooge2c.py`).
+- **100% Self-Contained**: Operates without the retired Python toolchain.
 - **Statically Linked**: `scroogec_fast_x86-64` has zero external runtime library dependencies.
 - **Intermediate Inspection**: Built-in support for inspecting intermediate C and bytecode output.
 - **Library Module Resolution**: Automatically resolves imported library modules from specified or standard library locations (`library/`, `../Scrooge/library/`).

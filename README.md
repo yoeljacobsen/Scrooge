@@ -24,23 +24,22 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The Nim static compiler executable `./scroogec_fast` (and its statically-linked binary `compiler/scroogec_fast_x86-64`) is the sole static verifier, type checker, and C code generation compiler for Scrooge v1.49 in this environment.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.49, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
 ```bash
-# Rebuild static compiler binary from source
-nim c -d:release scroogec_fast.nim
-
 # Perform static verification only (outputs ACCEPT or REJECT)
-./scroogec_fast --check-only my_program.sg
+compiler/scroogec_fast -L library --check-only my_program.sg
 
 # Compile Scrooge source file into a native ELF executable
-./scroogec_fast -L library -o my_program my_program.sg
+compiler/scroogec_fast -L library -o my_program my_program.sg
 
 # Dump generated intermediate C source code
-./scroogec_fast --dump-c out.c -L library my_program.sg
+compiler/scroogec_fast -L library --dump-c out.c my_program.sg
 ```
+
+A complete command-line program to start from: `examples/args_demo.sg`.
 
 For complete technical documentation on compiler architecture, C codegen optimizations (`make_int_array`), AST line-number tracking (`lineNum: int`), and diagnostic formats, refer to [`compiler/scroogec_fast.md`](compiler/scroogec_fast.md).
 
@@ -66,21 +65,18 @@ Standard library lexicon modules reside in `library/`:
 - `library/file.sg`: Sequential file I/O over the opaque `File` handle -- whole-file transfer (`f_read_file`, `f_write_file`, `f_append_file`), explicit open/close (`f_open_read`/`f_open_write`/`f_open_append`), streaming reads and writes (`f_read_all`, `f_read_line`, `f_write_str`, `f_write_line`), and the pre-opened standard streams (`f_stdin`, `f_stdout`, `f_stderr`).
 - `library/args.sg`: Command-line arguments over the `argc`/`argv` primitives -- the program name (`arg_prog`), a total accessor taking a default (`arg_or`), the arguments without the program name as a Block of Blocks (`arg_tail`), and flag scanning (`arg_find`).
 
-The discovery manifest is synchronized at [`library/manifest.sm`](library/manifest.sm). It is generated, not hand-maintained: `tools/build_manifest.py` is the single canonical source of truth, deriving every entry (and the matching spec §8 lexicon word-lists) directly from `library/*.sg`. It also lists every compiler primitive as a `prim` line; those come from a table in the tool that `--check` holds against the compiler's own primitive tables (every primitive present once, matching arity and types), so they cannot drift either. The compiler reads only the `tool` lines. Regenerate it after any library change, or just verify it's in sync:
-```bash
-python3 tools/build_manifest.py          # regenerate manifest.sm + spec §8
-python3 tools/build_manifest.py --check  # verify only; exit 1 if out of sync
-```
+The discovery manifest is synchronized at [`library/manifest.sm`](library/manifest.sm). It is generated, not hand-maintained: `tools/build_manifest.py` (in the development repository) is the single canonical source of truth, deriving every entry (and the matching spec §8 lexicon word-lists) directly from `library/*.sg`. It also lists every compiler primitive as a `prim` line; those come from a table in the tool that `--check` holds against the compiler's own primitive tables (every primitive present once, matching arity and types), so they cannot drift either. The compiler reads only the `tool` lines. Regenerate it after any library change, or just verify it's in sync:
+(`python3 tools/build_manifest.py --check` verifies it in the development repository.)
 
 ---
 
 ## 4. Automated Test Suite (Gates A through J)
 
+These gates run in the development repository, which holds the compiler source; they are listed here as a record of what every release is verified against. They cannot be run from this repository, which contains the prebuilt compiler, the library, the specification and the corpus.
+
 Execute the standard automated test harness to verify compiler correctness, inter-macro type validation, decimal float support, signed string formatting, and manifest integrity:
 
-```bash
-python3 scratch/test_gates_a_j.py
-```
+Run in the development repository: `python3 scratch/test_gates_a_j.py`.
 
 ### Test Gate Coverage
 - **Gate A**: Heuristic eradication (`Block` parameter named `src` PASSES).
@@ -100,9 +96,7 @@ python3 scratch/test_gates_a_j.py
 
 File I/O has its own harness, covering the static guarantees the `File` type provides, the runtime behaviour of all six file primitives and every public word in `library/file.sg`, and a memory regression test for Bug 17:
 
-```bash
-python3 scratch/test_gates_file_io.py
-```
+Run in the development repository: `python3 scratch/test_gates_file_io.py`.
 
 - **Gate K1-K4**: Static rejection of `File` misuse (arithmetic, `hread`, `_at`, swapped `fputc` arguments).
 - **Gate K5**: Whole-file read/write round trip, byte for byte.
@@ -115,9 +109,7 @@ python3 scratch/test_gates_file_io.py
 
 ### Command-Line Argument Gate (Gate O)
 
-```bash
-python3 scratch/test_gates_args.py
-```
+Run in the development repository: `python3 scratch/test_gates_args.py`.
 
 Covers the static guarantees (`argv`'s index must be a `Scalar`; its result is a `Block`, not a `Scalar` or a `File`), the C indexing `argc`/`argv` promise (`argc == 1` with no arguments, `argv[0]` is the program as invoked), arguments preserved verbatim including spaces and an empty one, out-of-range in both directions giving `ok=0`, the **present-but-empty** case that must give `ok=1` rather than `ok=0`, and every public word in `library/args.sg`.
 
@@ -125,9 +117,7 @@ Covers the static guarantees (`argv`'s index must be a `Scalar`; its result is a
 
 Every file in `check/corpus/passing/` must actually pass the checker:
 
-```bash
-python3 scratch/test_gates_corpus.py
-```
+Run in the development repository: `python3 scratch/test_gates_corpus.py`.
 
 The directory name is a claim, and for four of its seven files it was false -- three obsolete pre-lexicon engine forks plus one program with a redundant local `#pair`, all rejected under v1.48's `DuplicateWordError` rules and all left behind by the v1.48 upgrade. The forks now live in `check/corpus/legacy_pre_v148/` (with a README explaining why they no longer compile and which maintained engines superseded them), and that directory is deliberately not gated.
 
@@ -135,9 +125,7 @@ The directory name is a claim, and for four of its seven files it was false -- t
 
 Every standard-library lexicon must pass the checker standalone:
 
-```bash
-python3 scratch/test_gates_lexicon.py
-```
+Run in the development repository: `python3 scratch/test_gates_lexicon.py`.
 
 Library source is concatenated into a program for *codegen* but never reaches `checkSource` -- `reservedWordPass`, `checkNesting`, the Track 1 arity analyzer and Track 2 all see only the user's file, with lexicon words supplied as pre-typed externs from `manifest.sm`. So `library/*.sg` was the one place in the tree where "code either passes the checker or is rejected" did not hold. Running each lexicon as a top-level source file puts library code under the same rules as everything else; all nine pass.
 
@@ -145,10 +133,8 @@ Library source is concatenated into a program for *codegen* but never reaches `c
 
 Per-primitive refcount leak gates, one probe per op:
 
-```bash
-python3 scratch/test_gates_leak.py
-```
+Run in the development repository: `python3 scratch/test_gates_leak.py`.
 
 The contract each probe enforces: a value popped off the stack carries a reference, and the op that popped it must **return** it, **store** it into a structure, or **release** it. An op doing none of the three leaks permanently, in proportion to its call count. Every probe allocates a *fresh* Block each iteration and asserts peak RSS is flat across a 16x range of iteration counts -- the freshness matters, since leaking a reference to one long-lived Block costs no memory.
 
-Ten ops pass flat (`len`, `at`, `block_get`, `=`, `!=`, both `select` branches, plus `cons`, `block_set` and `hwrite` as known-correct controls). Three probes are tracked as known-cause `XFAIL`s: `block_decref` does not recurse into Block-typed elements, so `pair`, a nested `cons`, and a Block written into a heap cell and then `hrelease`d all leak their elements. That is a separate ownership question, recorded in `BUGFIX_TASK_PLAN.md` as Task 9.
+Ten ops pass flat (`len`, `at`, `block_get`, `=`, `!=`, both `select` branches, plus `cons`, `block_set` and `hwrite` as known-correct controls). Three probes are tracked as known-cause `XFAIL`s: `block_decref` does not recurse into Block-typed elements, so `pair`, a nested `cons`, and a Block written into a heap cell and then `hrelease`d all leak their elements. That is a separate ownership question, recorded in `BUGFIX_TASK_PLAN.md` in the development repository as Task 9.

@@ -6,11 +6,11 @@
 
 ## 1. Compiler Architecture & CLI Usage
 
-Compiled from `scroogec_fast.nim`, `scroogec_fast` operates as a 100% self-contained unified tool that performs tokenization, AST construction, static verification (Track 1 arity analysis & Track 2 type checking), and C code generation without requiring external Python scripts.
+Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fast` operates as a 100% self-contained unified tool that performs tokenization, AST construction, static verification (Track 1 arity analysis & Track 2 type checking), and C code generation without requiring external Python scripts.
 
 ### CLI Syntax
 ```bash
-./scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
 ```
 
 ### Options & Flags
@@ -95,7 +95,7 @@ static inline void init_args(int argc, char** argv) { ... }
 
 ### Adding a primitive
 
-A new primitive must be added in **seven** places. `--selftest` now mechanically catches an omission in five of them (2-5); the remaining two are caught by `tools/spec_sync_check` and by nothing respectively.
+A new primitive must be added in **seven** places. `--selftest` now mechanically catches an omission in five of them (2-5); the remaining two are caught by `tools/spec_sync_check` (development repository) and by nothing respectively.
 
 1. `RESERVED` -- so it cannot be used as a parameter name or frame alias. **Not automatically checked.**
 2. `PRIM_EFFECT` (module level) -- arity for the Track 1 checker. This table is what `--selftest` treats as the definition of the primitive surface; everything else is held against it.
@@ -103,7 +103,7 @@ A new primitive must be added in **seven** places. `--selftest` now mechanically
 4. `emitNode` and `emitBCNode` -- one case arm each. A spelling in `PRIM_EFFECT` without both is the ACCEPT-then-fails-to-build class `--selftest` was created to eliminate.
 5. `PRIM_TYPES` (module level) -- Track 2 operand and result types. A word with no entry here *and* no early-return branch in `wordTC` falls through to that proc's trailing `tstack.add("Unknown")`, which pushes a result without popping the operands: the type stack desyncs by the input count and every later call site in the same word is checked against shifted operands. That was Bug 18, and `--selftest` now rejects it.
 6. `analyzeStack`'s local `PRIM_EFFECT` copy -- `--metrics` stack-depth accounting. **Not automatically checked.**
-7. Spec §7 -- `tools/spec_sync_check` requires every backticked token there to be a `PRIM_EFFECT` key.
+7. Spec §7 -- `tools/spec_sync_check` (development repository) requires every backticked token there to be a `PRIM_EFFECT` key.
 
 ### What `--selftest` guarantees about the primitive surface
 

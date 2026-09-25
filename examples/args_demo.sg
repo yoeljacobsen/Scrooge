@@ -1,0 +1,79 @@
+{ ---- args_demo: a `cat`-like tool, demonstrating library/args.sg ---- }
+{ ----                                                                ---- }
+{ ---- Usage:  args_demo [-c] [file...]                               ---- }
+{ ----   with no files, copies standard input                         ---- }
+{ ----   -c prints each file's character count instead of its contents ---- }
+{ ----                                                                ---- }
+{ ---- Shows the whole shape of a command-line program in Scrooge:    ---- }
+{ ---- reading the argument vector (arg_tail), scanning for a flag     ---- }
+{ ---- (arg_find), separating flags from operands, naming the program  ---- }
+{ ---- in a diagnostic (arg_prog), and falling back to stdin when no   ---- }
+{ ---- operands were given -- the ordinary Unix filter convention.     ---- }
+{ ----                                                                ---- }
+{ ---- Build: compiler/scroogec_fast -L library -o args_demo examples/args_demo.sg }
+{ ---- Run:   ./args_demo file1 file2                                 ---- }
+{ ----        ./args_demo -c file1                                    ---- }
+{ ----        cat file1 | ./args_demo                                 ---- }
+
+use "args"
+use "file"
+use "strings"
+use "util"
+
+{ An operand is any argument that does not begin with '-'. An empty
+  argument is an operand, not a flag: `args_demo ""` names a file whose
+  path is the empty string, which f_read_file will then fail to open. }
+#is_flag ( s:Block -- flag:Scalar )
+  -> [ s ] s len 0 >
+  cond [ s 0 at 45 = ] else [ 0 ] ?
+end
+
+#keep_step ( idx:Scalar acc:Block val:Block ctx:Scalar -- acc2:Block )
+  -> [ idx acc val ctx ] [
+    val is_flag cond [ acc ] else [ val acc cons ] ?
+  ]
+end
+#operands ( args:Block -- files:Block )
+  -> [ args ] [
+    args [fold| idx acc val _ | idx acc val 0 keep_step from nil ] reverse
+  ]
+end
+
+{ One file: contents to stdout, or just its length when counting.
+  ok=0 means the file could not be read. }
+#emit_file ( path:Block counting:Scalar -- ok:Scalar )
+  -> [ path counting ] [ path counting path f_read_file ]
+  -> [ path counting text ok ] ok
+  cond [
+    counting
+    cond [ path str_print 58 print_char 32 print_char text len print_line 1 ]
+    else [ text f_stdout f_write_str ] ?
+  ] else [
+    text drop
+    arg_prog f_stderr f_write_str drop
+    ": cannot read " f_stderr f_write_str drop
+    path f_stderr f_write_line drop
+    0
+  ] ?
+end
+
+#emit_step ( idx:Scalar acc:Scalar val:Block ctx:Scalar -- acc2:Scalar )
+  -> [ idx acc val ctx ] [ val ctx emit_file acc and ]
+end
+
+#main ( -- )
+  "-c" arg_find -> [ cpos cfound ] [
+    cpos drop
+    arg_tail operands -> [ files ] files len 0 =
+    cond [
+      { no operands: behave as a filter on standard input }
+      cfound
+      cond [ f_stdin f_read_all len print_line ]
+      else [ f_stdin f_read_all f_stdout f_write_str drop ] ?
+    ] else [
+      cfound files [fold| idx acc val ctx | idx acc val ctx emit_step from 1 ]
+      cond [ ] else [ "args_demo: some files could not be read" abort ] ?
+    ] ?
+  ]
+end
+main
