@@ -178,3 +178,5 @@ For all static verification, shape-gate analysis, and native executable generati
 ```bash
 compiler/scroogec_fast -L library <file.sg>
 ```
+
+**Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to inline or restructure.

@@ -10,7 +10,7 @@ Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fas
 
 ### CLI Syntax
 ```bash
-compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
 ```
 
 ### Options & Flags
@@ -21,6 +21,7 @@ compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--de
 - `--dump-bytecode [path]`: Performs static verification, generates intermediate binary bytecode (`.scc`) to `path` (or `<basename>.scc`), and exits.
 - `--check-only`: Performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default (every program used to print a trailing `STACK: []`).
+- `--profile`: Builds a program that counts every word's calls and times its activations, and prints a table to stderr when it exits (also on `abort`): calls, self time (excluding callees), share of wall time, total time (including callees; a recursive word's inner activations are not counted twice), sorted by self time. A tail-recursive loop is one activation. Activations are timed with the CPU cycle counter (about 10 ns each, included in self time, so a word called hundreds of millions of times looks slower than it is). Without the flag the generated C contains no profiling code.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.
 
