@@ -138,6 +138,14 @@ use "args"
 end
 ```
 
+**Parse flags with `arg_flag`, `arg_value_or` and `arg_int_or`.** They cover the usual `-v`, `-f path` and `-n 1000` shapes without a hand-written loop; a missing, trailing or non-numeric value gives the default:
+```scrooge
+use "args"
+#limit ( -- n:Scalar ) "-n" 1000000 arg_int_or end
+#verbose ( -- f:Scalar ) "-v" arg_flag end
+#input_path ( -- p:Block ) "-f" "data.csv" arg_value_or end
+```
+
 **Iterate with `arg_tail`.** It gives the arguments *without* the program name, as a `Block` of `Block`s -- the shape a `[fold| ... ]` wants. It is also the only word here that materializes every argument, so ask for one argument by index when that is all you need.
 
 **Scan flags with `arg_find`.** `"-v" arg_find` answers "was `-v` passed, and at which index", using the same found-flag convention as `find_sub`. The search starts at index 1, so the program name can never match.

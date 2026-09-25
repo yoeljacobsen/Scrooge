@@ -114,7 +114,7 @@ Import at file top; names resolve only for imported lexicons.
 - `map`: map_make, map_hash, map_find, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
 - `file`: f_read, f_write, f_append, f_stdin, f_stdout, f_stderr, f_open_read, f_open_write, f_open_append, f_write_str, f_write_line, f_chunk, f_next_chunk, f_read_all, f_read_line, f_read_file, f_write_file, f_append_file, f_expand_home.
-- `args`: arg_prog, arg_or, arg_tail, arg_find.
+- `args`: arg_prog, arg_or, arg_tail, arg_find, arg_flag, arg_value_or, arg_int_or.
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══
 Static checker enforces:
@@ -294,7 +294,10 @@ end
   `arg_or` (a total accessor taking a default, so no flag reaches the call
   site), `arg_tail` (the arguments without the program name, as a Block of
   Blocks, for `[fold| ... ]`), and `arg_find` (the C index of the first
-  argument equal to a given string -- flag scanning).
+  argument equal to a given string -- flag scanning), plus flag parsing:
+  `arg_flag` (was the flag given), `arg_value_or` (the argument after the
+  flag, or a default when it is absent or last) and `arg_int_or` (that value
+  as an integer, or a default when absent or not an integer).
 
 Worked example -- greet each argument, or the world if there are none:
 ```scrooge
