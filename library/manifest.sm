@@ -116,6 +116,7 @@ prim name "hread" sig "( p:Ptr i:Scalar -- v:Unknown )" desc "Read heap cell i. 
 prim name "hwrite" sig "( v:Unknown p:Ptr i:Scalar -- )" desc "Write v into heap cell i. Note the value comes first."
 prim name "hmark" sig "( -- mark:Scalar )" desc "Mark the heap arena (spec Sec.5)."
 prim name "hrelease" sig "( mark:Scalar -- )" desc "Release every heap cell allocated since mark."
+prim name "hsort" sig "( p:Ptr start:Scalar count:Scalar -- )" desc "Sort heap cells [start, start+count) ascending, in place, stably, ordered as `<` orders; a non-number cell is a fatal error."
 prim name "+" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Add."
 prim name "-" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Subtract."
 prim name "*" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Multiply."

@@ -77,7 +77,30 @@ end
     reverse
   ]
 end
+{ block_sort was an insertion sort that rebuilt its result on every insert:
+  O(n^2) comparisons and allocations. It now copies into a marked heap
+  region, sorts it with hsort (stable, ordered exactly as `<` orders), and
+  copies back: O(n log n), same result. Numbers only, as before; a
+  non-number element, which `<` never ordered meaningfully, is now a clear
+  fatal error. }
+#bsort_fill_step ( idx:Scalar acc:Scalar val:Unknown p:Ptr -- acc2:Scalar )
+  -> [ idx acc val p ] [ val p idx hwrite acc ]
+end
+#bsort_collect_loop ( p:Ptr i:Scalar acc:Block -- sorted:Block )
+  -> [ p i acc ] i 0 = cond [ acc ] else [ p i 1 - p i 1 - hread acc cons bsort_collect_loop ]
+end
 #block_sort ( blk:Block -- sorted:Block )
-  [fold| idx acc val _ | val acc insert_sorted from nil ]
+  -> [ blk ] [
+    hmark -> [ m ] [
+      blk len -> [ n ] [
+        n hnew -> [ p ] [
+          p blk [fold| idx acc val p2 | idx acc val p2 bsort_fill_step from 0 ] drop
+          p 0 n hsort
+          p n nil bsort_collect_loop
+          m hrelease
+        ]
+      ]
+    ]
+  ]
 end
 
