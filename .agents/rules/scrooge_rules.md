@@ -39,6 +39,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Stack Shufflers: `dup`, `drop`, `swap`, `rot`, `over`, the only five. `pk`, `roll` and `nip` do not exist (`pk`/`roll` are reserved for a possible future implementation). Prefer frames: shufflers erase types to `Unknown`.
 * Block Operations: `cons`, `pair`, `len`, `nil`, and the `_at`/`_get`/`_set` access words (spec Sec.4).
 * Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `val ptr idx hwrite`, `hmark`/`hrelease`.
+* Records: `#record Name  field Type count ...  end` generates `Name_new`, `Name_size` and typed `Name_field` / `Name_field_set` accessors; use it instead of hand-numbered heap offsets (spec Sec.5).
 * Logic: `not` is LOGICAL (`6 not` is `0`); `bitnot` is bitwise (`6 bitnot` is `-7`). `and`/`or` are eager: guard risky work with `cond`, not with `and`/`or`.
 * Comparison: `=`, `!=`, `>`, `<` are primitives; `>=` and `<=` come from `use "util"`.
 * Clock: `clock_ns ( -- ns:Scalar )`, monotonic nanoseconds; subtract two readings.
