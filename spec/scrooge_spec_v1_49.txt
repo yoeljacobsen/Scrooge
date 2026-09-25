@@ -98,7 +98,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
 - I/O: `print_char` ( ascii -- ) | `print_int` ( int -- ) | `print_float` ( x:Scalar decimals:Scalar -- ), a number with 0 to 17 decimals, formatted as C's printf %.*f (so -0.5 with 0 decimals prints -0). Fixed-point and zero-padded integers: print_fixed and int_to_str_pad in the strings lexicon.
 - Files: `fopen` ( path:Block mode:Scalar -- fh:File ok:Scalar ) | `fclose` ( fh:File -- ok:Scalar ) | `fgetc` ( fh:File -- ch:Scalar ok:Scalar ) | `fputc` ( ch:Scalar fh:File -- ok:Scalar ) | `fread` ( fh:File n:Scalar -- str:Block ) | `fwrite` ( str:Block fh:File -- written:Scalar ). See §12.
-- Command line: `argc` ( -- n:Scalar ) | `argv` ( i:Scalar -- arg:Block ok:Scalar ). See §13..
+- Command line and environment: `argc` ( -- n:Scalar ) | `argv` ( i:Scalar -- arg:Block ok:Scalar ) | `getenv` ( name:Block -- value:Block ok:Scalar ), read-only. See §13.
 - Clock: `clock_ns` ( -- ns:Scalar ), nanoseconds from a monotonic clock. The epoch is arbitrary, so only the difference of two readings means anything: read it before and after the work and subtract.
 - Heap Arena: `hmark` ( -- mark:Scalar ) | `hrelease` ( mark:Scalar -- ) | `hsort` ( p:Ptr start:Scalar count:Scalar -- ): sorts the cells start to start+count-1 ascending, in place, stably, ordered as `<` orders; a cell that is not a number, or a range outside the allocation, is a fatal error. See §5.
 - Abort: `abort` ( Block -- ), never returns. Prints its Block argument to stderr as characters and terminates the process with a nonzero exit status. A cond branch whose terminal call is `abort` is exempt from the "branches MUST match in count and type" rule (§10): the checker unifies on the OTHER branch's stack effect/type instead, since the aborting branch never produces a value.
@@ -113,7 +113,7 @@ Import at file top; names resolve only for imported lexicons.
 - `list`: lst_make, lst_get, lst_set, lst_new_cap, lst_grow, lst_push, lst_try_push.
 - `map`: map_make, map_hash, map_find, map_get, map_set.
 - `record`: rec_make, rec_get, rec_set.
-- `file`: f_read, f_write, f_append, f_stdin, f_stdout, f_stderr, f_open_read, f_open_write, f_open_append, f_write_str, f_write_line, f_chunk, f_next_chunk, f_read_all, f_read_line, f_read_file, f_write_file, f_append_file.
+- `file`: f_read, f_write, f_append, f_stdin, f_stdout, f_stderr, f_open_read, f_open_write, f_open_append, f_write_str, f_write_line, f_chunk, f_next_chunk, f_read_all, f_read_line, f_read_file, f_write_file, f_append_file, f_expand_home.
 - `args`: arg_prog, arg_or, arg_tail, arg_find.
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══
@@ -126,7 +126,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
@@ -284,8 +284,12 @@ end
 - Nothing is materialized up front. A program that never asks pays nothing;
   one that asks for argument 3 allocates that one string. `library/args.sg`'s
   `arg_tail` is the word that deliberately materializes all of them.
-- Arguments are read-only. There is no way to alter them, and no environment
-  access.
+- Arguments are read-only. There is no way to alter them.
+- The environment is readable, not writable: `getenv` ( name:Block --
+  value:Block ok:Scalar ) has argv's shape, ok=0 and an empty Block for an
+  unset variable, ok=1 and the value (possibly empty) for a set one.
+  `library/file.sg`'s `f_expand_home` turns a leading `~/`, or a lone `~`,
+  into $HOME, leaving any other path unchanged.
 - `library/args.sg` (§8) adds the words worth having on top: `arg_prog`,
   `arg_or` (a total accessor taking a default, so no flag reaches the call
   site), `arg_tail` (the arguments without the program name, as a Block of

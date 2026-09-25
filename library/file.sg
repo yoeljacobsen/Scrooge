@@ -133,3 +133,28 @@ end
   -> [ str fh ok ] ok not
   cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
 end
+
+{ ---- Home-directory expansion (GAPS_TASK_PLAN.md G4) ---- }
+{ f_expand_home turns a leading "~/" (or a path that is just "~") into the
+  value of $HOME, so a program can take "~/Data/x.csv" as the shell would.
+  Any other path, "~user/..." included, or an unset HOME, comes back
+  unchanged. Self-contained like every lexicon, so it joins with its own
+  loop rather than util's concat. }
+#feh_cat_loop ( a:Block b:Block i:Scalar -- ab:Block )
+  -> [ a b i ] i 0 = cond [ b ] else [ a a i 1 - at b cons i 1 - feh_cat_loop ]
+end
+#feh_join_check ( path:Block -- path2:Block )
+  -> [ path ] "HOME" getenv -> [ home ok ] [
+    ok cond [ home path 1 path len block_slice home len feh_cat_loop ] else [ path ]
+  ]
+end
+#feh_tilde_check ( path:Block -- path2:Block )
+  -> [ path ] path len 1 = cond [ path feh_join_check ] else [
+    path 1 at 47 = cond [ path feh_join_check ] else [ path ]
+  ]
+end
+#f_expand_home ( path:Block -- path2:Block )
+  -> [ path ] path len 0 = cond [ path ] else [
+    path 0 at 126 = cond [ path feh_tilde_check ] else [ path ]
+  ]
+end

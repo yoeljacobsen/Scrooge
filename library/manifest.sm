@@ -38,6 +38,7 @@ tool "file" name "f_read_line" sig "( fh:File -- line:Block got:Scalar )" desc "
 tool "file" name "f_read_file" sig "( path:Block -- str:Block ok:Scalar )" desc "Opens, reads to end, closes; ok=0 (with an empty result) if the open or close failed."
 tool "file" name "f_write_file" sig "( str:Block path:Block -- ok:Scalar )" desc "Opens truncating, writes, closes; ok=0 if any step failed."
 tool "file" name "f_append_file" sig "( str:Block path:Block -- ok:Scalar )" desc "Opens for append, writes, closes; ok=0 if any step failed."
+tool "file" name "f_expand_home" sig "( path:Block -- path2:Block )" desc "A leading ~/ (or a lone ~) replaced by $HOME; any other path, or an unset HOME, unchanged."
 
 tool "list" name "lst_make" sig "( initial_capacity:Scalar -- ptr:Ptr )" desc "..."
 tool "list" name "lst_get" sig "( ptr:Ptr idx:Scalar -- val:Unknown )" desc "..."
@@ -157,4 +158,5 @@ prim name "fread" sig "( fh:File n:Scalar -- str:Block )" desc "Read up to n cha
 prim name "fwrite" sig "( str:Block fh:File -- written:Scalar )" desc "Write a Block of characters; returns the count written."
 prim name "argc" sig "( -- n:Scalar )" desc "Command-line argument count, program name included (spec Sec.13)."
 prim name "argv" sig "( i:Scalar -- arg:Block ok:Scalar )" desc "Argument i, C indexing (0 is the program); ok=0 when out of range."
+prim name "getenv" sig "( name:Block -- value:Block ok:Scalar )" desc "Environment variable, read-only; ok=0 and an empty Block when unset, ok=1 (value possibly empty) when set."
 prim name "clock_ns" sig "( -- ns:Scalar )" desc "Nanoseconds from a monotonic clock; only differences between readings mean anything."
