@@ -1,6 +1,19 @@
-# Scrooge Programming Language (v1.50)
+# Scrooge Programming Language (v1.51)
 
-Repository status: **Scrooge v1.50**.
+Repository status: **Scrooge v1.51**.
+
+### What changed in v1.51
+
+Every program in this project's corpus that compiled under v1.50 still compiles, to the same output. A word, parameter or alias named after one of the seven new primitives (`freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`) is now rejected. Output to stdout is now buffered, so a program killed by a signal can lose output it had not yet flushed; normal exit, `abort` and runtime errors flush it.
+
+- **Records.** `#record Name  field Type count ...  end` declares a heap layout and generates `Name_new`, `Name_size` and a typed getter and setter per field, with computed offsets (spec Sec.5). A word named `record` (`#record ( ... )`) is still an ordinary definition.
+- **`--profile`** builds a program that prints each word's calls, self time and total time to stderr at exit.
+- **Debugging.** `trace ( v -- )` prints a value of any type and its source line to stderr; `assert ( ok msg -- )` in `util.sg`; a debugging section in the skill guide, including how to read `--dump-c` output.
+- **Clearer errors.** An unknown word that a lexicon defines names it (`'<=': it is defined in lexicon "util"; add: use "util"`), a parenthesis is explained, and the misleading ArityMismatch that followed an unknown word is gone. A definition named after a reserved word says so; a collision names the lexicon or primitive it collides with.
+- **Warning for loops written as mutual recursion.** Words that call each other round a cycle of tail calls get a `WARNING MutualRecursion` on stderr after `ACCEPT`: only direct self-recursion runs as a loop, so such a cycle stops at 65,536 trips with `Fatal: Max frames exceeded`.
+- **Faster output and input.** Printing no longer flushes on every call (5.8x faster). `freadline` reads a line in one pass, and `f_read_line` uses it (7x faster); `fread_into` reads bytes straight into heap cells; `fseek`/`ftell` reposition a file.
+- **Bulk heap work.** `hmove` (overlap-safe cell copy) and `hfill`.
+- **Fix.** `memory.sg`'s `h_find_val` failed with `Max frames exceeded` on allocations over 65,536 cells; it is now a single loop.
 
 ### What changed in v1.50
 
@@ -35,7 +48,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.50, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.51, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
@@ -58,7 +71,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_50.txt`](spec/scrooge_spec_v1_50.txt) (defines v1.50 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_51.txt`](spec/scrooge_spec_v1_51.txt) (defines v1.51 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.50)
+# Skill: Writing Correct Scrooge (v1.51)
 
 Operational guide for generating Scrooge code that passes static verification on the first try. The specification defines the language; this document defines the methodology, patterns, and empirical best practices.
 
@@ -6,7 +6,7 @@ Operational guide for generating Scrooge code that passes static verification on
 
 ## 0. Preparation & Standard Library Rules
 
-1. **Learn before development**: Study language specifications (`spec/scrooge_spec_v1_50.txt`) and library modules in `library/`.
+1. **Learn before development**: Study language specifications (`spec/scrooge_spec_v1_51.txt`) and library modules in `library/`.
 2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`, `bitset.sg`, `file.sg`, `args.sg`) before writing custom helpers. Import existing library words with `use "<module>"` (e.g., `use "util"`).
 3. **Look signatures up in `library/manifest.sm`**: one typed line per public library word (`tool`) and per compiler primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. It is generated and checked against the compiler, so it is exact.
 
