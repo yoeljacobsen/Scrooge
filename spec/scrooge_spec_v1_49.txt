@@ -47,7 +47,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 ═══ 3. Control Flow & Iterators ═══
 - Conditional: `flag cond [ true-body ] else [ false-body ]`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out). The else-branch may be omitted: `flag cond [ true-body ]` means `flag cond [ true-body ] else [ ]`, so the true-body must then leave the stack as it found it (net effect 0). A closing `?` may follow the last branch (`... else [ false-body ] ?`, the form older code uses); it is optional and changes nothing. A `?` or `else` anywhere else is a ParseError.
 - `select` chooses a value with no branching: `vt vf flag select` -> vt if flag nonzero else vf. Both operands are always evaluated.
-- No loop keyword. Write loops as tail-recursive words. Only DIRECT self-recursion in terminal position is optimized to iteration; mutual recursion (word A's terminal call to word B, which terminally calls back to A) is not converted, still nests one stack frame per call, and is bounded by MAX_FRAMES (65536).
+- No loop keyword. Write loops as tail-recursive words. Only DIRECT self-recursion in terminal position is optimized to iteration; mutual recursion (word A's terminal call to word B, which terminally calls back to A) is not converted, still nests one call per level, and is bounded at 65536 nested calls (MAX_FRAMES; exceeding it stops the program with `Fatal: Max frames exceeded`).
 - Iterators over a Block:
     `[map|  idx val ctx | body ]`          body effect: ( idx val -- val' )
     `[fold| idx acc val ctx | body from init ]`  body effect: ( idx acc val -- acc' )
