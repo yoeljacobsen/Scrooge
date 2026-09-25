@@ -23,31 +23,12 @@ end
   -> [ a b ] [ a b bitnot bitand ]
 end
 
-#bs_count_step ( set:Scalar i:Scalar acc:Scalar -- set2:Scalar i2:Scalar acc2:Scalar )
-  -> [ set i acc ] [
-    set
-    i 1 +
-    acc set i bs_test +
-  ]
-end
-#bs_count_loop ( set:Scalar i:Scalar acc:Scalar -- acc2:Scalar )
-  -> [ set i acc ] [ i 64 < ]
-  cond [ set i acc bs_count_step bs_count_loop ] else [ acc ] ?
-end
+{ bs_count and bs_first used to be 64-step loops of word calls; they are now
+  the bitcount and bitctz primitives. Results unchanged: bs_first gives
+  0 0 for an empty set. }
 #bs_count ( set:Scalar -- n:Scalar )
-  -> [ set ] [ set 0 0 bs_count_loop ]
-end
-
-#bs_first_step ( set:Scalar i:Scalar -- set2:Scalar i2:Scalar )
-  -> [ set i ] [ set i 1 + ]
-end
-#bs_first_loop ( set:Scalar i:Scalar -- i2:Scalar found:Scalar )
-  -> [ set i ] [ i 64 = ]
-  cond [ 0 0 ] else [
-    set i bs_test
-    cond [ i 1 ] else [ set i bs_first_step bs_first_loop ] ?
-  ] ?
+  bitcount
 end
 #bs_first ( set:Scalar -- i:Scalar found:Scalar )
-  -> [ set ] [ set 0 bs_first_loop ]
+  -> [ set ] set 0 = cond [ 0 0 ] else [ set bitctz 1 ]
 end

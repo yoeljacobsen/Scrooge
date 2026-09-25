@@ -17,7 +17,7 @@ tool "bitset" name "bs_test" sig "( set:Scalar i:Scalar -- present:Scalar )" des
 tool "bitset" name "bs_union" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Bitwise OR."
 tool "bitset" name "bs_inter" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Bitwise AND."
 tool "bitset" name "bs_minus" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "a with b's bits cleared."
-tool "bitset" name "bs_count" sig "( set:Scalar -- n:Scalar )" desc "Population count (number of set bits)."
+tool "bitset" name "bs_count" sig "( set:Scalar -- n:Scalar )" desc "..."
 tool "bitset" name "bs_first" sig "( set:Scalar -- i:Scalar found:Scalar )" desc "Lowest set bit; found=0 if set is empty."
 
 tool "file" name "f_read" sig "( -- mode:Scalar )" desc "Open mode for reading (fopen's mode argument)."
@@ -139,6 +139,9 @@ prim name "bitxor" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Bitwise xor (in
 prim name "bitshl" sig "( a:Scalar n:Scalar -- c:Scalar )" desc "Shift left by n bits."
 prim name "bitshr" sig "( a:Scalar n:Scalar -- c:Scalar )" desc "Shift right by n bits."
 prim name "bitnot" sig "( a:Scalar -- c:Scalar )" desc "BITWISE complement: 6 bitnot is -7. A 9-bit mask complement is `bitnot 511 bitand`."
+prim name "bitcount" sig "( a:Scalar -- n:Scalar )" desc "Number of set bits of the 64-bit pattern (-1 bitcount is 64)."
+prim name "bitctz" sig "( a:Scalar -- n:Scalar )" desc "Trailing zero bits: the index of the lowest set bit; 64 for 0."
+prim name "bitclz" sig "( a:Scalar -- n:Scalar )" desc "Leading zero bits of the 64-bit pattern; 64 for 0."
 prim name "print_char" sig "( ch:Scalar -- )" desc "Write one character code to stdout."
 prim name "print_int" sig "( n:Scalar -- )" desc "Write an integer to stdout."
 prim name "abort" sig "( msg:Block -- )" desc "Print msg to stderr and exit nonzero. Never returns; an aborting cond branch is exempt from branch matching."

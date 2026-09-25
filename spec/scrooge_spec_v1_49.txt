@@ -93,7 +93,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Stack Shufflers: `dup` ( x -- x x ) | `drop` ( x -- ) | `swap` ( x y -- y x ) | `rot` ( x y z -- y z x ) | `over` ( x y -- x y x ).
 - Block Build: `cons` ( x block -- block' ) | `pair` ( a b -- [a b] ) | `nil` ( -- [] ) | `len` ( block -- n ). | `block_slice` ( b:Block start:Scalar stop:Scalar -- b2:Block ), the elements at indices start <= i < stop as a new Block; bounds clamp to the Block, and start >= stop gives an empty Block. O(stop - start).
 - Math: `+`, `-`, `*` | `/` (floor if both int, float if either is float) | `\` (modulo).
-- Bitwise (integer operands only): `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr` ( Scalar Scalar -- Scalar ) | `bitnot` ( Scalar -- Scalar ).
+- Bitwise (integer operands only): `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr` ( Scalar Scalar -- Scalar ) | `bitnot` ( Scalar -- Scalar ) | `bitcount`, `bitctz`, `bitclz` ( Scalar -- Scalar ): the number of set bits, trailing zero bits and leading zero bits of the 64-bit pattern (a negative number has bit 63 set); `bitctz` and `bitclz` of 0 are 64.
 - Compare: `=`, `!=`, `>`, `<`. (`>=` and `<=` are in `library/util.sg`). `=` and `!=` accept any two values: numbers compare by value (an integer equals a float of the same value), Blocks element by element (the same length and every pair of elements equal, recursively; a string is a Block, so this compares strings), Ptrs by identity (the same allocation), and values of different kinds are unequal. `>` and `<` compare numbers.
 - Logic: `and`, `or` (eager, both operands evaluated) | `not` ( 1 if input is 0 ).
 - I/O: `print_char` ( ascii -- ) | `print_int` ( int -- )
@@ -126,7 +126,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word, or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
