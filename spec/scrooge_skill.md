@@ -49,6 +49,21 @@ The checker counts, for every word, how far each token moves the stack, and reje
 
 ---
 
+## 2c. Counted Loops
+
+For a fixed number of iterations, use a counted loop instead of a helper word:
+
+```scrooge
+0 10 [times| i | i + ]                      { sum 0..9: leaves 45 }
+s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
+9 [times| r | 9 [times| c | r 9 * c + ... ] ]   { nested: the inner body sees r }
+```
+
+- `n [times| i | body ]` runs i = 0..n-1; `lo hi [for| i | body ]` runs i = lo..hi-1.
+- The body's net effect is 0. To accumulate, leave the accumulator BELOW the loop and have the body replace it (`acc i +`); several accumulators work the same way (`0 1 20 [times| i | swap over + ]`).
+- It is faster than the equivalent tail-recursive word (a plain C loop; carried values stay in registers) and has no depth limit.
+- No `break`: a loop that must stop early (a search, a scan to a delimiter) is still a self-recursive word.
+
 ## 3. Choose the Right Access Operation by Structure
 
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `array_at` / `list_at` / `block_at` or `at`.

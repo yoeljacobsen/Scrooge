@@ -6,7 +6,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ## 1. Antigravity Agent Directives
 
-1. **Enforce Postfix Stack Syntax:** Scrooge is strictly a postfix stack language. Infix and imperative constructs (`fn`, `ret`, `for`, `while`, `.push`, `.pop`) do not exist. Loops are tail-recursive words; only direct self-recursion in terminal position runs as a loop.
+1. **Enforce Postfix Stack Syntax:** Scrooge is strictly a postfix stack language. Infix and imperative constructs (`fn`, `ret`, `while`, `.push`, `.pop`, a C-style `for`) do not exist; the counted loops are `n [times| i | body ]` and `lo hi [for| i | body ]`. Counted loops are `[times| ]` / `[for| ]`; other loops are tail-recursive words, and only direct self-recursion in terminal position runs as a loop.
 2. **First-Pass Static Verification Invariant:** Code is only valid when the checker prints `ACCEPT`:
    ```bash
    compiler/scroogec_fast -L library --check-only <file.sg>
@@ -51,6 +51,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
   - `flag cond [ true-branch ]` omits the else-branch, which then means `else [ ]`, so the true-branch must have net effect 0.
   - A closing `?` after the last branch is optional (older code writes `... else [ f ] ?`). A `?` or `else` anywhere else is a ParseError.
   - Iterators: `[map| idx val ctx | body ]` and `[fold| idx acc val ctx | body from init ]` (spec Sec.3).
+  - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); the body is net 0 and threads accumulators left below the loop (`0 10 [times| i | i + ]`). No `break`: an early-exit loop is a self-recursive word.
 * Debugging: `x trace` prints a value and its line to stderr; `flag msg assert` (util) stops on a failed invariant; spec Sec.7 and the skill guide's debugging section.
 * Files: `f_read_line` (one pass per line), `fread_into` (bytes into heap cells), `fseek`/`ftell`.
 * Profiling: build with `--profile` to get each word's calls, self and total time on stderr at exit.
