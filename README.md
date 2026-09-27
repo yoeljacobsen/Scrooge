@@ -33,7 +33,7 @@ Every program in this project's corpus that compiled under v1.50 still compiles,
 
 Every program in this project's corpus that compiled under v1.49 still compiles, to the same output. Nothing v1.49 accepted is rejected, except a word, parameter or alias named after one of the seven new primitives. One construct changes meaning: a string or data literal right after a frame's names (see Fixes).
 
-- **Much faster generated code.** Word variables are C locals, words compile to C functions with parameters and returns, the stack is cached in C temporaries, values are 16 bytes, and the C is built with `-O3`. The full select4 SQL test suite went from 6 h 32 min to 2 min 53 s with identical output; a sudoku solver's throughput rose 3.8x.
+- **Much faster generated code.** Word variables are C locals, words compile to C functions with parameters and returns, the stack is cached in C temporaries, values are 16 bytes, and the C is built with `-O3`. Call-heavy benchmark programs run many times faster (over 100x on the largest) with identical output; a sudoku solver's throughput rose 3.8x.
 - **Faster checking.** The parser is linear in the number of frames in a block: checking a 1.2 MB generated program went from 280 s and 27 GB to 0.5 s.
 - **New primitives (68):** `bitcount`, `bitctz`, `bitclz` (popcount and bit scans); `hsort` (sort heap cells in place, stable); `print_float ( x decimals -- )`; `getenv ( name -- value ok )`, read-only; `block_slice`.
 - **Library:** `block_sort` is O(n log n) (it was an O(n^2) insertion sort); `length` is O(1); `bs_count`/`bs_first` use the bit primitives; `print_fixed` and `int_to_str_pad` in `strings.sg`; `f_expand_home` in `file.sg`; `arg_flag`, `arg_value_or`, `arg_int_or` in `args.sg`.
@@ -157,7 +157,7 @@ Every file in `check/corpus/passing/` must actually pass the checker:
 
 Run in the development repository: `python3 scratch/test_gates_corpus.py`.
 
-The directory name is a claim, and for four of its seven files it was false -- three obsolete pre-lexicon engine forks plus one program with a redundant local `#pair`, all rejected under v1.48's `DuplicateWordError` rules and all left behind by the v1.48 upgrade. The forks now live in `check/corpus/historical/legacy_pre_v148/` (with a README explaining why they no longer compile and which maintained engines superseded them), and that directory is deliberately not gated.
+The directory name is a claim, and for four of its seven files it was false -- three obsolete pre-lexicon programs plus one program with a redundant local `#pair`, all rejected under v1.48's `DuplicateWordError` rules and all left behind by the v1.48 upgrade. The obsolete programs were moved out of the gated directory.
 
 ### Lexicon Gate (Gate M)
 

@@ -3,7 +3,7 @@
 end
 { `len` is O(1). This word used to count by folding over every element --
   a frame entered and left per element -- and was 94% of the instructions
-  of the curated select4 regression. Kept as a word so callers need not change. }
+  of a large benchmark workload. Kept as a word so callers need not change. }
 #length ( block:Block -- n:Scalar )
   len
 end
@@ -47,7 +47,7 @@ end
 
 { `=` already compares Blocks element by element (same lengths, then `=`
   on each element), which is what this word did with a fold and a frame per
-  element: 13% of the curated select4 regression. The two `len`s are not
+  element: 13% of a large benchmark workload. The two `len`s are not
   redundant. The checker lets an Unknown-typed value reach a Block parameter,
   and the old word's `len` stopped a program that passed a non-Block
   ("Fatal: len operand must be a block/list"); `=` alone would compare it

@@ -10,6 +10,5 @@ To learn the language, read the specification (`spec/`), the skill guide
 |------|------|----------------------------------|
 | `sudoku.scr` | an early sudoku peer-relation sketch | ACCEPTs, but in old style: several words work their inputs with shufflers instead of naming them in a frame, and every `cond` ends with `?`, which is now optional |
 | `lisp_core_v134.scr` | v1.24 to v1.34, a metacircular evaluator core | ACCEPTs, but in old style: `?` after every `cond`, and it predates the standard library |
-| `legacy_pre_v148/` | early forks of the SQL engine | REJECTED since v1.48; its own README explains why |
 
 The `.scr` extension is historical too. Current Scrooge source files use `.sg`.

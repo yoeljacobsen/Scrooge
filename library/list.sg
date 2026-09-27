@@ -15,8 +15,8 @@
 { ---- So it is LOGARITHMIC in list length, not linear. Against the          ---- }
 { ---- 1,000,000-slot budget, exhausting it through lst_grow alone would      ---- }
 { ---- take roughly 77,000 separate long-lived lists each grown to 100,000    ---- }
-{ ---- elements. For reference, the whole real select4.test dataset -- every  ---- }
-{ ---- CREATE TABLE and INSERT, 9 tables, plus 10 real queries -- finishes    ---- }
+{ ---- elements. For reference, a real workload that builds 9 tables of     ---- }
+{ ---- a few hundred rows each and runs 10 queries over them finishes       ---- }
 { ---- with 63 live slots out of 1,000,000, of which roughly 36 are these     ---- }
 { ---- orphans.                                                              ---- }
 { ----                                                                       ---- }
