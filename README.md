@@ -1,6 +1,10 @@
 # Scrooge Programming Language (v1.52)
 
-Repository status: **Scrooge v1.52**.
+Repository status: **Scrooge v1.52.1**.
+
+### What changed in v1.52.1
+
+No compiler, library or specification behaviour changed. Old sample programs (early forks of a large application, and a hashing test) were removed from `check/corpus/` so that benchmarks written against this repository start from a clean slate.
 
 ### What changed in v1.52
 
