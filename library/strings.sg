@@ -47,17 +47,21 @@ end
 end
 { print_fixed prints an integer as a fixed-point number with `decimals`
   digits after the point: 12345 3 print_fixed is 12.345, -5 2 is -0.05,
-  7 0 is 7. For times kept in integer nanoseconds, 3 gives microseconds. }
+  7 0 is 7. For times kept in integer nanoseconds, 3 gives microseconds.
+  v must be an integer: for a float, use print_float. The remainder is
+  taken before anything is printed, so a float stops the program with
+  "Modulo requires integers" and the words that called print_fixed,
+  instead of printing half a number first. }
 #pf_pow10_loop ( d:Scalar acc:Scalar -- p:Scalar )
   -> [ d acc ] d 0 = cond [ acc ] else [ d 1 - acc 10 * pf_pow10_loop ]
 end
 #print_fixed ( v:Scalar decimals:Scalar -- )
   -> [ v d ] [
-    v 0 < cond [ 45 print_char ]
-    v abs -> [ a ] [ d 1 pf_pow10_loop -> [ sc ] [
+    v abs -> [ a ] [ d 1 pf_pow10_loop -> [ sc ] [ a sc \ -> [ fr ] [
+      v 0 < cond [ 45 print_char ]
       a sc / print_int
-      d 0 > cond [ 46 print_char a sc \ d int_to_str_pad str_print ]
-    ] ]
+      d 0 > cond [ 46 print_char fr d int_to_str_pad str_print ]
+    ] ] ]
   ]
 end
 

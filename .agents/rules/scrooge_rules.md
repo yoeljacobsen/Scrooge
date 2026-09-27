@@ -29,7 +29,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * **Type tags:** `Scalar Block Ptr Record Map File Unknown`, exactly these spellings.
 
 ### 2.2 Words and Frames
-* Define before use: `#name ( a:Scalar b:Block -- r:Scalar ) body end`. Call by bare name.
+* Define a word: `#name ( a:Scalar b:Block -- r:Scalar ) body end`, in any order (a word may call one defined later). Call by bare name.
 * Entry point: `#main ( -- ) ... end`, then `main` at top level.
 * Name values with a frame: `-> [ a b ] [ body ]`. A frame's scope runs to the end of the enclosing block, so later code and later sibling frames still see `a` and `b`. The body bracket is therefore optional: `-> [ a b ] a b +` is the same code as `-> [ a b ] [ a b + ]`. The names bracket is not.
 * Cond branches, frame bodies and map/fold bodies nest freely. Moving an inner loop or conditional into a named word is good style, not a rule (spec Sec.6).

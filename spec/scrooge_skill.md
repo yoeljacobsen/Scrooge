@@ -17,7 +17,7 @@ Operational guide for generating Scrooge code that passes static verification on
 Scrooge rewards many small words over one large word:
 - **One word = one job**, minimal live variables, shallow stack depth.
 - Give each helper a clear signature (`#helper_name ( input:Type -- output:Type )`).
-- **Define helpers BEFORE the word that calls them**.
+- Words may appear in any order (a word can call one defined later); putting helpers first just reads better.
 
 ---
 
@@ -37,13 +37,25 @@ Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional st
 
 ---
 
+## 2b. How Stack Effects Add Up
+
+The checker counts, for every word, how far each token moves the stack, and rejects a body whose total differs from its signature. These are the rules it applies, which cost earlier agents the most rebuilds:
+
+- **A frame pops.** `-> [ a b ]` takes the top two values off the stack (net -2) and names them. Names stay in scope to the end of the enclosing block, so a later frame binds only NEW values: `-> [ s n ] [ ... ] s n foo -> [ r ] [ ... s n r ... ]`. Re-listing a name that is still in scope, as in `-> [ s n ] [ ... ] -> [ s n r ]`, pops two more values that are not there. Many examples re-push before re-binding (`-> [ a ] [ a a f ] -> [ a b ]`); that is one style, not a requirement.
+- **`cond` consumes its flag,** and each branch is measured from there. Both branches must have the same net effect: `x 0 < cond [ 0 ] else [ x ]` is +1 either way. A branch without an else must be net 0. A branch whose last call is `abort` is exempt. A branch may consume values below it (a word's parameters), but only if the other branch has the same net effect: `cond [ drop ] else [ ]` is rejected (-1 against 0), while `cond [ drop 0 ] else [ ]` is fine (0 and 0).
+- **A call has its signature's effect**, a word's call to itself included: in `#count ( n:Scalar -- )`, the body `-> [ n ] n 0 = cond [ ] else [ n 1 - count ]` is -1 for the frame, then 0 for the cond (its else-branch pushes `n 1 -`, +1, and the call `count` takes it, -1), total -1 as the signature says.
+- **Record accessors:** a field with a count above 1 takes an index, `v s i Name_field_set` and `s i Name_field`; a count-1 field does not, `v s Name_field_set` and `s Name_field`.
+- When a word is rejected with `ArityMismatch`, the message lists the stack depth at the end of each line of the body, relative to entry: the first line whose depth is not what you intended is where the stray value is.
+
+---
+
 ## 3. Choose the Right Access Operation by Structure
 
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `array_at` / `list_at` / `block_at` or `at`.
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
 - **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one. Use them instead of a per-cell loop.
-- **Heap state with named fields**: declare it with `#record Name  field Type count ...  end` (spec Sec.5) instead of hand-numbering offsets. It generates `Name_new`, `Name_size`, and a typed getter `Name_field` and setter `Name_field_set` per field (an index argument unless the count is 1): `#record Board cells Scalar 81 solved Scalar 1 end` then `Board_new -> [ b ] [ 5 b 0 Board_cells_set 1 b Board_solved_set b 0 Board_cells print_int ]`.
+- **Heap state with named fields**: declare it with `#record Name  field Type count ...  end` (spec Sec.5) instead of hand-numbering offsets. It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` (both take an index argument unless the count is 1: a count-1 setter is `v s Name_field_set`, with no index) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset: `#record Board cells Scalar 81 solved Scalar 1 end` then `Board_new -> [ b ] [ 5 b 0 Board_cells_set 1 b Board_solved_set b 0 Board_cells print_int ]`.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 - **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.
 
@@ -94,7 +106,7 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
 
 - **Block Equality & Sorting (`util.sg`)**:
   - `#block_eq ( b1:Block b2:Block -- equal:Scalar )`: Checks length equality first, then folds element-by-element equality (returns `1` if equal, `0` otherwise).
-  - `#block_sort ( blk:Block -- sorted:Block )`: Stable insertion sort returning a sorted block.
+  - `#block_sort ( blk:Block -- sorted:Block )`: Stable ascending sort, O(n log n) (it uses `hsort`).
 
 - **Safe Indexing (`array.sg`)**:
   - `#nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )`: Returns element at `idx` if within bounds (`0 <= idx < arr len`), otherwise returns `default`.
@@ -168,7 +180,7 @@ use "args"
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
 5. **Bracketed Values Are Data**: a `[ ... ]` used as a value may hold only literals (`[ 1 [ 2 3 ] ]`); build a Block from computed values with `cons` or `pair`. Cond branches, frame bodies and loop bodies are not values and nest freely.
 6. **Correct Access Operator**: Use `_at` for arrays, `_get` for records, `hread` for heap handles, `fgetc`/`fread` for file handles.
-7. **Every Helper Defined Before Caller**: Order words from dependencies to caller.
+7. **Stack effects add up** (section 2b): every `cond` branch has the same net effect, a second frame pops new values, and a count-1 record setter takes no index.
 8. **Frame Scope Runs to the End of the Block**: `-> [ x ] [ A ] B` is `-> [ x ] [ A B ]`, so `B` still sees `x`. A cond branch does not extend that way: an `else` written after a branch's `]` cannot reach a cond inside it.
 
 ---

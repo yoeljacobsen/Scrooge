@@ -20,6 +20,7 @@ compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--de
 - `--dump-c [path]`: Performs static verification, generates intermediate C source code to `path` (or `<basename>.c`), and exits.
 - `--dump-bytecode [path]`: Performs static verification, generates intermediate binary bytecode (`.scc`) to `path` (or `<basename>.scc`), and exits.
 - `--check-only`: Performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
+- Exit status: 0 on ACCEPT (and a successful build), 1 on REJECT or a failed build. A build first removes any existing file at the output path, so a rejected build never leaves an older binary behind.
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default (every program used to print a trailing `STACK: []`).
 - `--profile`: Builds a program that counts every word's calls and times its activations, and prints a table to stderr when it exits (also on `abort`): calls, self time (excluding callees), share of wall time, total time (including callees; a recursive word's inner activations are not counted twice), sorted by self time. A tail-recursive loop is one activation. Activations are timed with the CPU cycle counter (about 10 ns each, included in self time, so a word called hundreds of millions of times looks slower than it is). Without the flag the generated C contains no profiling code.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
@@ -68,12 +69,13 @@ push(make_int_array((const long long[]){72LL, 101LL, 108LL, 108LL, 111LL}, 5));
 
 ## 2b. File I/O Runtime
 
-The six file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`; spec §12) are backed by a fixed `FILE*` table in `EMBEDDED_RUNTIME_C`:
+The file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `freadline`, `fread_into`, `fseek`, `ftell`; spec §12) are backed by a fixed `FILE*` table in `EMBEDDED_RUNTIME_C`:
 
 - `MAX_FILES` is 64. Slots 0/1/2 are pre-opened by `init_files()` (called from `init_runtime()`) as `stdin`/`stdout`/`stderr`, leaving 61 slots that `fopen` allocates from by first-free scan. Exhaustion is reported through `fopen`'s `ok` flag, never by growing the table or writing past it.
 - A `File` value is that slot index. There is no `VAL_FILE` runtime type: `File` is a static type tag, exactly as `Map` and `Record` are, so `f_stdin`-style one-word type assertions in `library/file.sg` work the same way the spec's `hread` wrapper idiom does. Runtime safety comes from `file_slot()`, which validates the index is in range and the slot is open before every read or write.
 - `FILE_PATH_MAX` is 4096. `op_fopen` converts the path Block into a C string, validating every slot is an integer, and releases the Block's reference (`block_decref`) since the value came off the stack.
 - `op_fread` buffers into `unsigned char[want]` and only converts what was actually read into `ScroogeValue` slots, so an oversized count costs one byte per requested character up front rather than sixteen.
+- Every non-leaf word calls `word_enter(id)` on entry (MAX_FRAMES check, and one store of its id into `word_stack[call_depth]`) and `call_depth--` on exit. After a `Fatal:` message, `err_printf` prints that chain via `scrooge_backtrace`, from the `word_names`/`word_places` tables emitted with every program. A leaf word (it calls no other word, so it cannot recurse) skips both: measured with callgrind, the store alone cost 4% of instructions on a call-heavy solver, and skipping leaves made two sudoku solvers 7-9% cheaper than before the chain existed.
 - Output to stdout is buffered. `print_char`/`print_int`/`print_float` and `op_fputc`/`op_fwrite` on slot 1 share `stdout`'s buffer, so they stay in order. Every runtime message to stderr goes through `err_printf`, which flushes stdout first; `op_fputc`/`op_fwrite` on slot 2 and reads from slot 0 flush it too, and `exit` flushes it at the end.
 
 ## 2c. Command-Line Argument Runtime
@@ -90,7 +92,7 @@ static inline void init_args(int argc, char** argv) { ... }
 - **Nothing is materialized up front.** `op_argv` converts one argument to a Block on demand, so a program that never asks pays nothing and one that asks for argument 3 allocates that one string. `library/args.sg`'s `arg_tail` is the only thing that deliberately builds all of them.
 - **The indexing is C's, unchanged**: `argv[0]` is the program as invoked, the first real argument is index 1, and `argc` counts both. Re-basing it in the runtime would make the language disagree with the `argc`/`argv` every reader already knows, invisibly at the call site.
 - Out-of-range (either direction) reports `ok=0` with an empty Block rather than aborting — it is the ordinary way to ask whether an argument was supplied. A *present but empty* argument returns an empty Block with `ok=1`; present-and-empty is deliberately distinguishable from absent. Only a non-integer index is fatal, matching `hread`/`fread`.
-- Arguments are read-only, and there is no environment access.
+- Arguments are read-only, and the environment is read-only (`getenv`).
 
 ---
 
