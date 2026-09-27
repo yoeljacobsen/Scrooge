@@ -1,6 +1,20 @@
-# Scrooge Programming Language (v1.51)
+# Scrooge Programming Language (v1.52)
 
-Repository status: **Scrooge v1.51**.
+Repository status: **Scrooge v1.52**.
+
+### What changed in v1.52
+
+Every program in this project's corpus that compiled under v1.51 still compiles, to the same output. Three things behave differently: a REJECT now exits with status 1 (it exited 0), a runtime fatal error is followed by the list of words that were running, and a negative shift count is a fatal error (it was undefined).
+
+- **Counted loops.** `n [times| i | body ]` runs i = 0..n-1 and `lo hi [for| i | body ]` runs i = lo..hi-1. The body sees `i` and every name in scope, must leave the stack as deep as it found it, and threads accumulators left below the loop: `0 10 [times| i | i + ]` is 45. Loops nest, compile to C `for` loops, and run about twice as fast as the equivalent tail-recursive word (spec Sec.3, skill guide section 2c).
+- **Safer builds.** A REJECT exits 1, and a build first removes any old binary at the output path, so a rejected build never leaves a stale program to be run by mistake.
+- **All errors at once.** Type errors are reported in the same run as unknown-word and stack-effect errors.
+- **Runtime errors say where.** A `Fatal:` message is followed by the running words, innermost first, each with its definition line (`in #report (defined line 2)`). `print_fixed` given a float now stops before printing anything.
+- **Shifts are defined.** A count of 64 or more gives 0; a negative count is fatal; `bitshr` is documented as a logical shift.
+- **Records.** Each field gets `Name_field_off ( -- n )`, its first cell, for `hmove`, `hfill` and `fread_into`.
+- **Fixes.** `hread` truncated its offset to 32 bits (offset 2^32+1 read cell 1).
+- **Faster.** Words that call no other word skip call tracking: two sudoku solvers run 5-13% faster.
+- **Docs.** Words may be defined in any order (the old "define helpers before callers" rule was never enforced); the skill guide explains how stack effects add up; stale text about `block_sort`, `getenv` and the file primitives is fixed.
 
 ### What changed in v1.51
 
@@ -48,7 +62,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.51, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.52, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
@@ -71,7 +85,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_51.txt`](spec/scrooge_spec_v1_51.txt) (defines v1.51 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_52.txt`](spec/scrooge_spec_v1_52.txt) (defines v1.52 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

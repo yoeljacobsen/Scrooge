@@ -1,6 +1,6 @@
-# Scrooge v1.51 Workspace Rules & Agent Directives
+# Scrooge v1.52 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_51.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_52.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -19,7 +19,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.51 Language Reference
+## 2. Core Scrooge v1.52 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -61,5 +61,5 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ## 3. Versioning & Tagging Policy
 
-- **Absolute Version Lockstep:** A release tag (e.g., `v1.51`), applied in both the development repository and this published repository, freezes the compiler, checker, standard library, specification and skill guide together.
-- **Spec Changes Trigger Versioning:** A change to the specification (`spec/scrooge_spec_v<major>_<minor>.txt`) or to primitive semantics that results in a new version MUST rename the spec file to the new version and create Git tags matching the version exactly (`v1.51`).
+- **Absolute Version Lockstep:** A release tag (e.g., `v1.52`), applied in both the development repository and this published repository, freezes the compiler, checker, standard library, specification and skill guide together.
+- **Spec Changes Trigger Versioning:** A change to the specification (`spec/scrooge_spec_v<major>_<minor>.txt`) or to primitive semantics that results in a new version MUST rename the spec file to the new version and create Git tags matching the version exactly (`v1.52`).
