@@ -8,11 +8,11 @@ tool "args" name "arg_flag" sig "( name:Block -- found:Scalar )" desc "1 when th
 tool "args" name "arg_value_or" sig "( name:Block default:Block -- value:Block )" desc "The argument after the flag; default when the flag is absent or last."
 tool "args" name "arg_int_or" sig "( name:Block default:Scalar -- n:Scalar )" desc "The argument after the flag as an integer (optional -, digits only); default when absent or not an integer."
 
-tool "array" name "arr_size" sig "( shape_block:Block -- total_cells:Scalar )" desc "..."
-tool "array" name "arr_make" sig "( shape_block:Block -- ptr:Ptr )" desc "..."
-tool "array" name "arr_offset" sig "( ptr:Ptr coords_block:Block -- flat_offset:Scalar )" desc "..."
-tool "array" name "arr_get" sig "( ptr:Ptr coords_block:Block -- val:Unknown )" desc "..."
-tool "array" name "arr_set" sig "( val:Unknown ptr:Ptr coords_block:Block -- )" desc "..."
+tool "array" name "arr_size" sig "( shape_block:Block -- total_cells:Scalar )" desc "Number of cells an array of the given shape holds (the product of the dimensions)."
+tool "array" name "arr_make" sig "( shape_block:Block -- ptr:Ptr )" desc "Allocate a zero-filled multi-dimensional array of the given shape, e.g. [ 9 9 ] arr_make."
+tool "array" name "arr_offset" sig "( ptr:Ptr coords_block:Block -- flat_offset:Scalar )" desc "The cell index of the element at the given coordinates (row-major)."
+tool "array" name "arr_get" sig "( ptr:Ptr coords_block:Block -- val:Unknown )" desc "Read the element at the given coordinates."
+tool "array" name "arr_set" sig "( val:Unknown ptr:Ptr coords_block:Block -- )" desc "Write the element at the given coordinates."
 tool "array" name "nth_or_default" sig "( arr:Block idx:Scalar default:Unknown -- val:Unknown )" desc "Safely indexes array with default fallback."
 
 tool "bitset" name "bs_add" sig "( set:Scalar i:Scalar -- set2:Scalar )" desc "Sets bit i."
@@ -20,7 +20,7 @@ tool "bitset" name "bs_test" sig "( set:Scalar i:Scalar -- present:Scalar )" des
 tool "bitset" name "bs_union" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Bitwise OR."
 tool "bitset" name "bs_inter" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Bitwise AND."
 tool "bitset" name "bs_minus" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "a with b's bits cleared."
-tool "bitset" name "bs_count" sig "( set:Scalar -- n:Scalar )" desc "..."
+tool "bitset" name "bs_count" sig "( set:Scalar -- n:Scalar )" desc "Number of members (set bits) of the set."
 tool "bitset" name "bs_first" sig "( set:Scalar -- i:Scalar found:Scalar )" desc "Lowest set bit; found=0 if set is empty."
 
 tool "file" name "f_read" sig "( -- mode:Scalar )" desc "Open mode for reading (fopen's mode argument)."
@@ -43,28 +43,28 @@ tool "file" name "f_write_file" sig "( str:Block path:Block -- ok:Scalar )" desc
 tool "file" name "f_append_file" sig "( str:Block path:Block -- ok:Scalar )" desc "Opens for append, writes, closes; ok=0 if any step failed."
 tool "file" name "f_expand_home" sig "( path:Block -- path2:Block )" desc "A leading ~/ (or a lone ~) replaced by $HOME; any other path, or an unset HOME, unchanged."
 
-tool "list" name "lst_make" sig "( initial_capacity:Scalar -- ptr:Ptr )" desc "..."
-tool "list" name "lst_get" sig "( ptr:Ptr idx:Scalar -- val:Unknown )" desc "..."
-tool "list" name "lst_set" sig "( val:Unknown ptr:Ptr idx:Scalar -- )" desc "..."
+tool "list" name "lst_make" sig "( initial_capacity:Scalar -- ptr:Ptr )" desc "A new growable list with room for initial_capacity elements before it grows."
+tool "list" name "lst_get" sig "( ptr:Ptr idx:Scalar -- val:Unknown )" desc "The element at index idx (0-based)."
+tool "list" name "lst_set" sig "( val:Unknown ptr:Ptr idx:Scalar -- )" desc "Replace the element at index idx."
 tool "list" name "lst_new_cap" sig "( old_cap:Scalar -- new_cap:Scalar )" desc "Doubles a capacity (or 1 if 0)."
 tool "list" name "lst_grow" sig "( ptr:Ptr -- )" desc "Reallocates the list's backing storage at double capacity, copying existing elements."
 tool "list" name "lst_push" sig "( val:Unknown ptr:Ptr -- )" desc "Grows the list (doubling capacity) when full; never silently drops."
 tool "list" name "lst_try_push" sig "( val:Unknown ptr:Ptr -- ok:Scalar )" desc "Does not grow; returns 0 when full instead of pushing."
 
-tool "map" name "map_make" sig "( buckets_size:Scalar -- ptr:Ptr )" desc "..."
+tool "map" name "map_make" sig "( buckets_size:Scalar -- ptr:Ptr )" desc "A new map from Scalar keys to values with buckets_size buckets (one key per bucket; see map_set)."
 tool "map" name "map_hash" sig "( key:Scalar buckets_size:Scalar -- bucket_idx:Scalar )" desc "Computes the bucket index for a key."
 tool "map" name "map_find" sig "( ptr:Ptr key:Scalar -- val:Unknown found:Scalar )" desc "Looks up a key; found=0 (val=0) rather than a sentinel when absent."
 tool "map" name "map_get" sig "( ptr:Ptr key:Scalar -- val:Unknown )" desc "Aborts when the key is absent; use map_find if absence is expected."
 tool "map" name "map_set" sig "( val:Unknown ptr:Ptr key:Scalar -- ok:Scalar )" desc "ok=0 if the write would clobber a different existing key at that bucket."
 
-tool "memory" name "hclear" sig "( p:Ptr start:Scalar size:Scalar -- )" desc "..."
-tool "memory" name "hloop_fill" sig "( p:Ptr start:Scalar stop:Scalar val:Scalar -- )" desc "..."
-tool "memory" name "hloop_add" sig "( p:Ptr start:Scalar stop:Scalar val:Scalar -- )" desc "..."
+tool "memory" name "hclear" sig "( p:Ptr start:Scalar size:Scalar -- )" desc "Set size cells from start to 0."
+tool "memory" name "hloop_fill" sig "( p:Ptr start:Scalar stop:Scalar val:Scalar -- )" desc "Set the cells start..stop-1 to val."
+tool "memory" name "hloop_add" sig "( p:Ptr start:Scalar stop:Scalar val:Scalar -- )" desc "Add val to each of the cells start..stop-1."
 tool "memory" name "h_find_val" sig "( ptr:Ptr size:Scalar val:Scalar -- index:Scalar )" desc "Scans sequential heap cells for a target value; returns 0-indexed offset or -1."
 
-tool "record" name "rec_make" sig "( size:Scalar -- ptr:Ptr )" desc "..."
-tool "record" name "rec_get" sig "( ptr:Ptr field_offset:Scalar -- val:Unknown )" desc "..."
-tool "record" name "rec_set" sig "( val:Unknown ptr:Ptr field_offset:Scalar -- )" desc "..."
+tool "record" name "rec_make" sig "( size:Scalar -- ptr:Ptr )" desc "Allocate a record of size cells (all 0); fields are addressed by offset."
+tool "record" name "rec_get" sig "( ptr:Ptr field_offset:Scalar -- val:Unknown )" desc "Read the field at field_offset."
+tool "record" name "rec_set" sig "( val:Unknown ptr:Ptr field_offset:Scalar -- )" desc "Write the field at field_offset."
 
 tool "strings" name "str_print" sig "( str:Block -- )" desc "Prints a string (block of ASCII codes) to stdout."
 tool "strings" name "is_digit" sig "( ch:Scalar -- flag:Scalar )" desc "1 if char code is 0-9, else 0."
@@ -92,7 +92,7 @@ tool "util" name "<=" sig "( a:Scalar b:Scalar -- bool:Scalar )" desc "1 if a <=
 tool "util" name "block_eq" sig "( b1:Block b2:Block -- equal:Scalar )" desc "Checks element-by-element equality of two blocks."
 tool "util" name "insert_sorted" sig "( val:Unknown blk:Block -- result:Block )" desc "Inserts a value into an already-sorted block, preserving order."
 tool "util" name "block_sort" sig "( blk:Block -- sorted:Block )" desc "Performs stable sorting on a block."
-tool "util" name "assert" sig "( ok:Scalar msg:Block -- )" desc "..."
+tool "util" name "assert" sig "( ok:Scalar msg:Block -- )" desc "Stop the program with msg (via abort) unless ok is nonzero."
 
 { ---- Primitives: built into the compiler, no `use` needed. Not loaded by the compiler; checked against it by tools/build_manifest.py ---- }
 

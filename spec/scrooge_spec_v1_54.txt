@@ -1,4 +1,4 @@
-Scrooge v1.53 Language Specification
+Scrooge v1.54 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -46,6 +46,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 
 ═══ 3. Control Flow & Iterators ═══
 - Conditional: `flag cond [ true-body ] else [ false-body ]`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out). The else-branch may be omitted: `flag cond [ true-body ]` means `flag cond [ true-body ] else [ ]`, so the true-body must then leave the stack as it found it (net effect 0). A closing `?` may follow the last branch (`... else [ false-body ] ?`, the form older code uses); it is optional and changes nothing. A `?` or `else` anywhere else is a ParseError.
+- Short-circuit forms: `a when [ b ]` is the value of b when a is nonzero, else 0, and b is not evaluated when a is 0; `a unless [ b ]` is the value of b when a is 0, else 0. The body must leave exactly one value. They are `a cond [ b ] else [ 0 ]` and `a cond [ 0 ] else [ b ]`, so `b len 0 > when [ b 0 block_get x = ]` guards the access that `b len 0 > b 0 block_get x = and` would perform even on an empty Block. A short-circuit or is `a cond [ 1 ] else [ b ]`.
 - `select` chooses a value with no branching: `vt vf flag select` -> vt if flag nonzero else vf. Both operands are always evaluated.
 - Counted loops:
     `n [times| i | body ]`         body runs n times, i = 0, 1, ..., n-1
@@ -55,7 +56,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
 - Iterators over a Block:
     `[map|  idx val ctx | body ]`          body effect: ( idx val -- val' )
     `[fold| idx acc val ctx | body from init ]`  body effect: ( idx acc val -- acc' )
-  `from init` sets the accumulator: `from 0` -> Scalar result, `from nil` -> Block result. Use `_` for an unused ctx. If ctx IS used, push it BEFORE the block: `ctx block [fold| ... ]` (loop pops block first, ctx second).
+  `from init` sets the initial accumulator: any expression that leaves exactly one value (`from 0`, `from nil`, `from acc`, `from 1 n +`); the fold's result has its type. Use `_` for an unused ctx. If ctx IS used, push it BEFORE the block: `ctx block [fold| ... ]` (loop pops block first, ctx second).
 
 ═══ 4. Data Structures & Access Protocol ═══
 A Block is an index-typed anonymous record: an ordered set of typed slots.
@@ -139,6 +140,7 @@ Import at file top; names resolve only for imported lexicons. Each public word i
 - `args`: arg_prog ( -- name:Block ); arg_or ( i:Scalar default:Block -- arg:Block ); arg_tail ( -- args:Block ); arg_find ( name:Block -- i:Scalar found:Scalar ); arg_flag ( name:Block -- found:Scalar ); arg_value_or ( name:Block default:Block -- value:Block ); arg_int_or ( name:Block default:Scalar -- n:Scalar ).
 
 ═══ 9. Track 2 Static Verification & Error Classes ═══
+Warnings (on stderr after ACCEPT, never a rejection): `MutualRecursion` for a loop written as a cycle of tail calls (§3), and `AliasShadowsWord` for a frame alias spelled like one of the program's own words, which hides that word until the end of the block.
 A REJECT lists every error found, in source order, and the compiler exits with status 1 (ACCEPT: 0); a build that is rejected removes any earlier binary at the output path, so a stale program is never left to be run by mistake. Words with a stack-effect error are not type-checked, but every other word is, in the same run.
 Static checker enforces:
 - `ArityMismatch`: Signature vs body net effect mismatch, signature vs frame input count mismatch, or unequal cond branches.
@@ -149,7 +151,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word (the message names the lexicon), or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill exit to_int float_to_str type_of hnull.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill exit to_int float_to_str type_of hnull when unless.
   - Of these, `to`, `fill`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.

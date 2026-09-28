@@ -1,6 +1,14 @@
-# Scrooge Programming Language (v1.53)
+# Scrooge Programming Language (v1.54)
 
-Repository status: **Scrooge v1.53.2**.
+Repository status: **Scrooge v1.54**.
+
+### What changed in v1.54
+
+Every program in this project's corpus that compiled under v1.53.2 still compiles, to the same output. A word, parameter or alias named `when` or `unless` is now rejected (both are reserved).
+
+- **Short-circuit forms.** `a when [ b ]` is the value of b when a is true, else 0, and b is not evaluated otherwise; `a unless [ b ]` is b when a is false, else 0. `b len 0 > when [ b 0 block_get x = ]` guards an access that `and` (which evaluates both sides) would perform anyway.
+- **Hints and warnings.** `%` and `mod` point to `\`, and `&&`/`||` to `and`/`or`/`when`. A frame alias spelled like one of your own words gets a warning, since it hides the word.
+- **Docs.** Every library word in `library/manifest.sm` now has a real description (17 had none, including the whole `array`, `list`, `record` and `map_make`). The spec says a fold's `from` takes any expression. The skill guide says to measure resident memory (`VmHWM`), not `VmPeak`.
 
 ### What changed in v1.53.2
 
@@ -87,7 +95,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.53, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.54, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
@@ -110,7 +118,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_53.txt`](spec/scrooge_spec_v1_53.txt) (defines v1.53 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_54.txt`](spec/scrooge_spec_v1_54.txt) (defines v1.54 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
