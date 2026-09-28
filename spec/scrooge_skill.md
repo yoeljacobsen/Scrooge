@@ -1,14 +1,39 @@
 # Skill: Writing Correct Scrooge (v1.52)
 
-Operational guide for generating Scrooge code that passes static verification on the first try. The specification defines the language; this document defines the methodology, patterns, and empirical best practices.
+Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
 ---
 
-## 0. Preparation & Standard Library Rules
+## 0. How to Learn Scrooge
 
-1. **Learn before development**: Study language specifications (`spec/scrooge_spec_v1_52.txt`) and library modules in `library/`.
-2. **Do not reinvent library words**: Always check existing library files (`util.sg`, `strings.sg`, `memory.sg`, `array.sg`, `list.sg`, `map.sg`, `record.sg`, `bitset.sg`, `file.sg`, `args.sg`) before writing custom helpers. Import existing library words with `use "<module>"` (e.g., `use "util"`).
-3. **Look signatures up in `library/manifest.sm`**: one typed line per public library word (`tool`) and per compiler primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. It is generated and checked against the compiler, so it is exact.
+Learn the language from its documents and from small experiments, in this order:
+
+1. **Read the specification** (`spec/scrooge_spec_v1_52.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
+3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
+4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
+
+Learn from the documents and your experiments, not from the compiler's internals: do not read the generated C (`--dump-c`) or the compiler's source to work out what Scrooge means. The documents are meant to be complete; where they are not, a probe program is the right way to find out, and a note in your friction log is the right way to report the gap.
+
+---
+
+## 0b. How to Build a Program
+
+**Design top down.** Before writing code, write the program's structure as a short outline: the main loop, the data it keeps (as `#record` layouts, section 3), and the few words each part needs, with their signatures. A signature is a promise the checker enforces, so choosing them first is most of the design.
+
+**Implement bottom up, in small increments.** Build the lowest layer first (parsing a number, one record accessor, one helper), and make it pass `--check-only` and a tiny test program before building on it. Then the next layer, tested the same way. Never write several hundred lines and compile them for the first time together: the first error hides the design problem behind it.
+
+- Keep a test program per layer (a `main` that calls the layer's words on known inputs and prints the results), and keep it passing as you go.
+- Split a large program into user modules (section 6d): one file per layer, each with its own test program.
+- While iterating, build with `-O0` (a large program builds in seconds instead of tens of seconds); measure speed only with the default `-O3`.
+- Keep a running note of what is done and what is next, so a long task survives an interruption.
+
+---
+
+## 0c. Standard Library Rules
+
+1. **Do not reinvent library words**: check `library/manifest.sm` before writing a helper. Import lexicons with `use "<lexicon>"` (e.g., `use "util"`).
+2. **Your own modules**: `use "name"` loads the file "name.sg" from your program's directory when no library lexicon has that name (section 6d).
 
 ---
 
@@ -23,7 +48,7 @@ Scrooge rewards many small words over one large word:
 
 ## 2. Name Values with Frames; Avoid Stack Gymnastics
 
-Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). Arrow frames preserve static type tags, whereas shufflers produce `Unknown` types.
+Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). Arrow frames preserve static type tags, whereas shufflers produce `Unknown` types. A frame binds at most 64 names; for more state, use a `#record`.
 
 - **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A trailing `?` is optional.
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
@@ -42,7 +67,7 @@ Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional st
 The checker counts, for every word, how far each token moves the stack, and rejects a body whose total differs from its signature. These are the rules it applies, which cost earlier agents the most rebuilds:
 
 - **A frame pops.** `-> [ a b ]` takes the top two values off the stack (net -2) and names them. Names stay in scope to the end of the enclosing block, so a later frame binds only NEW values: `-> [ s n ] [ ... ] s n foo -> [ r ] [ ... s n r ... ]`. Re-listing a name that is still in scope, as in `-> [ s n ] [ ... ] -> [ s n r ]`, pops two more values that are not there. Many examples re-push before re-binding (`-> [ a ] [ a a f ] -> [ a b ]`); that is one style, not a requirement.
-- **`cond` consumes its flag,** and each branch is measured from there. Both branches must have the same net effect: `x 0 < cond [ 0 ] else [ x ]` is +1 either way. A branch without an else must be net 0. A branch whose last call is `abort` is exempt. A branch may consume values below it (a word's parameters), but only if the other branch has the same net effect: `cond [ drop ] else [ ]` is rejected (-1 against 0), while `cond [ drop 0 ] else [ ]` is fine (0 and 0).
+- **`cond` consumes its flag,** and each branch is measured from there. Both branches must have the same net effect: `x 0 < cond [ 0 ] else [ x ]` is +1 either way. A branch without an else must be net 0. A branch whose last call is `abort` or `exit` is exempt. A branch may consume values below it (a word's parameters), but only if the other branch has the same net effect: `cond [ drop ] else [ ]` is rejected (-1 against 0), while `cond [ drop 0 ] else [ ]` is fine (0 and 0).
 - **A call has its signature's effect**, a word's call to itself included: in `#count ( n:Scalar -- )`, the body `-> [ n ] n 0 = cond [ ] else [ n 1 - count ]` is -1 for the frame, then 0 for the cond (its else-branch pushes `n 1 -`, +1, and the call `count` takes it, -1), total -1 as the signature says.
 - **Record accessors:** a field with a count above 1 takes an index, `v s i Name_field_set` and `s i Name_field`; a count-1 field does not, `v s Name_field_set` and `s Name_field`.
 - When a word is rejected with `ArityMismatch`, the message lists the stack depth at the end of each line of the body, relative to entry: the first line whose depth is not what you intended is where the stray value is.
@@ -69,7 +94,9 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `array_at` / `list_at` / `block_at` or `at`.
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
-- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one. Use them instead of a per-cell loop.
+- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically). Use them instead of a per-cell loop.
+- **An absent link**: `hnull` is a Ptr that refers to nothing (a tree's missing child, an empty list head). Test it with `p hnull =`; reading or writing through it is a fatal error.
+- **Memory**: a Block owns the Blocks inside it and frees them with itself, and a heap cell owns what it holds, so nested data costs nothing once released. Bracket per-item work with `hmark`/`hrelease` so a long run does not keep every allocation alive.
 - **Heap state with named fields**: declare it with `#record Name  field Type count ...  end` (spec Sec.5) instead of hand-numbering offsets. It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` (both take an index argument unless the count is 1: a count-1 setter is `v s Name_field_set`, with no index) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset: `#record Board cells Scalar 81 solved Scalar 1 end` then `Board_new -> [ b ] [ 5 b 0 Board_cells_set 1 b Board_solved_set b 0 Board_cells print_int ]`.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 - **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.
@@ -100,6 +127,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 ## 5. Numeric Conversions & Arithmetic
 
 - **Floating-Point Literals**: Use bare decimal floats (`0.0`, `3.14`, `-0.5`) or scientific notation (`314e-2`).
+- **Float to integer**: `x to_int` truncates toward zero (`-3.9 to_int` is -3). **Number to text**: `x 3 float_to_str` is the Block `"3.142"` for 3.14159 (exactly what `3 print_float` prints); `n int_to_str` (strings) for an integer. **Which kind of value**: `v type_of` is 0 for an integer, 1 a float, 2 a Block, 3 a Ptr.
 - **Explicit Float Casting (`to_float`)**:
   Cast integer scalars to float before division (`/`) when float division is required:
   ```scrooge
@@ -112,7 +140,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 
 ---
 
-## 6. Standard Library Additions (v1.48)
+## 6. Standard Library Highlights
 
 Import library lexicons at the top of the file via `use "<lexicon>"`.
 
@@ -121,7 +149,7 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
 
 - **Block Equality & Sorting (`util.sg`)**:
   - `#block_eq ( b1:Block b2:Block -- equal:Scalar )`: Checks length equality first, then folds element-by-element equality (returns `1` if equal, `0` otherwise).
-  - `#block_sort ( blk:Block -- sorted:Block )`: Stable ascending sort, O(n log n) (it uses `hsort`).
+  - `#block_sort ( blk:Block -- sorted:Block )`: Stable ascending sort, O(n log n) (it uses `hsort`). It sorts numbers, and Blocks lexicographically: a Block of strings sorts in byte order, a Block of rows column by column. For a descending order, `reverse` the result.
 
 - **Safe Indexing (`array.sg`)**:
   - `#nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )`: Returns element at `idx` if within bounds (`0 <= idx < arr len`), otherwise returns `default`.
@@ -187,10 +215,16 @@ use "args"
 
 ---
 
+## 6d. Your Own Modules
+
+A program of more than a few hundred lines belongs in several files. `use "geo"` loads the file "geo.sg" from the directory of the file that says it (when no library lexicon is called `geo`); a module is ordinary Scrooge (word definitions and its own `use` lines), modules may use each other, and each is loaded once. Errors, warnings, runtime word chains and `trace` name the module and its own line: `REJECT UnknownWordError geo.sg line 2 ...`. Give each module a test program that `use`s it.
+
+---
+
 ## 7. Failure Checklist (Check Before Emitting Code)
 
 1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`). This is the list in spec Sec.10.
-2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive.
+2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive; the error names what it collides with.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
 5. **Bracketed Values Are Data**: a `[ ... ]` used as a value may hold only literals (`[ 1 [ 2 3 ] ]`); build a Block from computed values with `cons` or `pair`. Cond branches, frame bodies and loop bodies are not values and nest freely.
@@ -200,24 +234,37 @@ use "args"
 
 ---
 
-## 8. Verification and Compilation
+## 8. Checking, Building and Running
 
-For all static verification, shape-gate analysis, and native executable generation, use `compiler/scroogec_fast` (or the static `compiler/scroogec_fast_x86-64`), from the repository root:
+From the repository root:
 ```bash
-compiler/scroogec_fast -L library <file.sg>
+compiler/scroogec_fast -L library --check-only prog.sg   # ACCEPT, or every error found
+compiler/scroogec_fast -L library -O0 -o prog prog.sg     # fast build while developing
+compiler/scroogec_fast -L library -o prog prog.sg         # optimised build (-O3)
 ```
 
-**Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to inline or restructure.
+- The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.
+- Warnings (a loop written as two words calling each other in tail position) go to stderr after `ACCEPT`; take them seriously, since such a loop stops at 65,536 trips.
+- `exit ( code -- )` ends a program with a status of your choosing.
+
+**Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to restructure.
 
 ## 9. Debugging a Program That Runs Wrong
 
-Work from cheapest to most detailed:
+Work from cheapest to most detailed, and stay in Scrooge:
 
 1. **`assert` your invariants** (`use "util"`): `count 81 <= "count past the grid" assert` stops the program with that message the first time the invariant fails, instead of minutes later with a corrupted result.
-2. **`trace` a value**: `x trace` prints `trace line N: <value>` to stderr, for any type: numbers, Blocks (the first 64 elements, and as text when they are all printable characters), and a Ptr as its size. It consumes the value, so trace a frame-bound name (`-> [ x ] [ x trace ... x ... ]`) or a `dup`. stdout is flushed first, so traces appear in order with the program's output.
-3. **`--debug-stack`** prints whatever the program left on the stack at exit.
-4. **`--profile`** (section 8) shows which words run and how often: a count that is far off what you expect is a bug, not just a hot spot.
-5. **Read the generated C** when the semantics puzzle you: `compiler/scroogec_fast -L library --dump-c prog.c prog.sg`. Each word `name` is a C function `f_name` (words with a fixed stack effect, called directly) and a stack wrapper `m_name`; characters outside `[A-Za-z0-9_]` become `_XX` hex codes, so `>=` is `f__3E_3D`. Word parameters are `p0, p1, ...` (the first is the deepest input), frame bindings are the locals `v0, v1, ...` in binding order, `t0, t1, ...` are intermediate values, and each runtime primitive is an `op_<name>` function in the preamble. You can add `fprintf(stderr, ...)` lines, build with `gcc -O3 prog.c -o prog` (what the compiler runs), and run it, but fix the Scrooge source afterwards: the C is regenerated on every build.
+2. **Read the word chain.** A runtime `Fatal:` error is followed by the words that were running, innermost first, each with its definition line (`in #report (defined line 2)`); start there.
+3. **`trace` a value**: `x trace` prints `trace line N: <value>` to stderr, for any type: numbers, Blocks (the first 64 elements, and as text when they are all printable characters), and a Ptr as its size. It consumes the value, so trace a frame-bound name (`-> [ x ] [ x trace ... x ... ]`) or a `dup`. stdout is flushed first, so traces appear in order with the program's output.
+4. **Make the program observable**: a debugging flag that prints intermediate results (a parsed structure, a row count per step) finds most logic errors faster than any tool.
+5. **Shrink the input.** When a large input fails, find the smallest input that still fails (halve it until it passes), and turn it into a test.
+6. **`--debug-stack`** prints whatever the program left on the stack at exit, and **`--profile`** shows which words run how often: a count far from what you expect is a bug, not just a hot spot.
 
-The checker also warns (after `ACCEPT`, on stderr) when words call each other round a cycle of tail calls: that is a loop, and only direct self-recursion runs as a loop, so such a cycle over a million records dies with `Fatal: Max frames exceeded`. Make one word call itself instead (nested `cond`s inside one word are fine).
+## 10. Long-Running Programs
 
+A program that runs for minutes can also run away: an unbounded join, a leak, a loop that never ends.
+
+- **Cap its memory** when you run it: `(ulimit -v 4000000; ./prog ...)` stops it at about 4 GB instead of letting it exhaust the machine.
+- **Start small**: run on the first few inputs (a `-n` flag) before the whole data set, and scale up only when the small run is correct and its time and memory look proportionate.
+- **Make it report progress** (a line every N items, to stderr) so a stalled or slowing run is visible.
+- **Watch it and stop it early**: if memory keeps growing, progress stops, or the output is already wrong, kill it and fix the cause rather than waiting for it to finish.

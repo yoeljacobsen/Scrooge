@@ -10,7 +10,7 @@ Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fas
 
 ### CLI Syntax
 ```bash
-compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [-O0|-O1|-O2|-O3] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
 ```
 
 ### Options & Flags
@@ -23,6 +23,7 @@ compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--de
 - Exit status: 0 on ACCEPT (and a successful build), 1 on REJECT or a failed build. A build first removes any existing file at the output path, so a rejected build never leaves an older binary behind.
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default (every program used to print a trailing `STACK: []`).
 - `--profile`: Builds a program that counts every word's calls and times its activations, and prints a table to stderr when it exits (also on `abort`): calls, self time (excluding callees), share of wall time, total time (including callees; a recursive word's inner activations are not counted twice), sorted by self time. A tail-recursive loop is one activation. Activations are timed with the CPU cycle counter (about 10 ns each, included in self time, so a word called hundreds of millions of times looks slower than it is). Without the flag the generated C contains no profiling code.
+- `-O0` / `-O1` / `-O2` / `-O3`: the optimisation level passed to gcc (default `-O3`). Behaviour is identical at every level; `-O0` builds a large program about ten times faster, for the edit-build-test loop.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.
 
@@ -76,6 +77,8 @@ The file primitives (`fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `fr
 - `FILE_PATH_MAX` is 4096. `op_fopen` converts the path Block into a C string, validating every slot is an integer, and releases the Block's reference (`block_decref`) since the value came off the stack.
 - `op_fread` buffers into `unsigned char[want]` and only converts what was actually read into `ScroogeValue` slots, so an oversized count costs one byte per requested character up front rather than sixteen.
 - Every non-leaf word calls `word_enter(id)` on entry (MAX_FRAMES check, and one store of its id into `word_stack[call_depth]`) and `call_depth--` on exit. After a `Fatal:` message, `err_printf` prints that chain via `scrooge_backtrace`, from the `word_names`/`word_places` tables emitted with every program. A leaf word (it calls no other word, so it cannot recurse) skips both: measured with callgrind, the store alone cost 4% of instructions on a call-heavy solver, and skipping leaves made two sudoku solvers 7-9% cheaper than before the chain existed.
+- User modules (G28): before checking, `resolveProgram` loads every `use "name"` that is not a library lexicon as the file name.sg beside the using file (transitively, once each), prepends the modules to the program's text, and records where each starts; `mapLines` rewrites every reported "line N" (errors, warnings) to the module file and line, and `sourcePlace` does the same for the runtime word chain and `trace`.
+- Memory (G24, G29): the heap allocation table grows by doubling (no fixed allocation count). A Block owns a reference to each Block element: `block_free` releases them (skipping the scan when `holds_blocks` is 0, which `cons`, `pair`, `block_slice`, `block_set` and the file readers keep exact), and the copying paths (`block_slice`, `cons`/`block_set` on a shared Block) count each copied element. Freed Block headers are reused from a free list.
 - Output to stdout is buffered. `print_char`/`print_int`/`print_float` and `op_fputc`/`op_fwrite` on slot 1 share `stdout`'s buffer, so they stay in order. Every runtime message to stderr goes through `err_printf`, which flushes stdout first; `op_fputc`/`op_fwrite` on slot 2 and reads from slot 0 flush it too, and `exit` flushes it at the end.
 
 ## 2c. Command-Line Argument Runtime

@@ -14,7 +14,7 @@ Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fas
 ## Usage
 
 ```bash
-scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [-O0|-O1|-O2|-O3] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
 ```
 
 ### Options & Flags
@@ -27,6 +27,7 @@ scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack
 - `--check-only`: Only performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default.
 - `--profile`: Builds a program that prints each word's calls, self time and total time to stderr at exit (see `compiler/scroogec_fast.md`).
+- `-O0` / `-O1` / `-O2` / `-O3`: the optimisation level passed to gcc (default `-O3`). Behaviour is identical at every level; `-O0` builds a large program about ten times faster, for the edit-build-test loop.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.
 
