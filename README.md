@@ -1,6 +1,10 @@
 # Scrooge Programming Language (v1.53)
 
-Repository status: **Scrooge v1.53**.
+Repository status: **Scrooge v1.53.1**.
+
+### What changed in v1.53.1
+
+Two fixes: a `fold` or `map` nested inside a `fold` body released its loop variables twice (a crash or corrupted data once v1.53 freed nested Blocks), and a fold's `from` expression was not checked (an unknown word there was accepted and then failed to build).
 
 ### What changed in v1.53
 
