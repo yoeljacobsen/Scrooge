@@ -56,6 +56,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Files: `f_read_line` (one pass per line), `fread_into` (bytes into heap cells), `fseek`/`ftell`.
 * Learning: learn Scrooge from the spec, the skill guide (sections 0 and 0b: how to learn, how to build) and `library/manifest.sm`, then by running small probe programs; not from generated C or compiler internals.
 * Modules: `use "name"` loads your own name.sg beside the program when no library lexicon has that name.
+* Editing: `scroogec_fast --words/--show/--replace/--insert-before/--insert-after/--delete/--fmt` edit a whole definition at a time (skill guide 8b), instead of ad-hoc search-and-replace scripts.
 * Builds: `-O0` for fast builds while iterating, default `-O3` for measurements; REJECT exits 1.
 * Conversions: `to_int`, `float_to_str`, `type_of`; `hnull` for an absent Ptr; `exit` for a status.
 * Profiling: build with `--profile` to get each word's calls, self and total time on stderr at exit.

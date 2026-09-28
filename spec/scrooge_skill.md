@@ -249,6 +249,26 @@ compiler/scroogec_fast -L library -o prog prog.sg         # optimised build (-O3
 
 **Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to restructure.
 
+## 8b. Editing Scrooge Source
+
+The compiler edits source a whole word at a time, so you never need a script that searches for and replaces a snippet of text (which breaks on any difference in indentation). It finds definitions with the compiler's own rules, so `end` or `#name` inside a string or a `{ }` comment is never mistaken for code:
+
+```bash
+compiler/scroogec_fast --words prog.sg                 # every definition: name, signature, lines
+compiler/scroogec_fast --show parse_row prog.sg        # print one definition
+compiler/scroogec_fast --replace parse_row prog.sg < new.sg        # replace it (new text on stdin)
+compiler/scroogec_fast --insert-before parse_row prog.sg < helper.sg  # add a helper above it
+compiler/scroogec_fast --insert-after parse_row prog.sg < next.sg
+compiler/scroogec_fast --delete parse_row prog.sg
+compiler/scroogec_fast --fmt prog.sg                   # re-indent (two spaces per bracket level)
+```
+
+- The new text (stdin) is one or more complete `#name ... end` definitions. It is checked before anything is written: balanced brackets, every definition ended, the parser accepts it, and no name it defines already exists (except the one being replaced). On any problem the file is left untouched and the reason is printed.
+- `--insert-before` is the natural way to add a helper: it lands directly above the word that calls it.
+- To change a few lines inside a long word, `--show` it, edit the text, and `--replace` it.
+- `--fmt` changes only leading whitespace, never the code or the line count, and `--fmt --check` reports whether a file is already formatted. Formatted files make ordinary text edits reliable too.
+- An edit does not check the whole program: run `--check-only` afterwards.
+
 ## 9. Debugging a Program That Runs Wrong
 
 Work from cheapest to most detailed, and stay in Scrooge:

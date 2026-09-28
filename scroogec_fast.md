@@ -28,6 +28,7 @@ scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default.
 - `--profile`: Builds a program that prints each word's calls, self time and total time to stderr at exit (see `compiler/scroogec_fast.md`).
 - `-O0` / `-O1` / `-O2` / `-O3`: the optimisation level passed to gcc (default `-O3`). Behaviour is identical at every level; `-O0` builds a large program about ten times faster, for the edit-build-test loop.
+- Source editing, a whole word at a time (no compile): `--words FILE`, `--show NAME FILE`, `--replace NAME FILE`, `--insert-before NAME FILE`, `--insert-after NAME FILE` (new definitions on stdin, checked before anything is written), `--delete NAME FILE`, `--fmt [--check] FILE` (re-indent only). See the skill guide, section 8b.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.
 

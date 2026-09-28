@@ -1,6 +1,10 @@
 # Scrooge Programming Language (v1.53)
 
-Repository status: **Scrooge v1.53.1**.
+Repository status: **Scrooge v1.53.2**.
+
+### What changed in v1.53.2
+
+Source-editing commands in the compiler, working on whole word definitions: `--words`, `--show`, `--replace`, `--insert-before`, `--insert-after`, `--delete` and `--fmt` (skill guide section 8b). New definitions are checked before anything is written. No language change.
 
 ### What changed in v1.53.1
 
