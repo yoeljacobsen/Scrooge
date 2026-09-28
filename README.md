@@ -7,7 +7,7 @@ Repository status: **Scrooge v1.53**.
 Every program in this project's corpus that compiled under v1.52 still compiles, to the same output. A word, parameter or alias named after one of the five new primitives (`exit`, `to_int`, `float_to_str`, `type_of`, `hnull`) is now rejected, and a `use` that names neither a library lexicon nor a file beside the program is now an error (it was ignored).
 
 - **User modules.** `use "name"` loads your own name.sg from the program's directory when no library lexicon has that name. Modules load transitively and once each, and every error, warning, runtime word chain and `trace` names the module file and its own line.
-- **No more nested-Block leak.** A Block now owns the Blocks inside it and frees them with itself. A SQL engine built from rows of pairs went from 4.0 GB to 197 MB; freeing that memory costs about 20% more time in such programs.
+- **No more nested-Block leak.** A Block now owns the Blocks inside it and frees them with itself. A program that keeps many rows built from pairs went from 4.0 GB to 197 MB; freeing that memory costs about 20% more time in such programs.
 - **No allocation limit.** The heap allocation table grows on demand; `hnew` used to stop at 1,000,000 live allocations.
 - **Build speed.** `-O0` to `-O3` choose gcc's optimisation level (default `-O3`); `-O0` builds a large program about ten times faster while developing it.
 - **New primitives:** `exit ( code -- )`, `to_int ( x -- n )`, `float_to_str ( x decimals -- s )`, `type_of ( v -- t )`, `hnull ( -- p )`.
