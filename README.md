@@ -1,6 +1,19 @@
-# Scrooge Programming Language (v1.52)
+# Scrooge Programming Language (v1.53)
 
-Repository status: **Scrooge v1.52.1**.
+Repository status: **Scrooge v1.53**.
+
+### What changed in v1.53
+
+Every program in this project's corpus that compiled under v1.52 still compiles, to the same output. A word, parameter or alias named after one of the five new primitives (`exit`, `to_int`, `float_to_str`, `type_of`, `hnull`) is now rejected, and a `use` that names neither a library lexicon nor a file beside the program is now an error (it was ignored).
+
+- **User modules.** `use "name"` loads your own name.sg from the program's directory when no library lexicon has that name. Modules load transitively and once each, and every error, warning, runtime word chain and `trace` names the module file and its own line.
+- **No more nested-Block leak.** A Block now owns the Blocks inside it and frees them with itself. A SQL engine built from rows of pairs went from 4.0 GB to 197 MB; freeing that memory costs about 20% more time in such programs.
+- **No allocation limit.** The heap allocation table grows on demand; `hnew` used to stop at 1,000,000 live allocations.
+- **Build speed.** `-O0` to `-O3` choose gcc's optimisation level (default `-O3`); `-O0` builds a large program about ten times faster while developing it.
+- **New primitives:** `exit ( code -- )`, `to_int ( x -- n )`, `float_to_str ( x decimals -- s )`, `type_of ( v -- t )`, `hnull ( -- p )`.
+- **Sorting Blocks.** `hsort` and `block_sort` order strings (byte order) and rows (column by column) as well as numbers.
+- **Checker.** Frames may bind 64 names (was 16); the mutual-recursion warning no longer fires on tree recursion such as an expression evaluator; a fold nested in a fold body now parses.
+- **Docs.** Spec Sec.8 lists every library word with its signature. The skill guide explains how to learn Scrooge from its documents and small experiments, how to design top down and build bottom up in tested increments, and how to run long programs safely; it no longer suggests reading the generated C.
 
 ### What changed in v1.52.1
 
@@ -66,7 +79,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.52, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.53, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
@@ -89,7 +102,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_52.txt`](spec/scrooge_spec_v1_52.txt) (defines v1.52 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_53.txt`](spec/scrooge_spec_v1_53.txt) (defines v1.53 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

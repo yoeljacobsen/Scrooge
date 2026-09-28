@@ -1,6 +1,6 @@
-# Scrooge v1.52 Workspace Rules & Agent Directives
+# Scrooge v1.53 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_52.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_53.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -13,13 +13,13 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
    ```
    It reports every error at once, in source order, with line numbers (and columns for `cond` and `end` structure). Fix them all before rebuilding. A build is `compiler/scroogec_fast -L library -o <bin> <file.sg>`.
 3. **Immutability Model:** Block updates (`_set`) are copy-on-write: they return a new Block and leave the original valid. Pass updated state down the call chain. The heap (`hnew`/`hread`/`hwrite`) is the one mutable store.
-4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (72 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
+4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (77 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
 5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `val ptr offset hwrite` (the value comes first).
 6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler.
 
 ---
 
-## 2. Core Scrooge v1.52 Language Reference
+## 2. Core Scrooge v1.53 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -54,6 +54,10 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
   - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); the body is net 0 and threads accumulators left below the loop (`0 10 [times| i | i + ]`). No `break`: an early-exit loop is a self-recursive word.
 * Debugging: `x trace` prints a value and its line to stderr; `flag msg assert` (util) stops on a failed invariant; spec Sec.7 and the skill guide's debugging section.
 * Files: `f_read_line` (one pass per line), `fread_into` (bytes into heap cells), `fseek`/`ftell`.
+* Learning: learn Scrooge from the spec, the skill guide (sections 0 and 0b: how to learn, how to build) and `library/manifest.sm`, then by running small probe programs; not from generated C or compiler internals.
+* Modules: `use "name"` loads your own name.sg beside the program when no library lexicon has that name.
+* Builds: `-O0` for fast builds while iterating, default `-O3` for measurements; REJECT exits 1.
+* Conversions: `to_int`, `float_to_str`, `type_of`; `hnull` for an absent Ptr; `exit` for a status.
 * Profiling: build with `--profile` to get each word's calls, self and total time on stderr at exit.
 * Output: `print_char`, `print_int`, `x decimals print_float`; `print_fixed` and `int_to_str_pad` in `strings.sg`. A program prints only what it prints; `--debug-stack` adds a final `STACK: [...]` line showing what was left on the stack.
 
@@ -61,5 +65,5 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ## 3. Versioning & Tagging Policy
 
-- **Absolute Version Lockstep:** A release tag (e.g., `v1.52`), applied in both the development repository and this published repository, freezes the compiler, checker, standard library, specification and skill guide together.
-- **Spec Changes Trigger Versioning:** A change to the specification (`spec/scrooge_spec_v<major>_<minor>.txt`) or to primitive semantics that results in a new version MUST rename the spec file to the new version and create Git tags matching the version exactly (`v1.52`).
+- **Absolute Version Lockstep:** A release tag (e.g., `v1.53`), applied in both the development repository and this published repository, freezes the compiler, checker, standard library, specification and skill guide together.
+- **Spec Changes Trigger Versioning:** A change to the specification (`spec/scrooge_spec_v<major>_<minor>.txt`) or to primitive semantics that results in a new version MUST rename the spec file to the new version and create Git tags matching the version exactly (`v1.53`).
