@@ -80,9 +80,10 @@ end
 { block_sort was an insertion sort that rebuilt its result on every insert:
   O(n^2) comparisons and allocations. It now copies into a marked heap
   region, sorts it with hsort (stable, ordered exactly as `<` orders), and
-  copies back: O(n log n), same result. Numbers only, as before; a
-  non-number element, which `<` never ordered meaningfully, is now a clear
-  fatal error. }
+  copies back: O(n log n). It sorts numbers (as `<` orders them) and Blocks
+  (element by element, shorter first on a tie), so a Block of strings sorts
+  in byte order and a Block of rows column by column; numbers sort before
+  Blocks. A Ptr element is a fatal error. }
 #bsort_fill_step ( idx:Scalar acc:Scalar val:Unknown p:Ptr -- acc2:Scalar )
   -> [ idx acc val p ] [ val p idx hwrite acc ]
 end
