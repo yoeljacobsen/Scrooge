@@ -4,7 +4,7 @@ Repository status: **Scrooge v1.56.1**.
 
 ### What changed in v1.56.1
 
-- **Faster float arithmetic.** `+`, `-` and `*` on two floats take a direct path: a multiply-add loop is 33% faster and a neural-network trainer 9% faster, with identical results; integer code is unchanged.
+- **Faster float arithmetic.** `+`, `-` and `*` on two floats take a direct path: a multiply-add loop is 33% faster and a larger float-heavy program 9% faster, with identical results; integer code is unchanged.
 - **A word's comment moves with it.** The comment lines directly above a `#name` line belong to the word: `--show` prints them, `--delete` removes them, `--insert-before` goes above them, and `--replace` replaces them when the new text brings its own comment.
 - **Docs.** Each heap cell takes 16 bytes (spec Sec.5); the skill guide shows how to pack small values, and that `to_float` on a value reused in a hot loop speeds the loop up. The spec and skill guide titles now say v1.56.
 
