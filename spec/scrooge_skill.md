@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_55.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_56.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -129,7 +129,8 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 ## 5. Numeric Conversions & Arithmetic
 
 - **Floating-Point Literals**: Use bare decimal floats (`0.0`, `3.14`, `-0.5`) or scientific notation (`314e-2`).
-- **Float to integer**: `x to_int` truncates toward zero (`-3.9 to_int` is -3). **Number to text**: `x 3 float_to_str` is the Block `"3.142"` for 3.14159 (exactly what `3 print_float` prints); `n int_to_str` (strings) for an integer. **Which kind of value**: `v type_of` is 0 for an integer, 1 a float, 2 a Block, 3 a Ptr.
+- **Float to integer**: `x to_int` truncates toward zero (`-3.9 to_int` is -3); `x floor` rounds down (`-3.9 floor` is -4), and "x 0.5 + floor" rounds to nearest. **Number to text**: `x 3 float_to_str` is the Block `"3.142"` for 3.14159 (exactly what `3 print_float` prints); `n int_to_str` (strings) for an integer. **Which kind of value**: `v type_of` is 0 for an integer, 1 a float, 2 a Block, 3 a Ptr.
+- **Real functions and random numbers**: `exp`, `log` (natural), `sqrt` and `pow` ("2 10 pow" is 1024.0) return floats. `rand` gives a float in [0, 1), and `seed` ( s -- ) fixes the sequence; without a seed call every run gives the same numbers, so seed explicitly and record the seed when results must be reproducible. "rand n * to_int" is an integer in 0..n-1.
 - **Explicit Float Casting (`to_float`)**:
   Cast integer scalars to float before division (`/`) when float division is required:
   ```scrooge
@@ -225,7 +226,7 @@ A program of more than a few hundred lines belongs in several files. `use "geo"`
 
 ## 7. Failure Checklist (Check Before Emitting Code)
 
-1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `sort_cmp`). This is the list in spec Sec.10.
+1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `sort_cmp`). This is the list in spec Sec.10.
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive; the error names what it collides with.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.

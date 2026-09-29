@@ -1,6 +1,13 @@
-# Scrooge Programming Language (v1.55)
+# Scrooge Programming Language (v1.56)
 
-Repository status: **Scrooge v1.55.2**.
+Repository status: **Scrooge v1.56**.
+
+### What changed in v1.56
+
+Every program in this project's corpus that compiled under v1.55.2 still compiles, to the same output. A word or alias named `floor` is now rejected (it is a new primitive).
+
+- **Real functions.** `exp`, `log`, `sqrt` and `pow`, reserved since early versions, are implemented: they take integers or floats and return floats (`2 10 pow` is 1024.0). `floor` rounds down to an integer (`-2.5 floor` is -3).
+- **Random numbers.** `rand` is a pseudo-random float in [0, 1) (xorshift64*, 53 bits) and `s seed` restarts its sequence. A program that never calls `seed` gets the same numbers on every run.
 
 ### What changed in v1.55.2
 
@@ -136,7 +143,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_55.txt`](spec/scrooge_spec_v1_55.txt) (defines v1.55 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_56.txt`](spec/scrooge_spec_v1_56.txt) (defines v1.56 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
