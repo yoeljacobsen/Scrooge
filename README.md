@@ -1,6 +1,13 @@
 # Scrooge Programming Language (v1.56)
 
-Repository status: **Scrooge v1.56.2**.
+Repository status: **Scrooge v1.56.3**.
+
+### What changed in v1.56.3
+
+No program's behaviour changed; two error messages say more.
+
+- **An unclosed `[` says where the `]` is probably missing.** The error named only the line of the outermost open bracket; it now uses the indentation to point at the `]` that closes the wrong bracket: `unterminated [ block (probably a ']' is missing before line 6, closing the '[' at line 4 ...)`.
+- **A non-Ptr address says what it was**: `hwrite address must be a Ptr, got the integer 0 (a Ptr comes from hnew, a #record's _new, or a cell that holds one)`.
 
 ### What changed in v1.56.2
 
