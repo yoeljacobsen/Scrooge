@@ -88,6 +88,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 
 - `n [times| i | body ]` runs i = 0..n-1; `lo hi [for| i | body ]` runs i = lo..hi-1.
 - The body's net effect is 0. To accumulate, leave the accumulator BELOW the loop and have the body replace it (`acc i +`); several accumulators work the same way (`0 1 20 [times| i | swap over + ]`).
+- A frame cannot update a name: `0 -> [ s ] [ 5 [times| i | s i + -> [ s ] ] s ]` leaves s at 0, because the inner `-> [ s ]` is a new name for one iteration (the compiler warns: `AliasRebindsOuter`). Thread the value on the stack instead: `0 5 [times| i | i + ] -> [ s ]`.
 - It is faster than the equivalent tail-recursive word (a plain C loop; carried values stay in registers) and has no depth limit.
 - No `break`: a loop that must stop early (a search, a scan to a delimiter) is still a self-recursive word.
 
@@ -220,7 +221,7 @@ use "args"
 
 ## 6d. Your Own Modules
 
-A program of more than a few hundred lines belongs in several files. `use "geo"` loads the file "geo.sg" from the directory of the file that says it (when no library lexicon is called `geo`); a module is ordinary Scrooge (word definitions and its own `use` lines), modules may use each other, and each is loaded once. Errors, warnings, runtime word chains and `trace` name the module and its own line: `REJECT UnknownWordError geo.sg line 2 ...`. Give each module a test program that `use`s it.
+A program of more than a few hundred lines belongs in several files. `use "geo"` loads the file "geo.sg" from the directory of the file that says it (when no library lexicon is called `geo`), and a relative path works too, so a test in `t/` can say `use "../src/geo"`; a module is ordinary Scrooge (word definitions and its own `use` lines), modules may use each other, and each is loaded once. Errors, warnings, runtime word chains and `trace` name the module and its own line: `REJECT UnknownWordError geo.sg line 2 ...`. Give each module a test program that `use`s it.
 
 ---
 

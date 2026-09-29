@@ -158,7 +158,7 @@ prim name "bitcount" sig "( a:Scalar -- n:Scalar )" desc "Number of set bits of 
 prim name "bitctz" sig "( a:Scalar -- n:Scalar )" desc "Trailing zero bits: the index of the lowest set bit; 64 for 0."
 prim name "bitclz" sig "( a:Scalar -- n:Scalar )" desc "Leading zero bits of the 64-bit pattern; 64 for 0."
 prim name "print_char" sig "( ch:Scalar -- )" desc "Write one character code to stdout."
-prim name "print_int" sig "( n:Scalar -- )" desc "Write an integer to stdout."
+prim name "print_int" sig "( n:Scalar -- )" desc "Write an integer to stdout (a float is fatal: to_int or floor it, or use print_float)."
 prim name "print_float" sig "( x:Scalar decimals:Scalar -- )" desc "Write a number with the given number of decimals (0-17), formatted as printf %.*f."
 prim name "abort" sig "( msg:Block -- )" desc "Print msg to stderr and exit nonzero. Never returns; an aborting cond branch is exempt from branch matching."
 prim name "fopen" sig "( path:Block mode:Scalar -- fh:File ok:Scalar )" desc "Open a file (spec Sec.12)."

@@ -1,6 +1,14 @@
 # Scrooge Programming Language (v1.56)
 
-Repository status: **Scrooge v1.56.1**.
+Repository status: **Scrooge v1.56.2**.
+
+### What changed in v1.56.2
+
+Every program in this project's corpus that compiled under v1.56.1 still compiles, with the same output. `print_int` of a float is now a fatal error (it printed the float with six decimals).
+
+- **A loop that rebinds an outer name warns.** `0 -> [ s ] [ 5 [times| i | s i + -> [ s ] ] s ]` leaves s at 0, since the inner frame makes a new name for one iteration; the compiler now says so (`AliasRebindsOuter`), and the spec states the rule.
+- **Clearer errors.** A name used after the block that bound it says where it was bound and why it is gone. A word named like one a `#record` generates names the record; `--words` lists the words each record generates.
+- **Small things.** `--fmt --check` says `already formatted`; the skill guide says `use` takes a relative path (`use "../src/geo"`).
 
 ### What changed in v1.56.1
 
