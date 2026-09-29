@@ -1,4 +1,4 @@
-Scrooge v1.55 Language Specification
+Scrooge v1.56 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -75,7 +75,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Primitive spellings: `_at`: `at`, `array_at`, `arr_at`, `list_at`, `block_at`. `_get`: `block_get`, `array_get`, `list_get`, `record_get`. `_set`: `block_set`, `array_set`, `list_set`, `record_set`. (`arr_get`/`arr_set`/`map_get`/`map_set`/`rec_get`/`rec_set` are library words defined in `array.sg`/`map.sg`/`record.sg` — see §8 — not compiler primitives; a local `#word` definition using any of the primitive spellings above is rejected as `DuplicateWordError`, but the six library spellings are exactly what those lexicons are for.)
 
 ═══ 5. Heap & Memory Protocol ═══
-- `size hnew -> ptr` allocate cells. Every cell starts as the integer 0. `ptr idx hread -> val`. `val ptr idx hwrite`.
+- `size hnew -> ptr` allocate cells. Every cell starts as the integer 0 and holds one value of any kind; each takes 16 bytes. `ptr idx hread -> val`. `val ptr idx hwrite`.
 - Ptr is opaque: `ptr 1 +` is a static `TypeError`. Compute integer offset first as Scalar, then pass it: `ptr offset hread`.
 - Block access (`_at`/`_get`) and heap access (`hread`) are different: `_at`/`_get` index a Block value; `hread` reads a heap Ptr. They are NOT interchangeable.
 - Limits: the number of live allocations is limited only by memory (the allocation table grows), and an allocation may hold any number of cells. `hmark`/`hrelease` still matter: memory that is never released stays allocated.

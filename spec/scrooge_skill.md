@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.55)
+# Skill: Writing Correct Scrooge (v1.56)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -270,6 +270,7 @@ compiler/scroogec_fast --fmt prog.sg                   # re-indent (two spaces p
 ```
 
 - The new text (stdin) is one or more complete `#name ... end` definitions. It is checked before anything is written: balanced brackets, every definition ended, the parser accepts it, and no name it defines already exists (except the one being replaced). On any problem the file is left untouched and the reason is printed.
+- A word's comment is the run of comment lines directly above its `#name` line, with no blank line between. It belongs to the word: `--show` prints it, `--delete` removes it, and `--insert-before` puts new text above it. `--replace` replaces it too when the new text starts with its own comment, and keeps it otherwise.
 - `--insert-before` is the natural way to add a helper: it lands directly above the word that calls it.
 - To change a few lines inside a long word, `--show` it, edit the text, and `--replace` it.
 - `--fmt` changes only leading whitespace, never the code or the line count, and `--fmt --check` reports whether a file is already formatted. Formatted files make ordinary text edits reliable too.
@@ -295,3 +296,8 @@ A program that runs for minutes can also run away: an unbounded join, a leak, a 
 - **Make it report progress** (a line every N items, to stderr) so a stalled or slowing run is visible.
 - **Measure memory as resident memory**: `VmHWM` in `/proc/self/status`, or the maximum resident set size from `/usr/bin/time -v`. `VmPeak` counts reserved address space too (every program reserves a 1 GB stack it mostly never touches), so it overstates by about 1 GB.
 - **Watch it and stop it early**: if memory keeps growing, progress stops, or the output is already wrong, kill it and fix the cause rather than waiting for it to finish.
+
+Speed and size in numeric code:
+
+- **Every heap cell takes 16 bytes**, whatever it holds (a byte, an integer, a float). A million-byte file read into cells takes 16 MB; when that matters, pack several small values into one integer cell with `bitshl`/`bitor` and take them apart with `bitshr`/`bitand`.
+- **A value read once and reused in a hot loop is faster after `to_float`** (or `to_int`, for an integer): `c 0 hread to_float -> [ g ]` before a loop that multiplies by `g` on every iteration. The generated code then knows g's kind and drops the checks it would otherwise repeat each time round (measured: a multiply-add loop 30% faster). Values read inside the loop gain little from it.
