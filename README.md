@@ -1,6 +1,10 @@
 # Scrooge Programming Language (v1.57)
 
-Repository status: **Scrooge v1.57**.
+Repository status: **Scrooge v1.57.1**.
+
+### What changed in v1.57.1
+
+An ArityMismatch for a word with an empty body says the body is empty (it printed an empty list of line depths).
 
 ### What changed in v1.57
 
