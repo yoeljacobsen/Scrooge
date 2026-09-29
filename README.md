@@ -1,6 +1,10 @@
 # Scrooge Programming Language (v1.55)
 
-Repository status: **Scrooge v1.55.1**.
+Repository status: **Scrooge v1.55.2**.
+
+### What changed in v1.55.2
+
+`fold`/`map` over a value that is not a Block stop with a message (`str_print` of a number crashed); a crash prints the running words and keeps the program's output; `--profile` prints its table when a program is stopped by `timeout` or Ctrl-C; the spec states plainly that a frame's first name gets the deepest value.
 
 ### What changed in v1.55.1
 
