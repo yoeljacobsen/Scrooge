@@ -1,0 +1,69 @@
+{ ---- numeric: kernels over ranges of heap cells.                    ---- }
+{ ---- A vector is a Ptr, the cell where it starts and a length, so one    ---- }
+{ ---- allocation can hold a whole matrix (row r of a matrix with c        ---- }
+{ ---- columns starts at r c *). Each word is one counted loop that calls  ---- }
+{ ---- no other word, so its heap accesses compile to a bounds check each. ---- }
+{ ---- Integers and floats mix as in + and *; start from floats (0.0) when ---- }
+{ ---- the result must be a float.                                         ---- }
+
+{ ---- a[ao..ao+n) . b[bo..bo+n) ---- }
+#vec_dot ( a:Ptr ao:Scalar b:Ptr bo:Scalar n:Scalar -- s:Scalar )
+  -> [ a ao b bo n ] 0.0 n [times| i | a ao i + hread b bo i + hread * + ]
+end
+
+{ ---- y[yo+i] += g * x[xo+i] for i < n ---- }
+#vec_axpy ( g:Scalar x:Ptr xo:Scalar y:Ptr yo:Scalar n:Scalar -- )
+  -> [ g x xo y yo n ] [
+    g to_float -> [ gf ]
+    n [times| i | y yo i + hread gf x xo i + hread * + y yo i + hwrite ]
+  ]
+end
+
+{ ---- y[yo+i] += x[xo+i] for i < n ---- }
+#vec_add ( x:Ptr xo:Scalar y:Ptr yo:Scalar n:Scalar -- )
+  -> [ x xo y yo n ] n [times| i | y yo i + hread x xo i + hread + y yo i + hwrite ]
+end
+
+{ ---- p[off+i] *= g for i < n ---- }
+#vec_scale ( g:Scalar p:Ptr off:Scalar n:Scalar -- )
+  -> [ g p off n ] n [times| i | p off i + hread g * p off i + hwrite ]
+end
+
+{ ---- the sum of p[off..off+n) (0 when n is 0) ---- }
+#vec_sum ( p:Ptr off:Scalar n:Scalar -- s:Scalar )
+  -> [ p off n ] 0 n [times| i | p off i + hread + ]
+end
+
+{ ---- the index (0..n-1) of the first largest of p[off..off+n); n must be at least 1 ---- }
+#vec_argmax ( p:Ptr off:Scalar n:Scalar -- i:Scalar )
+  -> [ p off n ] [
+    n 1 < cond [ "vec_argmax: empty range" abort ] else [ ] ?
+    0 p off hread 1 n [for| i |
+      -> [ bi bv ] [ p off i + hread -> [ v ] v bv > cond [ i v ] else [ bi bv ] ? ]
+    ] drop
+  ]
+end
+
+{ ---- the largest of p[off..off+n); n must be at least 1 ---- }
+#vec_max ( p:Ptr off:Scalar n:Scalar -- m:Scalar )
+  -> [ p off n ] [ p off p off n vec_argmax + hread ]
+end
+
+{ ---- the 32-bit big-endian signed integer in the four byte cells p[off..off+4) ---- }
+{ ---- (as fread_into leaves a file's bytes: IDX, PNG, network formats)        ---- }
+#vec_be32 ( p:Ptr off:Scalar -- n:Scalar )
+  -> [ p off ] [
+    p off hread 24 bitshl p off 1 + hread 16 bitshl bitor
+    p off 2 + hread 8 bitshl bitor p off 3 + hread bitor
+    -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ] ?
+  ]
+end
+
+{ ---- the 32-bit little-endian signed integer in p[off..off+4) ---- }
+#vec_le32 ( p:Ptr off:Scalar -- n:Scalar )
+  -> [ p off ] [
+    p off 3 + hread 24 bitshl p off 2 + hread 16 bitshl bitor
+    p off 1 + hread 8 bitshl bitor p off hread bitor
+    -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ] ?
+  ]
+end

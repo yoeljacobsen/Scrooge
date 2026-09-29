@@ -1,0 +1,43 @@
+{ ---- procinfo: what the running program can learn about itself (Linux).     ---- }
+{ ---- Memory figures come from /proc/self/status, in kB.                 ---- }
+
+{ ---- the number in a status line after its key: "VmHWM:\t  245180 kB" is 245180 ---- }
+#proc_line_num ( line:Block start:Scalar -- n:Scalar )
+  -> [ line start ] [
+    0 start line len [for| i |
+      line i block_get -> [ c ] c 48 < c 57 > or cond [ ] else [ 10 * c 48 - + ] ?
+    ]
+  ]
+end
+
+{ ---- read status lines until one starts with key ---- }
+#proc_scan_loop ( fh:File key:Block -- kb:Scalar ok:Scalar )
+  -> [ fh key ] [
+    fh freadline -> [ line got ] [
+      got not cond [ 0 0 ] else [
+        line len key len < cond [ fh key proc_scan_loop ] else [
+          line 0 key len block_slice key = cond [ line key len proc_line_num 1 ] else [ fh key proc_scan_loop ] ?
+        ] ?
+      ] ?
+    ]
+  ]
+end
+
+{ ---- the value of a /proc/self/status field such as "VmRSS:"; ok is 0 when it is absent ---- }
+#proc_status_kb ( key:Block -- kb:Scalar ok:Scalar )
+  -> [ key ] [
+    "/proc/self/status" 0 fopen -> [ fh fok ] [
+      fok not cond [ 0 0 ] else [ fh key proc_scan_loop -> [ kb ok ] [ fh fclose drop kb ok ] ] ?
+    ]
+  ]
+end
+
+{ ---- peak resident memory so far (VmHWM), the figure to report; not VmPeak ---- }
+#proc_peak_kb ( -- kb:Scalar )
+  "VmHWM:" proc_status_kb drop
+end
+
+{ ---- resident memory now (VmRSS) ---- }
+#proc_rss_kb ( -- kb:Scalar )
+  "VmRSS:" proc_status_kb drop
+end

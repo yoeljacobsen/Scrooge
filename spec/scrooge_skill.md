@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.56)
+# Skill: Writing Correct Scrooge (v1.57)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_56.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_57.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -147,6 +147,9 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 ## 6. Standard Library Highlights
 
 Import library lexicons at the top of the file via `use "<lexicon>"`.
+
+- **Numeric kernels (`numeric.sg`)**: a vector is a Ptr, a start cell and a length, so one allocation holds a whole matrix (row r of a c-column matrix starts at `r c *`). `vec_dot ( a ao b bo n -- s )`, `vec_axpy ( g x xo y yo n -- )` (y += g*x), `vec_add`, `vec_scale`, `vec_sum`, `vec_max`, `vec_argmax`, and `vec_be32` / `vec_le32 ( p off -- n )` for a 32-bit integer in four byte cells after `fread_into` (binary headers).
+- **Process figures (`procinfo.sg`)**: `proc_peak_kb ( -- kb )` is the peak resident memory (VmHWM) to report; `proc_rss_kb`, and `proc_status_kb ( key -- kb ok )` for any /proc/self/status field.
 
 - **Signed Integer Formatting (`strings.sg`)**:
   `int_to_str ( n:Scalar -- str:Block )` converts positive and negative integers to digit character blocks (e.g., `-42` $\rightarrow$ `"-42"` prepended with ASCII `-` / 45).
@@ -295,10 +298,11 @@ A program that runs for minutes can also run away: an unbounded join, a leak, a 
 - **Cap its memory** when you run it: `(ulimit -v 4000000; ./prog ...)` stops it at about 4 GB instead of letting it exhaust the machine.
 - **Start small**: run on the first few inputs (a `-n` flag) before the whole data set, and scale up only when the small run is correct and its time and memory look proportionate.
 - **Make it report progress** (a line every N items, to stderr) so a stalled or slowing run is visible.
-- **Measure memory as resident memory**: `VmHWM` in `/proc/self/status`, or the maximum resident set size from `/usr/bin/time -v`. `VmPeak` counts reserved address space too (every program reserves a 1 GB stack it mostly never touches), so it overstates by about 1 GB.
+- **Measure memory as resident memory**: `VmHWM` in `/proc/self/status` (`proc_peak_kb` in the procinfo lexicon), or the maximum resident set size from `/usr/bin/time -v`. `VmPeak` counts reserved address space too (every program reserves a 1 GB stack it mostly never touches), so it overstates by about 1 GB.
 - **Watch it and stop it early**: if memory keeps growing, progress stops, or the output is already wrong, kill it and fix the cause rather than waiting for it to finish.
 
 Speed and size in numeric code:
 
 - **Every heap cell takes 16 bytes**, whatever it holds (a byte, an integer, a float). A million-byte file read into cells takes 16 MB; when that matters, pack several small values into one integer cell with `bitshl`/`bitor` and take them apart with `bitshr`/`bitand`.
+- **Keep word calls out of the innermost numeric loop.** A `[times| ]` or `[for| ]` loop whose body calls no word (primitives only, and no `hrelease`) checks each heap address once, before the loop, and then each `hread`/`hwrite` through a variable from outside the loop costs one bounds check (measured on three numeric programs: 20-35% faster than when every access re-checked its address). A word call anywhere in the body turns this off for that loop. The numeric lexicon's words are such loops; call them per row or per vector, not per element.
 - **A value read once and reused in a hot loop is faster after `to_float`** (or `to_int`, for an integer): `c 0 hread to_float -> [ g ]` before a loop that multiplies by `g` on every iteration. The generated code then knows g's kind and drops the checks it would otherwise repeat each time round (measured: a multiply-add loop 30% faster). Values read inside the loop gain little from it.

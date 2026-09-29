@@ -1,6 +1,14 @@
-# Scrooge Programming Language (v1.56)
+# Scrooge Programming Language (v1.57)
 
-Repository status: **Scrooge v1.56.3**.
+Repository status: **Scrooge v1.57**.
+
+### What changed in v1.57
+
+Every program in this project's corpus that compiled under v1.56.3 still compiles, with the same output. A `use "numeric"` or `use "procinfo"` now loads the new library lexicons, and a module file named like any library lexicon is an error instead of being silently ignored.
+
+- **Faster heap loops.** A counted loop (`[times| ]`, `[for| ]`) whose body calls no word checks each heap address it uses once, before the loop; each `hread`/`hwrite` inside is then one bounds check. Three numeric training programs run 20-35% faster, with identical results; errors are reported exactly as before.
+- **`numeric` lexicon**: `vec_dot`, `vec_axpy`, `vec_add`, `vec_scale`, `vec_sum`, `vec_max`, `vec_argmax` over ranges of heap cells, and `vec_be32` / `vec_le32` for 32-bit integers in byte cells (binary file headers).
+- **`procinfo` lexicon**: `proc_peak_kb` (peak resident memory, VmHWM), `proc_rss_kb`, `proc_status_kb`.
 
 ### What changed in v1.56.3
 
@@ -164,7 +172,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_56.txt`](spec/scrooge_spec_v1_56.txt) (defines v1.56 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_57.txt`](spec/scrooge_spec_v1_57.txt) (defines v1.57 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
