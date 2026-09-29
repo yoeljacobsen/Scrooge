@@ -1,6 +1,16 @@
-# Scrooge Programming Language (v1.54)
+# Scrooge Programming Language (v1.55)
 
-Repository status: **Scrooge v1.54**.
+Repository status: **Scrooge v1.55**.
+
+### What changed in v1.55
+
+Every program in this project's corpus that compiled under v1.54 still compiles, to the same output. A word named `sort_cmp` is now rejected (it is a new primitive), and two things that silently went wrong now stop the program with a message: arithmetic or `<`/`>` on a Block, and a Ptr used after the `hrelease` of its region.
+
+- **Unclosed comments and strings are errors.** An unclosed `{` used to turn the rest of its file, and every module loaded after it, into comment, and the program was accepted. Now each file is checked on its own and the error names the file, line and column.
+- **Stale pointers are caught.** A Ptr used after its `hmark`/`hrelease` region was released (even after its slot was reused) is a fatal error that says so, instead of reading or writing someone else's allocation. This costs one comparison per `hread`/`hwrite` (about 7% in a program made almost only of heap reads, nothing measurable in a larger one).
+- **Defined arithmetic.** Arithmetic on a non-number is a fatal error (it returned a garbage number); integer overflow wraps around; min-int `/ -1` no longer crashes. The spec now says exactly what `/` (truncates) and `\` (floored remainder) do.
+- **`sort_cmp ( a b -- c )`** orders two values as `hsort` does: -1, 0 or 1, so two strings compare in byte order.
+- **Killed programs keep their output.** A program stopped by `timeout` or Ctrl-C flushes what it has printed before it dies.
 
 ### What changed in v1.54
 
@@ -95,7 +105,7 @@ This repository contains the Scrooge static compiler, standard library, language
 
 ## 1. Compiler Toolchain & Binary Executable
 
-The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.54, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
+The compiler ships prebuilt in `compiler/`: `compiler/scroogec_fast` (dynamically linked), `compiler/scroogec_fast_x86-64` (static, Linux x86-64) and `compiler/scroogec_fast_arm64` (static, Linux arm64). It is the static verifier, type checker and C code generator for Scrooge v1.55, and it builds executables by running `gcc`. Its Nim source, the test gates and the manifest tooling live in the development repository and are not part of this one.
 
 ### Quick Commands
 
@@ -118,7 +128,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_54.txt`](spec/scrooge_spec_v1_54.txt) (defines v1.54 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_55.txt`](spec/scrooge_spec_v1_55.txt) (defines v1.55 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
