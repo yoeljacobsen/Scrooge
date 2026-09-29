@@ -10,7 +10,7 @@ Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fas
 
 ### CLI Syntax
 ```bash
-compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [-O0|-O1|-O2|-O3] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [-O0|-O1|-O2|-O3] [--no-ptr-check] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
 ```
 
 ### Options & Flags
@@ -24,6 +24,7 @@ compiler/scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--de
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default (every program used to print a trailing `STACK: []`).
 - `--profile`: Builds a program that counts every word's calls and times its activations, and prints a table to stderr when it exits (also on `abort`): calls, self time (excluding callees), share of wall time, total time (including callees; a recursive word's inner activations are not counted twice), sorted by self time. A tail-recursive loop is one activation. Activations are timed with the CPU cycle counter (about 10 ns each, included in self time, so a word called hundreds of millions of times looks slower than it is). Without the flag the generated C contains no profiling code.
 - `-O0` / `-O1` / `-O2` / `-O3`: the optimisation level passed to gcc (default `-O3`). Behaviour is identical at every level; `-O0` builds a large program about ten times faster, for the edit-build-test loop.
+- `--no-ptr-check`: leave out the check that a Ptr's allocation has not been released by `hrelease` and reused (one comparison per `hread`/`hwrite`; about 7% in a program made almost only of heap reads). For benchmark builds of a program already tested with the check on; a Ptr to a released slot that has not been reused is still caught.
 - Source editing, a whole word at a time (no compile): `--words FILE`, `--show NAME FILE`, `--replace NAME FILE`, `--insert-before NAME FILE`, `--insert-after NAME FILE` (new definitions on stdin, checked before anything is written), `--delete NAME FILE`, `--fmt [--check] FILE` (re-indent only). See the skill guide, section 8b.
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.

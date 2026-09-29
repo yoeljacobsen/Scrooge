@@ -1,6 +1,10 @@
 # Scrooge Programming Language (v1.55)
 
-Repository status: **Scrooge v1.55**.
+Repository status: **Scrooge v1.55.1**.
+
+### What changed in v1.55.1
+
+`--no-ptr-check` leaves the stale-pointer check out of a build, for benchmark measurements of a program already tested with it on (about 7% faster in code made almost only of heap reads).
 
 ### What changed in v1.55
 

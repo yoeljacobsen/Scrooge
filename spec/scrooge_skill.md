@@ -250,6 +250,7 @@ compiler/scroogec_fast -L library -o prog prog.sg         # optimised build (-O3
 - The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.
 - Warnings (a loop written as two words calling each other in tail position) go to stderr after `ACCEPT`; take them seriously, since such a loop stops at 65,536 trips.
 - `exit ( code -- )` ends a program with a status of your choosing.
+- For a final speed measurement of a program that already runs correctly, `--no-ptr-check` leaves out the stale-Ptr check (about 7% in heap-read-heavy code). Develop and test with the check on.
 
 **Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to restructure.
 
