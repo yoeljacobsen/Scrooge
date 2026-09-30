@@ -1,6 +1,12 @@
 # Scrooge Programming Language (v1.59)
 
-Repository status: **Scrooge v1.59**.
+Repository status: **Scrooge v1.59.1**.
+
+### What changed in v1.59.1
+
+- **A rejected word shows its alias warnings.** A frame alias spelled like a word (`-> [ lab nl ]` beside a `#nl` word) makes every later `nl` push the value instead of calling the word; the warning that says so was printed only after ACCEPT, so the ArityMismatch it explained came alone. It now comes with it.
+- **`SimilarWords` warning**: words that are the same except for a call or two (`#safe_add`, `#safe_sub`, ... differing only in the operator) are named together, with the word parameter that would make them one.
+- **Docs.** The skill guide says plainly that a small helper in a hot loop and a word parameter both cost nothing (both were believed otherwise), that a record getter consumes its Ptr, and that braces in comment text must pair; the spec's comment rule is corrected (braces need no surrounding spaces).
 
 ### What changed in v1.59: word parameters
 

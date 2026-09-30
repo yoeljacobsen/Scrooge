@@ -41,6 +41,8 @@ Learn from the documents and your experiments, not from the compiler's internals
 
 Build every program from small words, each doing one job, and combine them into larger ones. A small word is easy to reason about (its stack effect fits in your head), easy to test on its own, and the checker's messages about it point at a line you can see. A word of a hundred tokens is none of these: when it is wrong, you debug the whole of it.
 
+**Two beliefs to drop, both measured false:** (1) "a call to a helper word inside a hot loop costs time, so hot code must be one big word": a call to a small word is compiled in place (a two-read helper in a loop run 20 million times: 25 ms named against 19-21 ms written inline); (2) "a word parameter is an indirect call": it is resolved when the program is compiled, and each word passed makes its own copy of the word that takes it, so there is no call through a value at all. Agents that believed these wrote words of 300 to 550 tokens and kept duplicated loops; neither is needed.
+
 **Small words cost nothing.** A call to a word that does not recurse and is small (at most about 60 tokens, counting the small words it calls in turn) is compiled as that word's body in place: no call, its values stay in registers, and a counted loop that calls it keeps its fast heap access (section 10, `--loops`). So never inline a helper by hand for speed; measure first if in doubt. A recursive word, and every word in a `--profile` build, is a real call.
 
 **Sizes to aim for.** Under 30 tokens and one level of nesting (a `cond` or a loop, not a loop inside a cond inside a loop). `--words FILE` lists every word with its size in tokens. The checker warns (`WARNING LargeWord`) about a word over 60 tokens or with more than 3 nested conds and loops: split it.
@@ -59,7 +61,9 @@ Build every program from small words, each doing one job, and combine them into 
 
 **Private helpers.** In a module, a word whose name starts with `_` (`#_sq_dev`) is visible only in that file, so helpers do not crowd the program's namespace and two modules can each have their own `_step`.
 
-**State travels in records.** When several words need the same five values, keep them in a `#record` and pass its Ptr: the getters are small words, so reading a field costs no call.
+**State travels in records.** When several words need the same five values, keep them in a `#record` and pass its Ptr: the getters are small words, so reading a field costs no call. A getter consumes the Ptr like any word taking an input: `tb TB_bcnt` leaves only the field, so a call that needs the record and one of its fields pushes the record twice: `tb tb TB_bcnt tb_apply` (with `tb` a frame name, each mention pushes it again).
+
+**Comments nest, so braces in comment text must pair.** `{ ... }` comments nest (spec section 1), so a lone `}` in the prose (`{ the } ends here }`) closes the comment, and the rest of the line is read as code (as unknown words). Write braces in comment text in pairs, or not at all.
 
 **Recognise a word that is too large:** more than one job in its comment ("reads, parses and sums"), more than about five names in its frames, the same few lines repeated with different fields (make those lines a word taking the field), or a loop body you cannot describe in one sentence (make the body a word).
 

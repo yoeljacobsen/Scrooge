@@ -26,7 +26,7 @@ rejected. Everything below serves that guarantee. Study the worked examples
   - Unknown: Produced by stack shufflers (`dup`, `swap`, `rot`, `over`); bypasses Track 2 type checks.
   - Mixed int/float math promotes to float.
 - String Literals: `"Hi"` expands at tokenization to a Block of ASCII integer scalars `[ 72 105 ]`.
-- Comments: `{` and `}` as standalone whitespace-isolated tokens; they nest. A comment or a string that is never closed is a ParseError naming the file, line and column where it opens (before v1.55 it silently turned the rest of the file, and every module after it, into comment).
+- Comments: `{` opens a comment and `}` closes it wherever they appear outside a string, with or without spaces around them (`1{c}` is 1 and a comment); comments nest, so braces in comment text must pair (a lone `}` in the prose closes the comment early and the rest of the line is code). A comment or a string that is never closed is a ParseError naming the file, line and column where it opens (before v1.55 it silently turned the rest of the file, and every module after it, into comment).
 
 ═══ 2. Words, Tagged Parameter Signatures & Entry Frames ═══
 - Define: `#name ( inputs -- outputs ) body end`. Every signature MUST explicitly declare input and output parameter types—either positionally (`#foo ( Ptr Scalar -- Scalar )`) or as tagged parameters (`#foo ( src:Ptr i:Scalar -- d:Scalar )`).
