@@ -1,0 +1,49 @@
+{ ---- stats: summary statistics of the n numbers in heap cells p[0..n),   ---- }
+{ ---- n >= 1. One job per word; the #test_ words below check each one on  ---- }
+{ ---- an input worked out by hand. Run them with                          ---- }
+{ ----   compiler/scroogec_fast -L library --test examples/colstats/stats.sg ---- }
+use "numeric"
+use "util"
+
+#st_mean ( p:Ptr n:Scalar -- m:Scalar ) -> [ p n ] p 0 n vec_sum to_float n / end
+
+{ the squared deviation of x from m }
+#_sq_dev ( x:Scalar m:Scalar -- d:Scalar ) -> [ x m ] x m - -> [ d ] d d * end
+
+{ population variance: the mean squared deviation from the mean }
+#st_var ( p:Ptr n:Scalar -- v:Scalar )
+  -> [ p n ] p n st_mean -> [ m ]
+  0.0 n [times| i | p i hread m _sq_dev + ] n /
+end
+
+#st_sd ( p:Ptr n:Scalar -- s:Scalar ) st_var sqrt end
+#st_min ( p:Ptr n:Scalar -- x:Scalar ) -> [ p n ] p 0 hread n [times| i | p i hread min ] end
+#st_max ( p:Ptr n:Scalar -- x:Scalar ) -> [ p n ] p 0 n vec_max end
+
+{ a sorted copy, so the median leaves the caller's cells as they were }
+#_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) -> [ p n ] n hnew -> [ q ] p 0 q 0 n hmove q 0 n hsort q end
+
+{ the middle of n sorted values: the middle one, or the mean of the two middle ones }
+#_middle ( q:Ptr n:Scalar -- m:Scalar )
+  -> [ q n ] n 2 / -> [ h ]
+  n 2 \ 1 = cond [ q h hread ] else [ q h 1 - hread q h hread + 2.0 / ] ?
+end
+
+#st_median ( p:Ptr n:Scalar -- m:Scalar ) -> [ p n ] p n _sorted_copy n _middle end
+
+{ ---- tests ---- }
+{ 2 4 4 4 5 5 7 9: mean 5, variance 4, sd 2, median 4.5, min 2, max 9 }
+#_sample ( -- p:Ptr n:Scalar )
+  [ 2 4 4 4 5 5 7 9 ] 8 hnew -> [ vals p ]
+  vals [fold| i acc v _ | v p i hwrite acc from 0 ] drop p 8
+end
+#test_sq_dev ( -- ok:Scalar ) 7 5 _sq_dev 4 "7 5 _sq_dev" expect_eq end
+#test_mean ( -- ok:Scalar ) _sample st_mean 5.0 0.000001 "mean" expect_near end
+#test_var ( -- ok:Scalar ) _sample st_var 4.0 0.000001 "variance" expect_near end
+#test_sd ( -- ok:Scalar ) _sample st_sd 2.0 0.000001 "sd" expect_near end
+#test_min_max ( -- ok:Scalar ) _sample st_min 2 "min" expect_eq _sample st_max 9 "max" expect_eq and end
+#test_median_even ( -- ok:Scalar ) _sample st_median 4.5 0.000001 "median of 8 values" expect_near end
+#test_median_odd ( -- ok:Scalar )
+  3 hnew -> [ p ] 9 p 0 hwrite 1 p 1 hwrite 5 p 2 hwrite
+  p 3 st_median 5 "median of 9 1 5" expect_eq p 0 hread 9 "the input is left unsorted" expect_eq and
+end

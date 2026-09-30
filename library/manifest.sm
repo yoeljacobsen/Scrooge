@@ -109,6 +109,9 @@ tool "util" name "block_eq" sig "( b1:Block b2:Block -- equal:Scalar )" desc "Ch
 tool "util" name "insert_sorted" sig "( val:Unknown blk:Block -- result:Block )" desc "Inserts a value into an already-sorted block, preserving order."
 tool "util" name "block_sort" sig "( blk:Block -- sorted:Block )" desc "Performs stable sorting on a block."
 tool "util" name "assert" sig "( ok:Scalar msg:Block -- )" desc "Stop the program with msg (via abort) unless ok is nonzero."
+tool "util" name "expect" sig "( ok:Scalar msg:Block -- ok2:Scalar )" desc "For #test_ words: ok passes through; when it is 0, prints `  expected: msg`."
+tool "util" name "expect_eq" sig "( got:Unknown want:Unknown msg:Block -- ok:Scalar )" desc "For #test_ words: got = want (any values, as `=`); when not, prints msg with both values."
+tool "util" name "expect_near" sig "( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Scalar )" desc "For #test_ words: |got - want| <= tol; when not, prints msg, both values and tol."
 
 { ---- Primitives: built into the compiler, no `use` needed. Not loaded by the compiler; checked against it by tools/build_manifest.py ---- }
 

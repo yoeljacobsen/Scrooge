@@ -1,6 +1,20 @@
-# Scrooge Programming Language (v1.57)
+# Scrooge Programming Language (v1.58)
 
-Repository status: **Scrooge v1.57.2**.
+Repository status: **Scrooge v1.58**.
+
+### What changed in v1.58: small words
+
+Programs are meant to be built from small words, each doing one job, combined into larger ones. This release removes the reasons not to.
+
+Every program in this project's corpus that compiled under v1.57.2 still compiles, with the same output. A word named `expect`, `expect_eq` or `expect_near` in a program that uses `util` is now rejected (util has them).
+
+- **Small words cost nothing.** A call to a non-recursive word of up to about 60 tokens (counting the small words it calls) is compiled as its body in place, and a counted loop that calls it keeps fast heap access. A two-read helper in a hot loop cost 3.7x the same code written inline; it now costs 1.2x. Error traces are unchanged: a word that calls others still appears in the word chain.
+- **`--test FILE`** runs every `#test_name ( -- ok:Scalar )` word in a file and prints PASS/FAIL for each; `expect`, `expect_eq` and `expect_near` (util) say what failed. A module can carry its own tests.
+- **Private words.** In a module, a word whose name starts with `_` is visible only in that file, so helpers do not collide across modules.
+- **Size is visible.** `--words` lists each word's size in tokens, and the checker warns (`LargeWord`) about a word over 60 tokens or nested more than 3 deep.
+- **Clearer arity errors.** An ArityMismatch names the line where the stack runs out, which is where a call got too few values.
+- **Checker fix.** `rot` was typed as if it did nothing, so a correct call after `rot` could be rejected.
+- **Docs.** The skill guide's section 1 is a workflow for writing, testing and combining small words, with flat frames (`-> [ x ]` needs no body bracket) and its one trap; `examples/colstats/` is a program written that way.
 
 ### What changed in v1.57.2
 
@@ -186,7 +200,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_57.txt`](spec/scrooge_spec_v1_57.txt) (defines v1.57 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_58.txt`](spec/scrooge_spec_v1_58.txt) (defines v1.58 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

@@ -112,3 +112,31 @@ end
 #assert ( ok:Scalar msg:Block -- )
   -> [ ok msg ] ok cond [ ] else [ msg abort ]
 end
+{ ---- Test helpers, for #test_ words run by `scroogec_fast --test`: each     ---- }
+{ ---- returns its flag, so several combine with `and`, and prints the      ---- }
+{ ---- message (and the values) when it fails.                              ---- }
+#ex_say_step ( s:Block -- ) -> [ s ] s [fold| i acc c _ | c print_char acc from 0 ] drop end
+#ex_num_step ( x:Unknown -- )
+  -> [ x ] x type_of 0 = cond [ x print_int ] else [
+    x type_of 1 = cond [ x 6 print_float ] else [ "(not a number)" ex_say_step ] ?
+  ] ?
+end
+#expect ( ok:Scalar msg:Block -- ok2:Scalar )
+  -> [ ok msg ] ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
+end
+#expect_eq ( got:Unknown want:Unknown msg:Block -- ok:Scalar )
+  -> [ got want msg ] got want = -> [ ok ] [
+    ok cond [ ] else [
+      "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
+      ", want " ex_say_step want ex_num_step 10 print_char
+    ] ? ok
+  ]
+end
+#expect_near ( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Scalar )
+  -> [ got want tol msg ] got want - abs tol > not -> [ ok ] [
+    ok cond [ ] else [
+      "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
+      ", want " ex_say_step want ex_num_step " within " ex_say_step tol ex_num_step 10 print_char
+    ] ? ok
+  ]
+end

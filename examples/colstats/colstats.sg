@@ -1,0 +1,32 @@
+{ ---- colstats: count, mean, standard deviation, min, max and median of ---- }
+{ ---- a file of integers, one per line. A program built from small words ---- }
+{ ---- in two modules, each word tested on its own (stats.sg).            ---- }
+{ ----                                                                    ---- }
+{ ---- Build: compiler/scroogec_fast -L library -o colstats examples/colstats/colstats.sg }
+{ ---- Test:  compiler/scroogec_fast -L library --test examples/colstats/stats.sg        }
+{ ---- Run:   ./colstats numbers.txt                                      ---- }
+use "args"
+use "strings"
+use "readnums"
+use "stats"
+
+#show ( label:Block x:Scalar -- ) -> [ label x ] label str_print x 3 print_float 10 print_char end
+#show_int ( label:Block n:Scalar -- ) -> [ label n ] label str_print n print_int 10 print_char end
+
+#report ( p:Ptr n:Scalar -- )
+  -> [ p n ]
+  "count   " n show_int
+  "mean    " p n st_mean show
+  "sd      " p n st_sd show
+  "min     " p n st_min show
+  "max     " p n st_max show
+  "median  " p n st_median show
+end
+
+#main ( -- )
+  1 "" arg_or rn_read -> [ p n ok ]
+  ok not cond [ "colstats: cannot read the file" abort ] ?
+  n 0 = cond [ "colstats: the file has no integers" abort ] ?
+  p n report
+end
+main

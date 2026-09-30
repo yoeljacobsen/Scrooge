@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.57)
+# Skill: Writing Correct Scrooge (v1.58)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_57.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_58.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -21,9 +21,9 @@ Learn from the documents and your experiments, not from the compiler's internals
 
 **Design top down.** Before writing code, write the program's structure as a short outline: the main loop, the data it keeps (as `#record` layouts, section 3), and the few words each part needs, with their signatures. A signature is a promise the checker enforces, so choosing them first is most of the design.
 
-**Implement bottom up, in small increments.** Build the lowest layer first (parsing a number, one record accessor, one helper), and make it pass `--check-only` and a tiny test program before building on it. Then the next layer, tested the same way. Never write several hundred lines and compile them for the first time together: the first error hides the design problem behind it.
+**Implement bottom up, in small increments.** Build the lowest layer first (parsing a number, one record accessor, one helper), and make it pass `--check-only` and its `#test_` words (`--test`, section 1) before building on it. Then the next layer, tested the same way. Never write several hundred lines and compile them for the first time together: the first error hides the design problem behind it.
 
-- Keep a test program per layer (a `main` that calls the layer's words on known inputs and prints the results), and keep it passing as you go.
+- Test each layer with `#test_` words and `--test` (section 1), and keep them passing as you go.
 - Split a large program into user modules (section 6d): one file per layer, each with its own test program.
 - While iterating, build with `-O0` (a large program builds in seconds instead of tens of seconds); measure speed only with the default `-O3`.
 - Keep a running note of what is done and what is next, so a long task survives an interruption.
@@ -39,10 +39,27 @@ Learn from the documents and your experiments, not from the compiler's internals
 
 ## 1. Decompose into Small Words
 
-Scrooge rewards many small words over one large word:
-- **One word = one job**, minimal live variables, shallow stack depth.
-- Give each helper a clear signature (`#helper_name ( input:Type -- output:Type )`).
-- Words may appear in any order (a word can call one defined later); putting helpers first just reads better.
+Build every program from small words, each doing one job, and combine them into larger ones. A small word is easy to reason about (its stack effect fits in your head), easy to test on its own, and the checker's messages about it point at a line you can see. A word of a hundred tokens is none of these: when it is wrong, you debug the whole of it.
+
+**Small words cost nothing.** A call to a word that does not recurse and is small (at most about 60 tokens, counting the small words it calls in turn) is compiled as that word's body in place: no call, its values stay in registers, and a counted loop that calls it keeps its fast heap access (section 10, `--loops`). So never inline a helper by hand for speed; measure first if in doubt. A recursive word, and every word in a `--profile` build, is a real call.
+
+**Sizes to aim for.** Under 30 tokens and one level of nesting (a `cond` or a loop, not a loop inside a cond inside a loop). `--words FILE` lists every word with its size in tokens. The checker warns (`WARNING LargeWord`) about a word over 60 tokens or with more than 3 nested conds and loops: split it.
+
+**The workflow, a word at a time:**
+1. Top down (section 0b): write the list of words with their signatures, from the program's outline down to the smallest steps. The top word should read like the outline: a short sequence of calls.
+2. Bottom up: write the lowest word, and next to it (in the same module, or in a test file that `use`s it) a test word, `#test_name ( -- ok:Scalar )`, that runs it on an input whose answer you worked out by hand.
+3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`.
+4. Only when the word passes, write the word that uses it, and its test. Keep every test passing as you go.
+
+`examples/colstats/` is a complete program written this way: `examples/colstats/stats.sg` (statistics words with their tests), `examples/colstats/readnums.sg` (reading a file of numbers) and `examples/colstats/colstats.sg` (the top, a sequence of calls).
+
+**Flat frames keep a word shallow.** A frame's body bracket is optional (spec section 2): `-> [ a b ] a b + -> [ s ] s s *` binds `a b`, then `s`, without nesting either. Write frames this way unless a bracket is needed to end the names' scope early. One trap: a `[` right after `-> [ names ]` opens the frame's body, so a data literal cannot follow a frame directly: write `[ 2 4 7 ] 3 hnew -> [ vals p ]`, not `3 hnew -> [ p ] [ 2 4 7 ] ...`.
+
+**Private helpers.** In a module, a word whose name starts with `_` (`#_sq_dev`) is visible only in that file, so helpers do not crowd the program's namespace and two modules can each have their own `_step`.
+
+**State travels in records.** When several words need the same five values, keep them in a `#record` and pass its Ptr: the getters are small words, so reading a field costs no call.
+
+**Recognise a word that is too large:** more than one job in its comment ("reads, parses and sums"), more than about five names in its frames, the same few lines repeated with different fields (make those lines a word taking the field), or a loop body you cannot describe in one sentence (make the body a word).
 
 ---
 
@@ -250,14 +267,16 @@ From the repository root:
 compiler/scroogec_fast -L library --check-only prog.sg   # ACCEPT, or every error found
 compiler/scroogec_fast -L library -O0 -o prog prog.sg     # fast build while developing
 compiler/scroogec_fast -L library -o prog prog.sg         # optimised build (-O3)
+compiler/scroogec_fast -L library --test src/stats.sg      # run the file's #test_ words (section 1)
+compiler/scroogec_fast --words src/stats.sg                # every word, its lines and size in tokens
 ```
 
 - The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.
-- Warnings (a loop written as two words calling each other in tail position) go to stderr after `ACCEPT`; take them seriously, since such a loop stops at 65,536 trips.
+- Warnings go to stderr after `ACCEPT`: `MutualRecursion` (a loop written as two words calling each other in tail position, which stops at 65,536 trips), `AliasShadowsWord`, `AliasRebindsOuter`, and `LargeWord` (a word to split, section 1). Take them seriously.
 - `exit ( code -- )` ends a program with a status of your choosing.
 - For a final speed measurement of a program that already runs correctly, `--no-ptr-check` leaves out the stale-Ptr check (about 7% in heap-read-heavy code). Develop and test with the check on.
 
-**Find where the time goes with `--profile`**, not by guessing: `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to restructure.
+**Find where the time goes with `--profile`**, not by guessing (a `--profile` build compiles every call as a real call, so small words show up in the table): `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to restructure.
 
 ## 8b. Editing Scrooge Source
 
@@ -305,5 +324,5 @@ Speed and size in numeric code:
 
 - **Every heap cell takes 16 bytes**, whatever it holds (a byte, an integer, a float). A million-byte file read into cells takes 16 MB; when that matters, pack several small values into one integer cell with `bitshl`/`bitor` and take them apart with `bitshr`/`bitand`.
 - **Name the operands of a non-commutative update.** In a line with more than two intermediate values, a `-` or `/` applied in the wrong order is accepted and runs (`lr v * w -` is lr*v - w, not w - lr*v): bind the values with a frame first (`-> [ w g ] w lr g * -`), and test a numeric kernel on inputs whose answer you know, or against a second, simpler implementation of the same computation.
-- **Keep word calls out of the innermost numeric loop.** A `[times| ]` or `[for| ]` loop whose body calls no word (primitives only, and no `hrelease`) checks each heap address once, before the loop, and then each `hread`/`hwrite` through a variable from outside the loop costs one bounds check (measured on three numeric programs: 20-35% faster than when every access re-checked its address). A word call anywhere in the body turns this off for that loop; build with `--loops` to see, for every counted loop, whether it has fast access and, if not, which call prevents it. The numeric lexicon's words are such loops; call them per row or per vector, not per element.
+- **A counted loop keeps fast heap access when its body calls only small words.** A `[times| ]` or `[for| ]` loop whose body calls no word, or only small non-recursive words (they are compiled in place, section 1), and no `hrelease`, checks each heap address once, before the loop; each `hread`/`hwrite` through a variable from outside the loop then costs one bounds check (measured on three numeric programs: 20-35% faster than when every access re-checked its address). A call to a recursive or large word in the body turns this off for that loop; build with `--loops` to see, for every counted loop, whether it has fast access and, if not, which call prevents it. So split a loop body into small words freely.
 - **A value read once and reused in a hot loop is faster after `to_float`** (or `to_int`, for an integer): `c 0 hread to_float -> [ g ]` before a loop that multiplies by `g` on every iteration. The generated code then knows g's kind and drops the checks it would otherwise repeat each time round (measured: a multiply-add loop 30% faster). Values read inside the loop gain little from it.

@@ -138,24 +138,18 @@ end
 { ---- Private: strict decimal parse, [-]digits[.digits] with at least   ---- }
 { ---- one digit (no exponent). The digits are kept as an integer and     ---- }
 { ---- divided once at the end, so "0.07" is the double nearest 0.07.     ---- }
+#af_char_step ( m:Scalar k:Scalar dot:Scalar bad:Scalar nd:Scalar c:Scalar -- m2:Scalar k2:Scalar dot2:Scalar bad2:Scalar nd2:Scalar )
+  -> [ m k dot bad nd c ] c 47 > c 58 < and cond [ m 10 * c 48 - + k dot + dot bad nd 1 + ] else [
+    c 46 = cond [ m k 1 dot bad or nd ] else [ m k dot 1 nd ] ?
+  ] ?
+end
+#af_value_check ( m:Scalar k:Scalar dot:Scalar bad:Scalar nd:Scalar neg:Scalar -- x:Scalar ok:Scalar )
+  -> [ m k dot bad nd neg ] m to_float 10.0 k pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
+end
 #af_parse_check ( s:Block -- x:Scalar ok:Scalar )
   -> [ s ] s len 0 = cond [ 0.0 0 ] else [
-    s 0 at 45 = -> [ neg ] [
-      0 0 0 0 0 neg s len [for| i |
-        -> [ m k dot bad nd ] [
-          s i at -> [ c ] [
-            c 47 > c 58 < and cond [
-              m 10 * c 48 - + k dot + dot bad nd 1 +
-            ] else [
-              c 46 = cond [ m k 1 dot bad or nd ] else [ m k dot 1 nd ] ?
-            ] ?
-          ]
-        ]
-      ] -> [ m k dot bad nd ] [
-        m to_float 10.0 k pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
-      ]
-    ]
-  ]
+    s 0 at 45 = -> [ neg ] 0 0 0 0 0 neg s len [for| i | s i at af_char_step ] neg af_value_check
+  ] ?
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }
 { ---- absent or its value is not a plain decimal                          ---- }
