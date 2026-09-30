@@ -135,3 +135,30 @@ end
 #arg_int_or ( name:Block default:Scalar -- n:Scalar )
   -> [ name default ] [ name nil arg_value_or ai_parse_check -> [ n ok ] [ ok cond [ n ] else [ default ] ] ]
 end
+{ ---- Private: strict decimal parse, [-]digits[.digits] with at least   ---- }
+{ ---- one digit (no exponent). The digits are kept as an integer and     ---- }
+{ ---- divided once at the end, so "0.07" is the double nearest 0.07.     ---- }
+#af_parse_check ( s:Block -- x:Scalar ok:Scalar )
+  -> [ s ] s len 0 = cond [ 0.0 0 ] else [
+    s 0 at 45 = -> [ neg ] [
+      0 0 0 0 0 neg s len [for| i |
+        -> [ m k dot bad nd ] [
+          s i at -> [ c ] [
+            c 47 > c 58 < and cond [
+              m 10 * c 48 - + k dot + dot bad nd 1 +
+            ] else [
+              c 46 = cond [ m k 1 dot bad or nd ] else [ m k dot 1 nd ] ?
+            ] ?
+          ]
+        ]
+      ] -> [ m k dot bad nd ] [
+        m to_float 10.0 k pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
+      ]
+    ]
+  ]
+end
+{ ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }
+{ ---- absent or its value is not a plain decimal                          ---- }
+#arg_float_or ( name:Block default:Scalar -- x:Scalar )
+  -> [ name default ] [ name nil arg_value_or af_parse_check -> [ x ok ] [ ok cond [ x ] else [ default ] ? ] ]
+end

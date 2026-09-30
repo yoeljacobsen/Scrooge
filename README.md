@@ -1,6 +1,16 @@
 # Scrooge Programming Language (v1.57)
 
-Repository status: **Scrooge v1.57.1**.
+Repository status: **Scrooge v1.57.2**.
+
+### What changed in v1.57.2
+
+Every program in this project's corpus that compiled under v1.57.1 still compiles, with the same output. A program that uses `args` and defines its own `#arg_float_or` is now rejected (the lexicon has one); drop the local definition.
+
+- **`use "../src/m"` works wherever Scrooge is installed.** With the Scrooge clone inside the working directory, a `use` with a path in it could resolve to the program's own module as if it were a library lexicon, and then none of its words were known. A name with a path is now always a module. A library file that the manifest does not list is an error that says so.
+- **`--loops`** prints, for every counted loop, whether its heap accesses compile to one bounds check each (`fast access through p`) or which word call prevents it.
+- **Loop, map and fold body errors show the stack depth at the end of each body line**, like the whole-word ArityMismatch.
+- **`arg_float_or`** (args): a decimal command-line value, `-l 0.02`.
+- **Docs.** The spec says which operand of `-`, `/` and `\` is which ("w lr v * -" is w - lr*v), and that `_set` copies a Block while `hwrite` and record setters write a heap cell in place.
 
 ### What changed in v1.57.1
 

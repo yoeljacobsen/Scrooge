@@ -7,6 +7,7 @@ tool "args" name "arg_find" sig "( name:Block -- i:Scalar found:Scalar )" desc "
 tool "args" name "arg_flag" sig "( name:Block -- found:Scalar )" desc "1 when the flag appears among the arguments, else 0."
 tool "args" name "arg_value_or" sig "( name:Block default:Block -- value:Block )" desc "The argument after the flag; default when the flag is absent or last."
 tool "args" name "arg_int_or" sig "( name:Block default:Scalar -- n:Scalar )" desc "The argument after the flag as an integer (optional -, digits only); default when absent or not an integer."
+tool "args" name "arg_float_or" sig "( name:Block default:Scalar -- x:Scalar )" desc "The decimal after flag name ([-]digits[.digits], e.g. -l 0.02), or default when the flag is absent or its value is not a plain decimal."
 
 tool "array" name "arr_size" sig "( shape_block:Block -- total_cells:Scalar )" desc "Number of cells an array of the given shape holds (the product of the dimensions)."
 tool "array" name "arr_make" sig "( shape_block:Block -- ptr:Ptr )" desc "Allocate a zero-filled multi-dimensional array of the given shape, e.g. [ 9 9 ] arr_make."
