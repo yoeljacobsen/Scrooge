@@ -1,6 +1,15 @@
-# Scrooge Programming Language (v1.59)
+# Scrooge Programming Language (v1.60)
 
-Repository status: **Scrooge v1.59.1**.
+Repository status: **Scrooge v1.60**.
+
+### What changed in v1.60
+
+Every program in this project's corpus that compiled under v1.59.1 still compiles, with the same output. A word named `fwrite_from` is now rejected (it is a new primitive).
+
+- **`fwrite_from ( fh p start count -- written )`** writes heap cells as bytes in one call, the mirror of `fread_into`, so a program that streams output (a decompressor) need not call `fputc` per byte.
+- **A `die` helper exempts its branch.** A cond branch ending in a call to a word whose body always ends in `abort` or `exit` is exempt from branch matching, like `abort` itself.
+- **Fixes.** `--test` rejected any file with a comment over several lines; an editing command refused a snippet that passes a `'word` to a word of the file; `--words` counted a data literal element by element (it now counts one token, as `LargeWord` does).
+- **Clearer error.** Numbers right after `-> [ names ]` are that frame's body, not a data literal; the ArityMismatch now says so.
 
 ### What changed in v1.59.1
 
@@ -213,7 +222,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_59.txt`](spec/scrooge_spec_v1_59.txt) (defines v1.59 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_60.txt`](spec/scrooge_spec_v1_60.txt) (defines v1.60 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

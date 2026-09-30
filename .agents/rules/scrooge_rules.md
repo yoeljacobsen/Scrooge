@@ -1,6 +1,6 @@
-# Scrooge v1.59 Workspace Rules & Agent Directives
+# Scrooge v1.60 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_59.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_60.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -13,14 +13,14 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
    ```
    It reports every error at once, in source order, with line numbers (and columns for `cond` and `end` structure). Fix them all before rebuilding. A build is `compiler/scroogec_fast -L library -o <bin> <file.sg>`.
 3. **Immutability Model:** Block updates (`_set`) are copy-on-write: they return a new Block and leave the original valid. Pass updated state down the call chain. The heap (`hnew`/`hread`/`hwrite`) is the one mutable store.
-4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (81 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
+4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (82 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
 5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `val ptr offset hwrite` (the value comes first).
 6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler.
 7. **Small Words, Tested One by One:** Build programs from small words (under about 30 tokens, one job each) combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Scalar ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
 
 ---
 
-## 2. Core Scrooge v1.59 Language Reference
+## 2. Core Scrooge v1.60 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.

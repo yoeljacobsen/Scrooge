@@ -188,6 +188,7 @@ prim name "fread" sig "( fh:File n:Scalar -- str:Block )" desc "Read up to n cha
 prim name "fwrite" sig "( str:Block fh:File -- written:Scalar )" desc "Write a Block of characters; returns the count written."
 prim name "freadline" sig "( fh:File -- line:Block got:Scalar )" desc "Read the next line in one pass, newline consumed; got=0 only at end of input with nothing read."
 prim name "fread_into" sig "( fh:File p:Ptr start:Scalar count:Scalar -- got:Scalar )" desc "Read up to count bytes into heap cells from start, as integers; returns how many."
+prim name "fwrite_from" sig "( fh:File p:Ptr start:Scalar count:Scalar -- written:Scalar )" desc "Write the cells p[start..start+count) as bytes (each 0-255) in one call; returns how many."
 prim name "fseek" sig "( fh:File pos:Scalar -- ok:Scalar )" desc "Move to an absolute byte offset; ok=0 when the stream cannot seek."
 prim name "ftell" sig "( fh:File -- pos:Scalar )" desc "Current byte offset; -1 when the stream has none (a pipe)."
 prim name "argc" sig "( -- n:Scalar )" desc "Command-line argument count, program name included (spec Sec.13)."
