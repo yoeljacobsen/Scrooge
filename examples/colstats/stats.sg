@@ -17,8 +17,13 @@ use "util"
 end
 
 #st_sd ( p:Ptr n:Scalar -- s:Scalar ) st_var sqrt end
-#st_min ( p:Ptr n:Scalar -- x:Scalar ) -> [ p n ] p 0 hread n [times| i | p i hread min ] end
-#st_max ( p:Ptr n:Scalar -- x:Scalar ) -> [ p n ] p 0 n vec_max end
+{ one loop, two uses: `pick` is a word parameter, so st_min and st_max }
+{ share the loop instead of copying it (each compiles to its own word) }
+#_reduce ( p:Ptr n:Scalar pick:Word(Scalar,Scalar--Scalar) -- x:Scalar )
+  -> [ p n pick ] p 0 hread n [times| i | p i hread pick ]
+end
+#st_min ( p:Ptr n:Scalar -- x:Scalar ) 'min _reduce end
+#st_max ( p:Ptr n:Scalar -- x:Scalar ) 'max _reduce end
 
 { a sorted copy, so the median leaves the caller's cells as they were }
 #_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) -> [ p n ] n hnew -> [ q ] p 0 q 0 n hmove q 0 n hsort q end

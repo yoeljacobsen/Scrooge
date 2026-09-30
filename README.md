@@ -1,6 +1,13 @@
-# Scrooge Programming Language (v1.58)
+# Scrooge Programming Language (v1.59)
 
-Repository status: **Scrooge v1.58**.
+Repository status: **Scrooge v1.59**.
+
+### What changed in v1.59: word parameters
+
+Every program in this project's corpus that compiled under v1.58 still compiles, with the same output.
+
+- **A word can take words as parameters**, so two words that differ in one step share their skeleton instead of copying it: `#each_cell ( p:Ptr n:Scalar step:Word(Ptr,Scalar--) -- ) -> [ p n step ] n [times| i | p i step ] end`, called as `p 3 'add_step each_cell`. The word passed must have the declared effect, checked at the call. Each distinct set of words passed compiles as an ordinary word (`each_cell<add_step>`), so it costs nothing and is checked and optimised like any other. There are no function values at run time.
+- `examples/colstats/stats.sg` uses one: `st_min` and `st_max` share one loop, passed `'min` or `'max`.
 
 ### What changed in v1.58: small words
 
@@ -200,7 +207,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_58.txt`](spec/scrooge_spec_v1_58.txt) (defines v1.58 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_59.txt`](spec/scrooge_spec_v1_59.txt) (defines v1.59 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
