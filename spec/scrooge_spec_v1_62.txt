@@ -1,4 +1,4 @@
-Scrooge v1.61 Language Specification
+Scrooge v1.62 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -51,7 +51,8 @@ rejected. Everything below serves that guarantee. Study the worked examples
 
 ═══ 3. Control Flow & Iterators ═══
 - Conditional: `flag cond [ true-body ] else [ false-body ]`. The `cond` keyword is mandatory. Condition `flag` MUST be an unbracketed expression. Both branches MUST have identical net stack effect (same count AND same types out). The else-branch may be omitted: `flag cond [ true-body ]` means `flag cond [ true-body ] else [ ]`, so the true-body must then leave the stack as it found it (net effect 0). A closing `?` may follow the last branch (`... else [ false-body ] ?`, the form older code uses); it is optional and changes nothing. A `?` or `else` anywhere else is a ParseError.
-- Short-circuit forms: `a when [ b ]` is the value of b when a is nonzero, else 0, and b is not evaluated when a is 0; `a unless [ b ]` is the value of b when a is 0, else 0. The body must leave exactly one value. They are `a cond [ b ] else [ 0 ]` and `a cond [ 0 ] else [ b ]`, so `b len 0 > when [ b 0 block_get x = ]` guards the access that `b len 0 > b 0 block_get x = and` would perform even on an empty Block. A short-circuit or is `a cond [ 1 ] else [ b ]`.
+- Statements `when` / `unless` (as in Common Lisp): `a when [ body ]` runs the body when a is nonzero, `a unless [ body ]` when a is 0; the body's net effect MUST be 0, and nothing is left. They are `a cond [ body ]` and `a cond [ ] else [ body ]`.
+- Short-circuit values `and_then` / `or_else`: `a and_then [ b ]` is the value of b when a is nonzero, else 0, and b is not evaluated when a is 0; `a or_else [ b ]` is 1 when a is nonzero, else the value of b (not evaluated when a is nonzero). The body MUST leave exactly one value. They are `a cond [ b ] else [ 0 ]` and `a cond [ 1 ] else [ b ]`, so `b len 0 > and_then [ b 0 block_get x = ]` guards the access that `b len 0 > b 0 block_get x = and` would perform even on an empty Block (`and` and `or` evaluate both sides). Before v1.62, `when` and `unless` were these value forms (`unless` was b when a is 0, else 0).
 - `select` chooses a value with no branching: `vt vf flag select` -> vt if flag nonzero else vf. Both operands are always evaluated.
 - Counted loops:
     `n [times| i | body ]`         body runs n times, i = 0, 1, ..., n-1
@@ -162,7 +163,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word (the message names the lexicon), or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt floor abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill exit to_int float_to_str type_of hnull when unless sort_cmp fwrite_from.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt floor abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill exit to_int float_to_str type_of hnull when unless and_then or_else sort_cmp fwrite_from.
   - Of these, `to`, `fill`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.

@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.61)
+# Skill: Writing Correct Scrooge (v1.62)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_61.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_62.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -93,7 +93,8 @@ The checker counts, for every word, how far each token moves the stack, and reje
 
 - **A frame pops.** `-> [ a b ]` takes the top two values off the stack (net -2) and names them. Names stay in scope to the end of the enclosing block, so a later frame binds only NEW values: `-> [ s n ] [ ... ] s n foo -> [ r ] [ ... s n r ... ]`. Re-listing a name that is still in scope, as in `-> [ s n ] [ ... ] -> [ s n r ]`, pops two more values that are not there. Many examples re-push before re-binding (`-> [ a ] [ a a f ] -> [ a b ]`); that is one style, not a requirement.
 - **`cond` consumes its flag,** and each branch is measured from there. Both branches must have the same net effect: `x 0 < cond [ 0 ] else [ x ]` is +1 either way. A branch without an else must be net 0. A branch whose last call is `abort` or `exit` is exempt. A branch may consume values below it (a word's parameters), but only if the other branch has the same net effect: `cond [ drop ] else [ ]` is rejected (-1 against 0), while `cond [ drop 0 ] else [ ]` is fine (0 and 0).
-- **`and`/`or` evaluate both sides.** To guard a test that would fail on bad input, use `when`: `b len 0 > when [ b 0 block_get x = ]` evaluates the access only for a non-empty Block and is 0 otherwise (`unless` runs its body when the flag is 0). The body leaves exactly one value. For a statement with no result, use `flag cond [ ... ]`.
+- **`and`/`or` evaluate both sides.** To guard a test that would fail on bad input, use `and_then`: `b len 0 > and_then [ b 0 block_get x = ]` evaluates the access only for a non-empty Block and is 0 otherwise; `a or_else [ b ]` is 1 when a is true and evaluates b only otherwise. Their body leaves exactly one value.
+- **`when` / `unless` are statements**: `x 0 < when [ "negative" str_print ]` runs the body when the flag is true (`unless`: when it is false) and leaves nothing; the body's net effect is 0.
 - **A fold's `from`** can be any expression leaving one value: `from 0`, `from nil`, or a name in scope (`from acc`).
 - **A call has its signature's effect**, a word's call to itself included: in `#count ( n:Scalar -- )`, the body `-> [ n ] n 0 = cond [ ] else [ n 1 - count ]` is -1 for the frame, then 0 for the cond (its else-branch pushes `n 1 -`, +1, and the call `count` takes it, -1), total -1 as the signature says.
 - **Record accessors:** a field with a count above 1 takes an index, `v s i Name_field_set` and `s i Name_field`; a count-1 field does not, `v s Name_field_set` and `s Name_field`.
@@ -255,7 +256,7 @@ A program of more than a few hundred lines belongs in several files. `use "geo"`
 
 ## 7. Failure Checklist (Check Before Emitting Code)
 
-1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `sort_cmp`, `fwrite_from`). This is the list in spec Sec.10.
+1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `and_then`, `or_else`, `sort_cmp`, `fwrite_from`). This is the list in spec Sec.10.
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive; the error names what it collides with.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
