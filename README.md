@@ -1,6 +1,12 @@
-# Scrooge Programming Language (v1.60)
+# Scrooge Programming Language (v1.61)
 
-Repository status: **Scrooge v1.60**.
+Repository status: **Scrooge v1.61**.
+
+### What changed in v1.61: inputs are names
+
+Every program in this project's corpus that compiled under v1.60 still compiles, with the same output.
+
+- **A word's input names can be used directly.** `#sq ( x:Scalar -- y:Scalar ) x x * end` and `#dist2 ( x:Scalar y:Scalar -- d:Scalar ) x sq y sq + end` bind their inputs as if they began with `-> [ x ]` / `-> [ x y ]`. This applies when a body uses an input name that no frame binds; a body that binds its names itself, or works on the stack, means what it did. An input named like a word stays a call to the word (warning `ParamNamedLikeWord`).
 
 ### What changed in v1.60
 
@@ -222,7 +228,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_60.txt`](spec/scrooge_spec_v1_60.txt) (defines v1.60 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_61.txt`](spec/scrooge_spec_v1_61.txt) (defines v1.61 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

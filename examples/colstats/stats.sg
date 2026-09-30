@@ -5,14 +5,14 @@
 use "numeric"
 use "util"
 
-#st_mean ( p:Ptr n:Scalar -- m:Scalar ) -> [ p n ] p 0 n vec_sum to_float n / end
+#st_mean ( p:Ptr n:Scalar -- m:Scalar ) p 0 n vec_sum to_float n / end
 
 { the squared deviation of x from m }
-#_sq_dev ( x:Scalar m:Scalar -- d:Scalar ) -> [ x m ] x m - -> [ d ] d d * end
+#_sq_dev ( x:Scalar m:Scalar -- d:Scalar ) x m - -> [ d ] d d * end
 
 { population variance: the mean squared deviation from the mean }
 #st_var ( p:Ptr n:Scalar -- v:Scalar )
-  -> [ p n ] p n st_mean -> [ m ]
+  p n st_mean -> [ m ]
   0.0 n [times| i | p i hread m _sq_dev + ] n /
 end
 
@@ -20,7 +20,7 @@ end
 { one loop, two uses: `pick` is a word parameter, so st_min and st_max }
 { share the loop instead of copying it (each compiles to its own word) }
 #_reduce ( p:Ptr n:Scalar pick:Word(Scalar,Scalar--Scalar) -- x:Scalar )
-  -> [ p n pick ] p 0 hread n [times| i | p i hread pick ]
+  p 0 hread n [times| i | p i hread pick ]
 end
 #st_min ( p:Ptr n:Scalar -- x:Scalar ) 'min _reduce end
 #st_max ( p:Ptr n:Scalar -- x:Scalar ) 'max _reduce end
@@ -34,7 +34,7 @@ end
   n 2 \ 1 = cond [ q h hread ] else [ q h 1 - hread q h hread + 2.0 / ] ?
 end
 
-#st_median ( p:Ptr n:Scalar -- m:Scalar ) -> [ p n ] p n _sorted_copy n _middle end
+#st_median ( p:Ptr n:Scalar -- m:Scalar ) p n _sorted_copy n _middle end
 
 { ---- tests ---- }
 { 2 4 4 4 5 5 7 9: mean 5, variance 4, sd 2, median 4.5, min 2, max 9 }
