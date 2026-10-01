@@ -1,6 +1,15 @@
-# Scrooge Programming Language (v1.62)
+# Scrooge Programming Language (v1.63)
 
-Repository status: **Scrooge v1.62**.
+Repository status: **Scrooge v1.63**.
+
+### What changed in v1.63
+
+Every program in this project's corpus that compiled under v1.62 still compiles, with the same output.
+
+- **Hex and binary literals**: `0xEDB88320`, `0x1f`, `0b1011`, `-0x10`, up to 64 bits.
+- **Top-level code is arity-checked from an empty stack**: a top-level call with too few arguments is rejected with the line, instead of stopping the program with `Fatal: Stack underflow`.
+- **`--words` counts tokens exactly as `LargeWord` does**, so the small-word rule can be audited from its output.
+- **Docs**: what a tail-recursive word does with its frames on each trip; `argc` under `--test`.
 
 ### What changed in v1.62: `when` is a statement
 
@@ -235,7 +244,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_62.txt`](spec/scrooge_spec_v1_62.txt) (defines v1.62 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_63.txt`](spec/scrooge_spec_v1_63.txt) (defines v1.63 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.62)
+# Skill: Writing Correct Scrooge (v1.63)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_62.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_63.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -45,12 +45,12 @@ Build every program from small words, each doing one job, and combine them into 
 
 **Small words cost nothing.** A call to a word that does not recurse and is small (at most about 60 tokens, counting the small words it calls in turn) is compiled as that word's body in place: no call, its values stay in registers, and a counted loop that calls it keeps its fast heap access (section 10, `--loops`). So never inline a helper by hand for speed; measure first if in doubt. A recursive word, and every word in a `--profile` build, is a real call.
 
-**Sizes to aim for.** Under 30 tokens and one level of nesting (a `cond` or a loop, not a loop inside a cond inside a loop). `--words FILE` lists every word with its size in tokens. The checker warns (`WARNING LargeWord`) about a word over 60 tokens or with more than 3 nested conds and loops: split it.
+**Sizes to aim for.** Under 30 tokens and one level of nesting (a `cond` or a loop, not a loop inside a cond inside a loop). `--words FILE` lists every word with its size in tokens, counted exactly as `LargeWord` counts (brackets and `?` are not tokens, a data literal is one). The checker warns (`WARNING LargeWord`) about a word over 60 tokens or with more than 3 nested conds and loops: split it.
 
 **The workflow, a word at a time:**
 1. Top down (section 0b): write the list of words with their signatures, from the program's outline down to the smallest steps. The top word should read like the outline: a short sequence of calls.
 2. Bottom up: write the lowest word, and next to it (in the same module, or in a test file that `use`s it) a test word, `#test_name ( -- ok:Scalar )`, that runs it on an input whose answer you worked out by hand.
-3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`.
+3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`. Under `--test` the program runs with no arguments (`argc` is 1), so test a word that reads options by passing it the arguments as a Block, not through `argv`.
 4. Only when the word passes, write the word that uses it, and its test. Keep every test passing as you go.
 
 `examples/colstats/` is a complete program written this way: `examples/colstats/stats.sg` (statistics words with their tests), `examples/colstats/readnums.sg` (reading a file of numbers) and `examples/colstats/colstats.sg` (the top, a sequence of calls).
