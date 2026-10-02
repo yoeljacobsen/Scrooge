@@ -1,6 +1,6 @@
-# Scrooge v1.65 Workspace Rules & Agent Directives
+# Scrooge v1.66 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_65.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_66.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -20,7 +20,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.65 Language Reference
+## 2. Core Scrooge v1.66 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -41,6 +41,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Block Operations: `cons`, `pair`, `len`, `nil`, and the `_at`/`_get`/`_set` access words (spec Sec.4).
 * Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `val ptr idx hwrite`, `hmark`/`hrelease`; bulk `hmove`, `hfill`, `hsort`.
 * Records: `#record Name  field Type count ...  end` generates `Name_new`, `Name_size` and typed `Name_field` / `Name_field_set` accessors; use it instead of hand-numbered heap offsets (spec Sec.5).
+* Codes: `#enum Kw select from where end` (members `Kw_select` .. `Kw_where`, `Kw_count`, `Kw_name`, `Kw_of`/`Kw_raw`) and `#type Row Scalar end` (`Row_of`/`Row_raw`) declare types of their own; a code compared with a plain number, or used in arithmetic, is a TypeError (spec Sec.5).
 * Logic: `not` is LOGICAL (`6 not` is `0`); `bitnot` is bitwise (`6 bitnot` is `-7`). `and`/`or` are eager: guard risky work with `cond`, not with `and`/`or`.
 * Comparison: `=`, `!=`, `>`, `<` are primitives; `>=` and `<=` come from `use "util"`.
 * Clock: `clock_ns ( -- ns:Scalar )`, monotonic nanoseconds; subtract two readings.

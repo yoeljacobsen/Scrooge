@@ -1,6 +1,25 @@
-# Scrooge Programming Language (v1.65)
+# Scrooge Programming Language (v1.66)
 
-Repository status: **Scrooge v1.65**.
+Repository status: **Scrooge v1.66**.
+
+### What changed in v1.66
+
+Distinct types and enums, so that a code is not a number. This change only adds: every program that compiled under v1.65 still compiles, with the same output (a word named `type` or `enum` is still a word).
+
+- **`#enum Kw select from where union end`** declares the type `Kw` and generates:
+  - a word for each member, `Kw_select` .. `Kw_union`, giving the codes 0 .. 3;
+  - `Kw_count`;
+  - `Kw_name ( k:Kw -- s:Block )`, the member's name, for messages;
+  - `Kw_of` and `Kw_raw`, to convert from and to the number. An enum's `Kw_of` stops on a number that is not one of its codes.
+- **`#type Row Scalar end`** declares a type that is a Scalar (or a Ptr, Block or File) at run time but its own type to the checker. It generates `Row_of` and `Row_raw`.
+- **The checker:**
+  - Values of one distinct type compare with each other (`=`, `!=`, `<`, `>`, `min`, `max`).
+  - These are TypeErrors, each with a hint naming the fix:
+    - comparing a code with a plain number: the SQL runs' bug, where keyword 118 matched the literal 118;
+    - arithmetic on a code;
+    - a code passed where a number is expected, or the reverse;
+    - a word whose declared result type does not match what its body leaves.
+- **Cost:** both are erased; they cost nothing at run time. Use them as tags in signatures, record fields and word parameters.
 
 ### What changed in v1.65
 
@@ -260,7 +279,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_65.txt`](spec/scrooge_spec_v1_65.txt) (defines v1.65 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_66.txt`](spec/scrooge_spec_v1_66.txt) (defines v1.66 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

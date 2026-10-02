@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.65)
+# Skill: Writing Correct Scrooge (v1.66)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_65.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_66.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -127,6 +127,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 - **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically; a cell holding a Ptr anywhere inside it, `hnull` included, stops the program, so a NULL marker in rows to be sorted must be a number or a Block). Use them instead of a per-cell loop.
 - **An absent link**: `hnull` is a Ptr that refers to nothing (a tree's missing child, an empty list head). Test it with `p hnull =`; reading or writing through it is a fatal error.
 - **Memory**: a Block owns the Blocks inside it and frees them with itself, and a heap cell owns what it holds, so nested data costs nothing once released. Bracket per-item work with `hmark`/`hrelease` so a long run does not keep every allocation alive.
+- **Codes get their own type**: a token kind, an opcode or a state is an `#enum`, not a number: `#enum Kw select from where union end` gives `Kw_select` .. `Kw_union` (0 .. 3), `Kw_count`, `Kw_name ( k:Kw -- s:Block )` for messages, and `Kw_of`/`Kw_raw` to convert from and to the number (an enum's `Kw_of` stops on a number that is not a code). Declare record fields and parameters as `Kw`, and the checker rejects comparing a code with a plain number (`t Tk_val Kw_union =`), arithmetic on a code, and a number passed where a code is expected; the SQL runs' worst bug (keyword 118 matching the literal 118) is then a compile error. `#type Name Base end` makes any Scalar or Ptr its own type the same way (`#type Row Scalar end`, `Row_of`, `Row_raw`). Both cost nothing at run time.
 - **Heap state with named fields**: declare it with `#record Name  field Type count ...  end` (spec Sec.5) instead of hand-numbering offsets. It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` (both take an index argument unless the count is 1: a count-1 setter is `v s Name_field_set`, with no index) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset: `#record Board cells Scalar 81 solved Scalar 1 end` then `Board_new -> [ b ] [ 5 b 0 Board_cells_set 1 b Board_solved_set b 0 Board_cells print_int ]`.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 - **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.

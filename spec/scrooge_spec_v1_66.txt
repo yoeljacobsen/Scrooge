@@ -1,4 +1,4 @@
-Scrooge v1.65 Language Specification
+Scrooge v1.66 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -31,7 +31,8 @@ rejected. Everything below serves that guarantee. Study the worked examples
 
 ═══ 2. Words, Tagged Parameter Signatures & Entry Frames ═══
 - Define: `#name ( inputs -- outputs ) body end`. Every signature MUST explicitly declare input and output parameter types—either positionally (`#foo ( Ptr Scalar -- Scalar )`) or as tagged parameters (`#foo ( src:Ptr i:Scalar -- d:Scalar )`).
-- Recognized type tags: Ptr, Block, Scalar, Record, Map, File, Unknown. These
+- Recognized type tags: Ptr, Block, Scalar, Record, Map, File, Unknown, and the
+  types the program declares with `#type` and `#enum` (§5). These
   exact spellings and no others: a tag the checker does not recognize (`n:Sclaar`,
   `p:ptr`) is a static `TypeError`, not a silent `Unknown`. A bare tag declares a
   type in a positional signature (`( Ptr Scalar -- Scalar )`); an untagged token
@@ -106,6 +107,18 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
   end
   ```
   generates ordinary words: `State_size ( -- n:Scalar )` (91), `State_new ( -- s:Ptr )` (`91 hnew`), and per field a getter and a setter, `State_grid ( s:Ptr i:Scalar -- v:Scalar )` and `State_grid_set ( v:Scalar s:Ptr i:Scalar -- )`. A count-1 field has no index: `State_lat ( s:Ptr -- v:Ptr )`, `State_lat_set ( v:Ptr s:Ptr -- )`. Every field also gets `State_grid_off ( -- n:Scalar )`, the cell where it starts (0 for grid, 81 for rowm, 90 for lat), for the words that take a raw offset: `0 s State_rowm_off 9 hfill` (clear rowm), `hmove`, `hsort`, `fread_into`. Fields are laid out in order (grid at cells 0-80, rowm at 81-89, lat at 90), so they cannot overlap. The accessors are `+ hread` / `+ hwrite` wrappers like the one above: the field type is the same unchecked assertion, and an index is not checked against the field's count (only against the whole allocation, as for any `hread`). Each record is its own allocation, since a `Ptr` cannot be offset. A word named `record` is still an ordinary definition: `#record (` starts a signature, `#record Name` a declaration.
+- Distinct types and enums: `#type Name Base end` declares a type that is a Base (Scalar, Ptr, Block or File) at run time but its own type to the checker; `#enum Name member ... end` declares one whose values are the named codes 0, 1, ... in order. Both are erased: no cost at run time. A type name starts with a capital letter. They are used as tags like any other, in signatures, record fields and word parameters:
+  ```scrooge
+  #enum Kw select from where union end
+  #record Tk kind Kw 1 val Scalar 1 end
+  #is_union ( t:Ptr -- f:Scalar ) t Tk_kind Kw_union = end
+  ```
+  `#type Name Base` generates `Name_of ( x:Base -- v:Name )` and `Name_raw ( v:Name -- x:Base )`. `#enum Name` generates those (with Base Scalar), one word per member, `Name_select ( -- v:Name )` (0 here), `Name_count ( -- n:Scalar )` (4) and `Name_name ( v:Name -- s:Block )` (`Kw_union Kw_name` is `"union"`). An enum's `Name_of` stops the program (`abort`) on a number that is not one of its codes. The checker treats a distinct value as different from every other type, except `Unknown`:
+  - `=`, `!=`, `<`, `>`, `min` and `max` take two values of the same distinct type (`min`/`max` keep the type). A distinct value against another known type is a `TypeError`: `t Tk_val Kw_union =` compares a Scalar with a Kw.
+  - Any other use needs the base type: `k 1 +`, `k print_int` and a Kw passed for a `Scalar` parameter are `TypeError`s; write `k Kw_raw`. A Scalar passed for a `Kw` parameter is one too; write a member or `n Kw_of`.
+  - A word whose result is declared a distinct type must leave one, and a word whose result is declared another type must not leave a distinct value: `#d ( -- k:Kw ) 118 end` is a `TypeError`. Only `Name_of` and `Name_raw` convert.
+  - What comes back from `hread`, `block_get` and the like is `Unknown` and is accepted anywhere; store distinct values in record fields declared with the type to keep the check.
+  A word named `type` or `enum` is still an ordinary definition (`#type (`).
 
 ═══ 6. Bracketed Values Are Data ═══
 - A `[ ... ]` written as a value (anything that is not a cond branch, a frame body, or a map/fold) is a DATA literal: it may contain only literals (numbers, strings, `nil`) and other such `[ ... ]`, nested to any depth: `[ 1 [ 2 3 ] "ab" nil ]` is valid. Anything else inside it (a word, a variable, a binding, a cond) is a ParseError, with or without nesting: `-> [ x y ] [ [ x y ] ]` is rejected. Build a Block from computed values with `cons` or `pair` (or `block_set` on a literal of the right shape).
@@ -157,7 +170,7 @@ Warnings (on stderr after ACCEPT, never a rejection): `MutualRecursion` for a lo
 A REJECT lists every error found, in source order, and the compiler exits with status 1 (ACCEPT: 0); a build that is rejected removes any earlier binary at the output path, so a stale program is never left to be run by mistake. Words with a stack-effect error are not type-checked, but every other word is, in the same run.
 Static checker enforces:
 - `ArityMismatch`: Signature vs body net effect mismatch, signature vs frame input count mismatch, or unequal cond branches.
-- `TypeError`: Tagged parameter call-site type mismatch (one error per call: each parameter that does not match, by name, then what the callee takes and what the top of the stack holds, deepest first, and, when the same kinds of values are there in another order, "check the order of the arguments"), `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
+- `TypeError`: A distinct type (`#type`, `#enum`, §5) used as another type, compared with another type, or left as a result declared another type; tagged parameter call-site type mismatch (one error per call: each parameter that does not match, by name, then what the callee takes and what the top of the stack holds, deepest first, and, when the same kinds of values are there in another order, "check the order of the arguments"), `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
 - `UnknownWordError`: Invocation of an undeclared word or primitive, in a word body or in top-level code. When a library lexicon defines the word, the message names it and the `use` line to add.
 - `ParseError`: Unterminated brackets, missing signature parentheses, a `[ ... ]` value containing code (§6), a frame with no `[ names ]` after `->`, a malformed `cond`, a stray `?`/`else` that no `cond` claims, an `end` outside any definition, or a definition with no `end`. Cond-related ParseErrors report `line L col C` and name the cond they concern.
 - `ReservedWordIdentifierError`: Reserved word used as a parameter name, a frame alias, or the name of a `#word` definition (when it is not a primitive; see `DuplicateWordError`).
