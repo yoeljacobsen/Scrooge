@@ -1,6 +1,13 @@
-# Scrooge Programming Language (v1.64)
+# Scrooge Programming Language (v1.65)
 
-Repository status: **Scrooge v1.64**.
+Repository status: **Scrooge v1.65**.
+
+### What changed in v1.65
+
+Errors are reported at the call. Only messages change: every program that compiled under v1.64 still compiles, with the same output.
+
+- **Where the stack runs out**, an ArityMismatch names the call, the inputs it takes, the values it found (named when they come from the word's inputs) and the missing ones: "The stack runs out at `pa` (line 6), which takes 3 values ( label:Block v:Scalar n:Scalar ) and finds 2 ( v:Scalar n:Scalar ): the missing one is the deepest, ( label:Block )". Top-level code gets the same message.
+- **A TypeError at a call** is one error per call. It names each parameter that does not match (primitives included: "'hwrite' parameter 'p' expects Ptr but got Scalar"), shows what the callee takes beside what the top of the stack holds, and, when the right kinds of values are there in another order, says "check the order of the arguments".
 
 ### What changed in v1.64
 
@@ -253,7 +260,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_64.txt`](spec/scrooge_spec_v1_64.txt) (defines v1.64 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_65.txt`](spec/scrooge_spec_v1_65.txt) (defines v1.65 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
