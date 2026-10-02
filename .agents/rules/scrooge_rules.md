@@ -1,6 +1,6 @@
-# Scrooge v1.73 Workspace Rules & Agent Directives
+# Scrooge v1.74 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_73.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_74.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -20,7 +20,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.73 Language Reference
+## 2. Core Scrooge v1.74 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -42,6 +42,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `val ptr idx hwrite`, `hmark`/`hrelease`; bulk `hmove`, `hfill`, `hsort`.
 * Records: `#record Name  field Type count ...  end` generates `Name_new`, `Name_size` and typed `Name_field` / `Name_field_set` accessors; use it instead of hand-numbered heap offsets (spec Sec.5).
 * Argument labels: `x :name` names the parameter a value is for (`5 :v p :p 0 :i hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's.
+* Edit with the compiler, not with text replacement: `--replace`, `--replace-all`, `--rename OLD NEW MAIN`, `--move NAME FROM TO`; each edit is checked and undone if it would make the program rejected.
 * Look things up instead of guessing: `compiler/scroogec_fast -L library --lookup NAME [FILE]`, `--apropos TEXT`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line).
 * Compact arrays (primitives): `Bytes`, `Ints`, `Floats` (1, 8, 8 bytes per element): `n floats_new`, `a i floats_get`, `a i x floats_set`, `K_len`, `K_fill`, `K_move`, `bytes_read`/`bytes_write`, `ints_sort`. Prefer them to hnew cells for numeric or byte data.
 * Collections: `use "vec"` (a growable `Vec`: vec_new, vec_push, vec_get, vec_set, vec_len, vec_pop; `v 'less vec_sort_by` and `p off n 'less sort_by` sort stably in the order of a word you pass) and `use "dict"` (a `Dict` from integer or string keys: dict_new, dict_set, dict_get, dict_find, dict_get_or, dict_has, dict_del, dict_add). Container first. `x to_str` gives any value as text.

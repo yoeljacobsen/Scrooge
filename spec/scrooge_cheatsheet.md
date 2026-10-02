@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.73)
+# Scrooge on one screen (v1.74)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_73.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_74.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Scalar (an integer or a float), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -34,6 +34,7 @@ Other loops are words that call themselves in tail position.
 
 **Tools.**
 - `scroogec_fast -L library --lookup NAME [FILE]` (a signature), `--apropos TERMS`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line), `--words FILE`.
+- Edits, each checked and undone if it breaks the program: `--show NAME FILE`, `--replace NAME FILE < new`, `--replace-all FILE < new`, `--rename OLD NEW MAIN`, `--move NAME FROM TO`.
 - `--check-only FILE` checks; `-o prog FILE` builds; `--unchecked-calls FILE` lists calls with unlabelled arguments; `--labels-required N` (default 4, 0 for never).
 
 **Mistakes that cost the most.**
