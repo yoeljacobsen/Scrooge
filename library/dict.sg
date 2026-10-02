@@ -1,0 +1,133 @@
+{ ---- dict: a hash map from integer or string keys to any values. A Dict ---- }
+{ ---- is its own type (a handle on the heap); every word takes the Dict  ---- }
+{ ---- first. Keys compare as `=` does, so the string "ab" and the Block  ---- }
+{ ---- [ 97 98 ] are the same key. Open addressing with linear probing;   ---- }
+{ ---- the table doubles before it is three quarters full.               ---- }
+{ ---- Header cells: 0 live keys, 1 used slots (live and deleted),        ---- }
+{ ---- 2 capacity (a power of 2), 3 keys, 4 values, 5 slot states         ---- }
+{ ---- (0 empty, 1 live, 2 deleted).                                      ---- }
+#type Dict Ptr end
+
+#_dict_pow2 ( p:Scalar n:Scalar -- q:Scalar ) p n < cond [ p 2 * n _dict_pow2 ] else [ p ] end
+
+#_dict_alloc ( c:Scalar -- d:Dict )
+  6 hnew -> [ h ]
+  0 h 0 hwrite
+  0 h 1 hwrite
+  c h 2 hwrite
+  c hnew h 3 hwrite
+  c hnew h 4 hwrite
+  c hnew -> [ st ] 0 st 0 c hfill st h 5 hwrite
+  h Dict_of
+end
+
+{ a new, empty Dict with room for about n keys before it grows }
+#dict_new ( n:Scalar -- d:Dict ) 8 n 2 * _dict_pow2 _dict_alloc end
+
+#dict_len ( d:Dict -- n:Scalar ) d Dict_raw 0 hread end
+#dict_cap ( d:Dict -- n:Scalar ) d Dict_raw 2 hread end
+#_dict_used ( d:Dict -- n:Scalar ) d Dict_raw 1 hread end
+#_dict_keys ( d:Dict -- p:Ptr ) d Dict_raw 3 hread end
+#_dict_vals ( d:Dict -- p:Ptr ) d Dict_raw 4 hread end
+#_dict_states ( d:Dict -- p:Ptr ) d Dict_raw 5 hread end
+
+{ FNV-1a over a string's characters }
+#_dict_hash_str ( k:Block -- h:Scalar )
+  k [fold| i h c _ | h c bitxor 16777619 * 0xffffffff bitand from 2166136261 ]
+end
+
+{ an integer mixed so that near keys spread over the table }
+#_dict_hash_int ( k:Scalar -- h:Scalar )
+  k 0x7fffffff bitand k 31 bitshr 0x7fffffff bitand bitxor 2654435761 * 0x7fffffffffff bitand
+end
+
+#dict_hash ( k:Unknown -- h:Scalar )
+  k type_of -> [ t ]
+  t 2 = cond [ k _dict_hash_str ]
+  else [ t 0 = cond [ k _dict_hash_int ] else [ "dict: a key must be an integer or a string" abort ] ]
+end
+
+{ along the probe path from slot i: the slot holding k (found 1), or else }
+{ the first deleted slot passed (free, -1 if none) or the empty one that  }
+{ ends the path (found 0) }
+#_dict_probe ( d:Dict k:Unknown i:Scalar free:Scalar -- s:Scalar found:Scalar )
+  d _dict_states i hread -> [ st ]
+  st 0 = cond [ free 0 < cond [ i ] else [ free ] 0 ]
+  else [
+    st 1 = and_then [ d _dict_keys i hread k = ]
+    cond [ i 1 ]
+    else [ d k i 1 + d dict_cap 1 - bitand st 2 = free 0 < and cond [ i ] else [ free ] _dict_probe ]
+  ]
+end
+
+#_dict_slot ( d:Dict k:Unknown -- s:Scalar found:Scalar )
+  d k k dict_hash d dict_cap 1 - bitand -1 _dict_probe
+end
+
+{ stores without growing }
+#_dict_put ( d:Dict k:Unknown v:Unknown -- )
+  d k _dict_slot -> [ s found ]
+  v d _dict_vals s hwrite
+  found unless [
+    k d _dict_keys s hwrite
+    d _dict_states s hread 0 = when [ d _dict_used 1 + d Dict_raw 1 hwrite ]
+    1 d _dict_states s hwrite
+    d dict_len 1 + d Dict_raw 0 hwrite
+  ]
+end
+
+{ before a store: rebuild into a table twice as big (or as big, when }
+{ deleted slots fill it) once used slots would pass three quarters }
+#_dict_make_room ( d:Dict -- )
+  d _dict_used 1 + 4 * d dict_cap 3 * > when [
+    d dict_len 1 + 4 * d dict_cap 2 * > cond [ d dict_cap 2 * ] else [ d dict_cap ] _dict_alloc -> [ e ]
+    d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ e k v _dict_put ] ]
+    e Dict_raw 0 d Dict_raw 0 6 hmove
+  ]
+end
+
+#dict_set ( d:Dict k:Unknown v:Unknown -- ) d _dict_make_room d k v _dict_put end
+
+{ the value of k and 1, or 0 0 when k is absent }
+#dict_find ( d:Dict k:Unknown -- v:Unknown found:Scalar )
+  d k _dict_slot -> [ s found ]
+  found cond [ d _dict_vals s hread 1 ] else [ 0 0 ]
+end
+
+{ stops the program when k is absent; dict_find or dict_get_or when it may be }
+#dict_get ( d:Dict k:Unknown -- v:Unknown )
+  d k dict_find unless [ "dict_get: the key is not in the Dict" abort ]
+end
+
+#dict_get_or ( d:Dict k:Unknown default:Unknown -- v:Unknown )
+  d k dict_find cond [ ] else [ drop default ]
+end
+
+#dict_has ( d:Dict k:Unknown -- f:Scalar ) d k _dict_slot swap drop end
+
+{ adds n to the number stored at k (0 when absent): counting }
+#dict_add ( d:Dict k:Unknown n:Scalar -- ) d k d k 0 dict_get_or n + dict_set end
+
+{ removes k; 1 if it was there }
+#dict_del ( d:Dict k:Unknown -- found:Scalar )
+  d k _dict_slot -> [ s found ]
+  found when [
+    2 d _dict_states s hwrite
+    0 d _dict_keys s hwrite
+    0 d _dict_vals s hwrite
+    d dict_len 1 - d Dict_raw 0 hwrite
+  ]
+  found
+end
+
+{ slot i, 0 <= i < dict_cap: its key and value and 1 when it holds one, }
+{ else 0 0 0. To visit every entry: }
+{ `d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ ... ] ]` }
+#dict_slot ( d:Dict i:Scalar -- k:Unknown v:Unknown live:Scalar )
+  d _dict_states i hread 1 = cond [ d _dict_keys i hread d _dict_vals i hread 1 ] else [ 0 0 0 ]
+end
+
+{ every key, in slot order (no particular order) }
+#dict_keys ( d:Dict -- b:Block )
+  nil d dict_cap [times| i | d i dict_slot -> [ k v live ] live cond [ k swap cons ] else [ ] ]
+end

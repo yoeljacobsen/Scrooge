@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.67)
+# Skill: Writing Correct Scrooge (v1.68)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_67.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_68.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -176,6 +176,11 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 
 Import library lexicons at the top of the file via `use "<lexicon>"`.
 
+- **Collections first (`vec.sg`, `dict.sg`)**: reach for these before writing a heap layout of your own. Both handles are types of their own (`v:Vec`, `d:Dict`), and every word takes the container first.
+  - `Vec`, a growable vector: `8 vec_new -> [ v ]`, `v x vec_push`, `v i vec_get`, `v i x vec_set`, `v vec_len`, `v vec_pop`, `v vec_last`, `v vec_to_block`, `b vec_from_block`. An index outside the Vec stops the program, naming the word.
+  - Sorting in your own order: write the order as a small word and pass it. `#by_age ( a:Ptr b:Ptr -- f:Scalar ) a Person_age b Person_age < end` then `v 'by_age vec_sort_by`, or `p 0 n 'by_age sort_by` for heap cells. The sort is stable, so to sort by two keys, sort by the second key first, then by the first. `v vec_sort` sorts in hsort's order (numbers, then strings and rows element by element).
+  - `Dict`, a hash map from integer or string keys: `100 dict_new -> [ d ]`, `d k v dict_set`, `d k dict_get` (stops when absent), `d k dict_find -> [ v found ]`, `d k default dict_get_or`, `d k dict_has`, `d k dict_del`, `d k 1 dict_add` (counting), `d dict_keys`, or every slot with `d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ ... ] ]`.
+
 - **Numeric kernels (`numeric.sg`)**: a vector is a Ptr, a start cell and a length, so one allocation holds a whole matrix (row r of a c-column matrix starts at `r c *`). `vec_dot ( a ao b bo n -- s )`, `vec_axpy ( g x xo y yo n -- )` (y += g*x), `vec_add`, `vec_scale`, `vec_sum`, `vec_max`, `vec_argmax`, and `vec_be32` / `vec_le32 ( p off -- n )` for a 32-bit integer in four byte cells after `fread_into` (binary headers).
 - **Process figures (`procinfo.sg`)**: `proc_peak_kb ( -- kb )` is the peak resident memory (VmHWM) to report; `proc_rss_kb`, and `proc_status_kb ( key -- kb ok )` for any /proc/self/status field.
 
@@ -258,7 +263,7 @@ A program of more than a few hundred lines belongs in several files. Each module
 
 ## 7. Failure Checklist (Check Before Emitting Code)
 
-1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `and_then`, `or_else`, `sort_cmp`, `fwrite_from`, `fflush`). This is the list in spec Sec.10.
+1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `and_then`, `or_else`, `sort_cmp`, `fwrite_from`, `fflush`, `to_str`). This is the list in spec Sec.10.
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive; the error names what it collides with.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
@@ -316,10 +321,11 @@ Work from cheapest to most detailed, and stay in Scrooge:
 
 1. **`assert` your invariants** (`use "util"`): `count 81 <= "count past the grid" assert` stops the program with that message the first time the invariant fails, instead of minutes later with a corrupted result.
 2. **Read the word chain.** A runtime `Fatal:` error is followed by the words that were running, innermost first, each with its definition line (`in #report (defined line 2)`); start there.
-3. **`trace` a value**: `x trace` prints `trace line N: <value>` to stderr, for any type: numbers, Blocks (the first 64 elements, and as text when they are all printable characters), and a Ptr as its size. It consumes the value, so trace a frame-bound name (`-> [ x ] [ x trace ... x ... ]`) or a `dup`. stdout is flushed first, so traces appear in order with the program's output.
-4. **Make the program observable**: a debugging flag that prints intermediate results (a parsed structure, a row count per step) finds most logic errors faster than any tool.
-5. **Shrink the input.** When a large input fails, find the smallest input that still fails (halve it until it passes), and turn it into a test.
-6. **`--debug-stack`** prints whatever the program left on the stack at exit, and **`--profile`** shows which words run how often: a count far from what you expect is a bug, not just a hot spot.
+3. **`to_str` any value** for a message or a test: `x to_str str_print` writes numbers, floats (`3.0`), nested Blocks and strings (`[ 104 105 ] { "hi" }`) whole, as Scrooge text.
+4. **`trace` a value**: `x trace` prints `trace line N: <value>` to stderr, for any type: numbers, Blocks (the first 64 elements, and as text when they are all printable characters), and a Ptr as its size. It consumes the value, so trace a frame-bound name (`-> [ x ] [ x trace ... x ... ]`) or a `dup`. stdout is flushed first, so traces appear in order with the program's output.
+5. **Make the program observable**: a debugging flag that prints intermediate results (a parsed structure, a row count per step) finds most logic errors faster than any tool.
+6. **Shrink the input.** When a large input fails, find the smallest input that still fails (halve it until it passes), and turn it into a test.
+7. **`--debug-stack`** prints whatever the program left on the stack at exit, and **`--profile`** shows which words run how often: a count far from what you expect is a bug, not just a hot spot.
 
 ## 10. Long-Running Programs
 

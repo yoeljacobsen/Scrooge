@@ -1,6 +1,17 @@
-# Scrooge Programming Language (v1.67)
+# Scrooge Programming Language (v1.68)
 
-Repository status: **Scrooge v1.67**.
+Repository status: **Scrooge v1.68**.
+
+### What changed in v1.68
+
+Batteries: a growable vector, a hash map, sorting with your own order, and text for any value. A word or frame name `to_str` is now rejected, because `to_str` is a new primitive. Apart from that, every program in this project's corpus that compiled under v1.67 still compiles, with the same output.
+
+- **`to_str ( v -- s )`** writes any value as text: `42`, `3.0`, `[ 1 [ 2 3 ] ]`, `[ 104 105 ] { "hi" }` and `Ptr#3(10 cells)`. Use it for messages and tests.
+- **`use "vec"`** adds `Vec`, a growable vector of any values. It is its own type, every word takes the container first, and indexes are checked.
+  - Words: `vec_new`, `vec_push`, `vec_get`, `vec_set`, `vec_len`, `vec_pop`, `vec_last`, `vec_clear`, `vec_reserve`, `vec_data`, `vec_from_block`, `vec_to_block`, `vec_sort`.
+  - Sorting with a word you pass: `v 'by_age vec_sort_by`, and `p off n 'by_age sort_by` for heap cells. Both are stable merge sorts; the comparator word is compiled into the loop.
+- **`use "dict"`** adds `Dict`, a hash map from integer or string keys to any values: `dict_new`, `dict_set`, `dict_get`, `dict_find`, `dict_get_or`, `dict_has`, `dict_del`, `dict_add`, `dict_len`, `dict_keys`, and `dict_slot` for visiting every entry.
+- **Library words can take word parameters.** The checker reads their bodies from the lexicon. A message about an instance names the lexicon file and its line.
 
 ### What changed in v1.67
 
@@ -289,7 +300,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_67.txt`](spec/scrooge_spec_v1_67.txt) (defines v1.67 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_68.txt`](spec/scrooge_spec_v1_68.txt) (defines v1.68 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
