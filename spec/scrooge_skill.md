@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.68)
+# Skill: Writing Correct Scrooge (v1.69)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,10 +8,11 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_68.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_69.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
-3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
-4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
+3. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( v:Unknown p:Ptr i:Scalar -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
+4. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
+5. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
 
 Learn from the documents and your experiments, not from the compiler's internals: do not read the generated C (`--dump-c`) or the compiler's source to work out what Scrooge means. The documents are meant to be complete; where they are not, a probe program is the right way to find out, and a note in your friction log is the right way to report the gap.
 
@@ -285,6 +286,10 @@ compiler/scroogec_fast -L library -O0 -o prog prog.sg     # fast build while dev
 compiler/scroogec_fast -L library -o prog prog.sg         # optimised build (-O3)
 compiler/scroogec_fast -L library --test src/stats.sg      # run the file's #test_ words (section 1); --test-timeout N (default 600 s)
 compiler/scroogec_fast --words src/stats.sg                # every word, its lines and size in tokens
+compiler/scroogec_fast -L library --lookup vec_push        # a word's signature and description (add FILE for your own words)
+compiler/scroogec_fast -L library --apropos hash string    # words whose name or description has every term
+compiler/scroogec_fast --explain TypeError                 # an error class: the rule, a wrong and a corrected example
+compiler/scroogec_fast -L library --stack st_var src/stats.sg   # the stack at the end of each line of one word
 ```
 
 - The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.

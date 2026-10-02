@@ -1,6 +1,16 @@
-# Scrooge Programming Language (v1.68)
+# Scrooge Programming Language (v1.69)
 
-Repository status: **Scrooge v1.68**.
+Repository status: **Scrooge v1.69**.
+
+### What changed in v1.69
+
+Looking things up, instead of probing. In earlier runs, about half of all compiler calls were probe programs.
+
+- **`--lookup NAME [FILE]`** shows a name's signature and description. It knows primitives, library words (and the lexicon to `use`), a lexicon's types (with the words that take them), constructs (`--lookup fold`), and, given your file, your own words with their comments, plus the words a declaration generates. A name it does not know gets a list of similar names.
+- **`--apropos TERMS...`** lists every word whose name or description contains all the terms.
+- **`--explain CLASS`** gives the rule behind an error or warning class, with a wrong example and the corrected one. A gate compiles every example, so they stay true. A rejection now ends with a pointer to it.
+- **`--stack WORD FILE`** prints the stack at the end of each line of a word: names and types, the depth relative to the entry, and what each frame binds.
+- **An input named like a primitive or reserved word** that the body mentions (`#f ( len:Scalar -- ) len print_int end`) is now a ReservedWordIdentifierError. The mention was the primitive, not the input.
 
 ### What changed in v1.68
 
@@ -300,7 +310,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_68.txt`](spec/scrooge_spec_v1_68.txt) (defines v1.68 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_69.txt`](spec/scrooge_spec_v1_69.txt) (defines v1.69 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

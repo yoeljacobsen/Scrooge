@@ -1,4 +1,4 @@
-Scrooge v1.68 Language Specification
+Scrooge v1.69 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -175,7 +175,7 @@ Static checker enforces:
 - `TypeError`: A distinct type (`#type`, `#enum`, §5) used as another type, compared with another type, or left as a result declared another type; tagged parameter call-site type mismatch (one error per call: each parameter that does not match, by name, then what the callee takes and what the top of the stack holds, deepest first, and, when the same kinds of values are there in another order, "check the order of the arguments"), `_at` indexing into `Ptr`/`Record`/`Scalar`/`File`, or a signature declaring an unrecognized type tag (§2).
 - `UnknownWordError`: Invocation of an undeclared word or primitive, in a word body or in top-level code. When a library lexicon defines the word, the message names it and the `use` line to add.
 - `ParseError`: Unterminated brackets, missing signature parentheses, a `[ ... ]` value containing code (§6), a frame with no `[ names ]` after `->`, a malformed `cond`, a stray `?`/`else` that no `cond` claims, an `end` outside any definition, or a definition with no `end`. Cond-related ParseErrors report `line L col C` and name the cond they concern.
-- `ReservedWordIdentifierError`: Reserved word used as a parameter name, a frame alias, or the name of a `#word` definition (when it is not a primitive; see `DuplicateWordError`).
+- `ReservedWordIdentifierError`: Reserved word used as a parameter name (an input whose name is a primitive or a reserved word and which the body mentions, since that mention is the primitive), a frame alias, or the name of a `#word` definition (when it is not a primitive; see `DuplicateWordError`).
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word (the message names the lexicon), or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
