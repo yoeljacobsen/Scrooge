@@ -1,6 +1,20 @@
-# Scrooge Programming Language (v1.70)
+# Scrooge Programming Language (v1.71)
 
-Repository status: **Scrooge v1.70**.
+Repository status: **Scrooge v1.71**.
+
+### What changed in v1.71
+
+Argument labels, against arguments that type-check but are in the wrong order. **This release breaks code:** a call with 4 or more inputs must now name every argument (`--labels-required 0` turns that off).
+
+- **`x :name`** after a value says which parameter it is for: `5 :v p :p 0 :i hwrite`. The checker compares it with the callee's parameter names, and nothing is reordered.
+  - Labels are optional and may be partial, and they cost nothing at run time.
+  - A label that names another parameter is an `ArgumentLabel` error, which shows what the word takes beside what was passed.
+- **Names count as labels.** An argument passed by a frame name, an input name or a word's declared result name equal to the parameter's name is checked without a label: `fh p start count fread_into`.
+  - Name a step word's results like its inputs, and the loop's recursive call is checked too.
+  - Names in each other's places (`b a sub` for `sub ( a b )`) draw the warning `ArgumentOrder`.
+- **`--labels-required N`** (default 4): a call with N or more inputs must have every argument labelled or passed by a matching name. 0 makes labels optional everywhere.
+- **`--unchecked-calls FILE`** lists the calls whose arguments are neither labelled nor named.
+- **The library, the examples and the documents conform.** Step words in the library now name their results like their inputs (`val2:Scalar` became `val:Scalar`).
 
 ### What changed in v1.70
 
@@ -321,7 +335,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_70.txt`](spec/scrooge_spec_v1_70.txt) (defines v1.70 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_71.txt`](spec/scrooge_spec_v1_71.txt) (defines v1.71 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

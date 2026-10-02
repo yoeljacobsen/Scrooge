@@ -3,7 +3,7 @@
 { ---- bit i is the (1 << i) place. No allocation, no Ptr -- everything    ---- }
 { ---- here is pure Scalar arithmetic.                                    ---- }
 
-#bs_add ( set:Scalar i:Scalar -- set2:Scalar )
+#bs_add ( set:Scalar i:Scalar -- set:Scalar )
   set 1 i bitshl bitor
 end
 

@@ -1,10 +1,10 @@
-# Scrooge on one screen (v1.70)
+# Scrooge on one screen (v1.71)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_70.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_71.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Scalar (an integer or a float), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
-**Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again.
+**Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. `x :name` labels a value with the parameter it is for, checked at the call: `5 :v p :p 0 :i hwrite`. A call with 4 or more inputs must have every argument labelled or passed by a matching name.
 
 | Construct | Stack effect | Notes |
 |---|---|---|
@@ -34,11 +34,11 @@ Other loops are words that call themselves in tail position.
 
 **Tools.**
 - `scroogec_fast -L library --lookup NAME [FILE]` (a signature), `--apropos TERMS`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line), `--words FILE`.
-- `--check-only FILE` checks; `-o prog FILE` builds.
+- `--check-only FILE` checks; `-o prog FILE` builds; `--unchecked-calls FILE` lists calls with unlabelled arguments; `--labels-required N` (default 4, 0 for never).
 
 **Mistakes that cost the most.**
 1. A name mentioned once too often, or not at all (ArityMismatch: read the per-line depths, or run `--stack`).
-2. Arguments in the wrong order: `v p i hwrite`, not `p i v`. Look the word up.
+2. Arguments in the wrong order: `v p i hwrite`, not `p i v`. Look the word up, and label them.
 3. A code compared with a number: give codes an `#enum`.
 4. Large words: keep each word under 30 tokens, with a test.
 5. Writing a list, a hash map or a sort yourself: use `vec`, `dict` and `sort_by`.

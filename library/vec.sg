@@ -28,7 +28,7 @@ end
   v vec_cap n < when [
     v vec_cap 2 * n max -> [ c ]
     c hnew -> [ q ]
-    v vec_data 0 q 0 v vec_len hmove
+    v vec_data :src 0 :soff q :dst 0 :doff v vec_len :count hmove
     q v Vec_raw 2 hwrite
     c v Vec_raw 1 hwrite
   ]
@@ -107,9 +107,9 @@ end
 #_sort_pass ( p:Ptr off:Scalar n:Scalar t:Ptr w:Scalar less:Word(Unknown,Unknown--Scalar) -- )
   n 2 w * + 1 - 2 w * / [times| r |
     2 w * r * -> [ lo ]
-    p off t lo lo w + n min lo 2 w * + n min 'less _sort_merge
+    p off t lo lo w + n min :mid lo 2 w * + n min :hi 'less _sort_merge
   ]
-  t 0 p off n hmove
+  t :src 0 :soff p :dst off :doff n :count hmove
 end
 
 #sort_by ( p:Ptr off:Scalar n:Scalar less:Word(Unknown,Unknown--Scalar) -- )

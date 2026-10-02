@@ -26,7 +26,7 @@ end
 #st_max ( p:Ptr n:Scalar -- x:Scalar ) 'max _reduce end
 
 { a sorted copy, so the median leaves the caller's cells as they were }
-#_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) n hnew -> [ q ] p 0 q 0 n hmove q 0 n hsort q end
+#_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) n hnew -> [ q ] p :src 0 :soff q :dst 0 :doff n :count hmove q 0 n hsort q end
 
 { the middle of n sorted values: the middle one, or the mean of the two middle ones }
 #_middle ( q:Ptr n:Scalar -- m:Scalar )
@@ -43,11 +43,11 @@ end
   vals [fold| i acc v _ | v p i hwrite acc from 0 ] drop p 8
 end
 #test_sq_dev ( -- ok:Scalar ) 7 5 _sq_dev 4 "7 5 _sq_dev" expect_eq end
-#test_mean ( -- ok:Scalar ) _sample st_mean 5.0 0.000001 "mean" expect_near end
-#test_var ( -- ok:Scalar ) _sample st_var 4.0 0.000001 "variance" expect_near end
-#test_sd ( -- ok:Scalar ) _sample st_sd 2.0 0.000001 "sd" expect_near end
+#test_mean ( -- ok:Scalar ) _sample st_mean :got 5.0 :want 0.000001 :tol "mean" :msg expect_near end
+#test_var ( -- ok:Scalar ) _sample st_var :got 4.0 :want 0.000001 :tol "variance" :msg expect_near end
+#test_sd ( -- ok:Scalar ) _sample st_sd :got 2.0 :want 0.000001 :tol "sd" :msg expect_near end
 #test_min_max ( -- ok:Scalar ) _sample st_min 2 "min" expect_eq _sample st_max 9 "max" expect_eq and end
-#test_median_even ( -- ok:Scalar ) _sample st_median 4.5 0.000001 "median of 8 values" expect_near end
+#test_median_even ( -- ok:Scalar ) _sample st_median :got 4.5 :want 0.000001 :tol "median of 8 values" :msg expect_near end
 #test_median_odd ( -- ok:Scalar )
   3 hnew -> [ p ] 9 p 0 hwrite 1 p 1 hwrite 5 p 2 hwrite
   p 3 st_median 5 "median of 9 1 5" expect_eq p 0 hread 9 "the input is left unsorted" expect_eq and

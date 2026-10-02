@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.70)
+# Skill: Writing Correct Scrooge (v1.71)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_70.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_71.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( v:Unknown p:Ptr i:Scalar -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -86,6 +86,8 @@ Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only f
   ```
 
 ---
+
+**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `5 :v p :p 0 :i hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name). So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Scalar acc:Scalar -- i:Scalar acc:Scalar )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`) draws the warning ArgumentOrder.
 
 ## 2b. How Stack Effects Add Up
 

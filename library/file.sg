@@ -9,13 +9,13 @@
 
 { ---- Open modes: fopen's second argument, named so no caller has to     ---- }
 { ---- remember which integer means what.                                 ---- }
-#f_read ( -- mode:Scalar )
+#f_read (  -- mode:Scalar )
   0
 end
-#f_write ( -- mode:Scalar )
+#f_write (  -- mode:Scalar )
   1
 end
-#f_append ( -- mode:Scalar )
+#f_append (  -- mode:Scalar )
   2
 end
 
@@ -24,13 +24,13 @@ end
 { ---- type-assertion idiom the spec prescribes for hread wrappers         ---- }
 { ---- (Sec.5), confined to three words here instead of spread across      ---- }
 { ---- every caller.                                                      ---- }
-#f_stdin ( -- fh:File )
+#f_stdin (  -- fh:File )
   0
 end
-#f_stdout ( -- fh:File )
+#f_stdout (  -- fh:File )
   1
 end
-#f_stderr ( -- fh:File )
+#f_stderr (  -- fh:File )
   2
 end
 
@@ -79,10 +79,10 @@ end
 { ---- file -- the same reason lst_grow doubles instead of adding a        ---- }
 { ---- constant. The cap keeps fread's up-front byte buffer bounded no     ---- }
 { ---- matter how large the input turns out to be.                        ---- }
-#f_chunk ( -- n:Scalar )
+#f_chunk (  -- n:Scalar )
   65536
 end
-#f_next_chunk ( n:Scalar -- n2:Scalar )
+#f_next_chunk ( n:Scalar -- n:Scalar )
   n 2 * 4194304 min
 end
 #f_read_all_loop ( fh:File acc:Block n:Scalar -- str:Block )
@@ -132,17 +132,17 @@ end
 #feh_cat_loop ( a:Block b:Block i:Scalar -- ab:Block )
   i 0 = cond [ b ] else [ a a i 1 - at b cons i 1 - feh_cat_loop ]
 end
-#feh_join_check ( path:Block -- path2:Block )
+#feh_join_check ( path:Block -- path:Block )
   "HOME" getenv -> [ home ok ] [
     ok cond [ home path 1 path len block_slice home len feh_cat_loop ] else [ path ]
   ]
 end
-#feh_tilde_check ( path:Block -- path2:Block )
+#feh_tilde_check ( path:Block -- path:Block )
   path len 1 = cond [ path feh_join_check ] else [
     path 1 at 47 = cond [ path feh_join_check ] else [ path ]
   ]
 end
-#f_expand_home ( path:Block -- path2:Block )
+#f_expand_home ( path:Block -- path:Block )
   path len 0 = cond [ path ] else [
     path 0 at 126 = cond [ path feh_tilde_check ] else [ path ]
   ]

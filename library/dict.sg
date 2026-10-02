@@ -17,7 +17,7 @@
   c h 2 hwrite
   c hnew h 3 hwrite
   c hnew h 4 hwrite
-  c hnew -> [ st ] 0 st 0 c hfill st h 5 hwrite
+  c hnew -> [ st ] 0 :v st :p 0 :start c :count hfill st h 5 hwrite
   h Dict_of
 end
 
@@ -56,12 +56,12 @@ end
   else [
     st 1 = and_then [ d _dict_keys i hread k = ]
     cond [ i 1 ]
-    else [ d k i 1 + d dict_cap 1 - bitand st 2 = free 0 < and cond [ i ] else [ free ] _dict_probe ]
+    else [ d k i 1 + d dict_cap 1 - bitand :i st 2 = free 0 < and cond [ i ] else [ free ] :free _dict_probe ]
   ]
 end
 
 #_dict_slot ( d:Dict k:Unknown -- s:Scalar found:Scalar )
-  d k k dict_hash d dict_cap 1 - bitand -1 _dict_probe
+  d k k dict_hash d dict_cap 1 - bitand :i -1 :free _dict_probe
 end
 
 { stores without growing }
@@ -82,7 +82,7 @@ end
   d _dict_used 1 + 4 * d dict_cap 3 * > when [
     d dict_len 1 + 4 * d dict_cap 2 * > cond [ d dict_cap 2 * ] else [ d dict_cap ] _dict_alloc -> [ e ]
     d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ e k v _dict_put ] ]
-    e Dict_raw 0 d Dict_raw 0 6 hmove
+    e Dict_raw :src 0 :soff d Dict_raw :dst 0 :doff 6 :count hmove
   ]
 end
 

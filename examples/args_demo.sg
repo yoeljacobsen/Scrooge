@@ -32,7 +32,7 @@ end
   val is_flag cond [ acc ] else [ val acc cons ] ?
 end
 #operands ( args:Block -- files:Block )
-  args [fold| idx acc val _ | idx acc val 0 keep_step from nil ] reverse
+  args [fold| idx acc val _ | idx acc val 0 :ctx keep_step from nil ] reverse
 end
 
 { One file: contents to stdout, or just its length when counting.
