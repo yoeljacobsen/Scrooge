@@ -1,5 +1,6 @@
-{ ---- dict: a hash map from integer or string keys to any values. A Dict ---- }
-{ ---- is its own type (a handle on the heap); every word takes the Dict  ---- }
+{ ---- dict: a hash map to any values, from integer, string or other   ---- }
+{ ---- Block keys (a #struct value is one). A Dict is its own type (a    ---- }
+{ ---- handle on the heap); every word takes the Dict                     ---- }
 { ---- first. Keys compare as `=` does, so the string "ab" and the Block  ---- }
 { ---- [ 97 98 ] are the same key. Open addressing with linear probing;   ---- }
 { ---- the table doubles before it is three quarters full.               ---- }
@@ -31,9 +32,16 @@ end
 #_dict_vals ( d:Dict -- p:Ptr ) d Dict_raw 4 hread end
 #_dict_states ( d:Dict -- p:Ptr ) d Dict_raw 5 hread end
 
-{ FNV-1a over a string's characters }
+{ an element of a Block key: an integer as itself, a nested Block (a }
+{ string or row field of a #struct) by its own hash, a float by its text }
+#_dict_hash_elem ( c:Unknown -- x:Scalar )
+  c type_of -> [ t ]
+  t 0 = cond [ c ] else [ t 2 = cond [ c _dict_hash_str ] else [ c to_str _dict_hash_str ] ]
+end
+
+{ FNV-1a over a Block's elements: a string's characters, or a struct's fields }
 #_dict_hash_str ( k:Block -- h:Scalar )
-  k [fold| i h c _ | h c bitxor 16777619 * 0xffffffff bitand from 2166136261 ]
+  k [fold| i h c _ | h c _dict_hash_elem bitxor 16777619 * 0xffffffff bitand from 2166136261 ]
 end
 
 { an integer mixed so that near keys spread over the table }
@@ -44,7 +52,7 @@ end
 #dict_hash ( k:Unknown -- h:Scalar )
   k type_of -> [ t ]
   t 2 = cond [ k _dict_hash_str ]
-  else [ t 0 = cond [ k _dict_hash_int ] else [ "dict: a key must be an integer or a string" abort ] ]
+  else [ t 0 = cond [ k _dict_hash_int ] else [ "dict: a key must be an integer, a string or another Block (a #struct)" abort ] ]
 end
 
 { along the probe path from slot i: the slot holding k (found 1), or else }

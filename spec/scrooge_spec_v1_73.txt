@@ -1,4 +1,4 @@
-Scrooge v1.72 Language Specification
+Scrooge v1.73 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -120,6 +120,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
   - A word whose result is declared a distinct type must leave one, and a word whose result is declared another type must not leave a distinct value: `#d ( -- k:Kw ) 118 end` is a `TypeError`. Only `Name_of` and `Name_raw` convert.
   - What comes back from `hread`, `block_get` and the like is `Unknown` and is accepted anywhere; store distinct values in record fields declared with the type to keep the check.
   A library lexicon can declare types too (§8). A word named `type` or `enum` is still an ordinary definition (`#type (`).
+- Records as values: `#struct Name field Type ... end` declares an immutable value of its own type, a Block of its fields at run time (`#record` is the mutable heap layout). It generates `Name_make` ( f1:T1 ... fn:Tn -- v:Name ), whose inputs are the field names, so a call can be labelled (`1 :x 2 :y Pt_make`); per field a getter `Name_f` ( s:Name -- f:T ) and an update `Name_with_f` ( s:Name f:T -- s:Name ) that returns a new value, leaving the old one as it was; and `Name_of` / `Name_raw` as for `#type`. Two values of one struct type compare with `=` field by field, sort (`hsort`, `vec_sort`, `sort_cmp`) field by field in declaration order, and are written whole by `to_str`. A field type is any type tag, including another struct, an enum or a compact array. A field name must not make a generated name twice (`x` beside `with_x`). `#struct (` is still a word named struct.
 
 ═══ 6. Bracketed Values Are Data ═══
 - A `[ ... ]` written as a value (anything that is not a cond branch, a frame body, or a map/fold) is a DATA literal: it may contain only literals (numbers, strings, `nil`) and other such `[ ... ]`, nested to any depth: `[ 1 [ 2 3 ] "ab" nil ]` is valid. Anything else inside it (a word, a variable, a binding, a cond) is a ParseError, with or without nesting: `-> [ x y ] [ [ x y ] ]` is rejected. Build a Block from computed values with `cons` or `pair` (or `block_set` on a literal of the right shape).

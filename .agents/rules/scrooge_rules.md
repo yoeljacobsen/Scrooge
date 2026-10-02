@@ -1,6 +1,6 @@
-# Scrooge v1.72 Workspace Rules & Agent Directives
+# Scrooge v1.73 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_72.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_73.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -20,7 +20,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.72 Language Reference
+## 2. Core Scrooge v1.73 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -45,6 +45,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Look things up instead of guessing: `compiler/scroogec_fast -L library --lookup NAME [FILE]`, `--apropos TEXT`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line).
 * Compact arrays (primitives): `Bytes`, `Ints`, `Floats` (1, 8, 8 bytes per element): `n floats_new`, `a i floats_get`, `a i x floats_set`, `K_len`, `K_fill`, `K_move`, `bytes_read`/`bytes_write`, `ints_sort`. Prefer them to hnew cells for numeric or byte data.
 * Collections: `use "vec"` (a growable `Vec`: vec_new, vec_push, vec_get, vec_set, vec_len, vec_pop; `v 'less vec_sort_by` and `p off n 'less sort_by` sort stably in the order of a word you pass) and `use "dict"` (a `Dict` from integer or string keys: dict_new, dict_set, dict_get, dict_find, dict_get_or, dict_has, dict_del, dict_add). Container first. `x to_str` gives any value as text.
+* Values: `#struct Pt x Scalar y Scalar end` (Pt_make, Pt_x, Pt_with_x), immutable, compared and sorted field by field; `#record` is for mutable heap state.
 * Codes: `#enum Kw select from where end` (members `Kw_select` .. `Kw_where`, `Kw_count`, `Kw_name`, `Kw_of`/`Kw_raw`) and `#type Row Scalar end` (`Row_of`/`Row_raw`) declare types of their own; a code compared with a plain number, or used in arithmetic, is a TypeError (spec Sec.5).
 * Logic: `not` is LOGICAL (`6 not` is `0`); `bitnot` is bitwise (`6 bitnot` is `-7`). `and`/`or` are eager: guard risky work with `cond`, not with `and`/`or`.
 * Comparison: `=`, `!=`, `>`, `<` are primitives; `>=` and `<=` come from `use "util"`.
