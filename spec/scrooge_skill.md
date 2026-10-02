@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.69)
+# Skill: Writing Correct Scrooge (v1.70)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,11 +8,12 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_69.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
-2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
-3. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( v:Unknown p:Ptr i:Scalar -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
-4. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
-5. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
+1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
+2. **Read the specification** (`spec/scrooge_spec_v1_70.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
+4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( v:Unknown p:Ptr i:Scalar -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
+5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
+6. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
 
 Learn from the documents and your experiments, not from the compiler's internals: do not read the generated C (`--dump-c`) or the compiler's source to work out what Scrooge means. The documents are meant to be complete; where they are not, a probe program is the right way to find out, and a note in your friction log is the right way to report the gap.
 
@@ -74,15 +75,13 @@ Build every program from small words, each doing one job, and combine them into 
 
 ## 2. Name Values with Frames; Avoid Stack Gymnastics
 
-Prefer arrow frames `-> [ a b ] [ ... use a, b by name ... ]` over positional stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). Arrow frames preserve static type tags, whereas shufflers produce `Unknown` types. A frame binds at most 64 names; for more state, use a `#record`.
+Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). A word's inputs are names already: write them in the body (`#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`) and the word binds them itself, so do not begin a body with `-> [ s n ]`. Name an intermediate result with a frame where it is made: `p n st_mean -> [ m ]`, then use `m` to the end of the block. Names keep their static types; shufflers produce `Unknown`. A frame binds at most 64 names; for more state, use a `#record`.
 
 - **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A trailing `?` is optional.
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
-    -> [ blk ] [
-      blk [fold| idx acc val _ | val acc cons from nil ] reverse
-    ]
+    blk [fold| idx acc val _ | val acc cons from nil ] reverse
   end
   ```
 
@@ -148,9 +147,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
   Accumulating values during `[fold| ... | val acc cons from nil ]` prepends elements one-by-one, which inherently reverses iteration order. Use a trailing `reverse` step when input order must be preserved:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
-    -> [ blk ] [
-      blk [fold| idx acc val _ | val acc cons from nil ] reverse
-    ]
+    blk [fold| idx acc val _ | val acc cons from nil ] reverse
   end
   ```
 
@@ -165,9 +162,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
   Cast integer scalars to float before division (`/`) when float division is required:
   ```scrooge
   #avg_calc ( sum:Scalar count:Scalar -- avg:Scalar )
-    -> [ sum count ] [
-      sum to_float count to_float /
-    ]
+    sum to_float count to_float /
   end
   ```
 
@@ -207,7 +202,7 @@ A file is read and written as a Block of character codes -- the same representat
 ```scrooge
 use "file"
 #save_report ( text:Block -- ok:Scalar )
-  -> [ text ] [ text "report.txt" f_write_file ]
+  text "report.txt" f_write_file
 end
 ```
 - `f_read_file ( path:Block -- str:Block ok:Scalar )` / `f_write_file ( str:Block path:Block -- ok:Scalar )` / `f_append_file ( str:Block path:Block -- ok:Scalar )`.

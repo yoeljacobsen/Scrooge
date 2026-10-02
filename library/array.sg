@@ -5,10 +5,8 @@
 end
 
 #arr_make ( shape_block:Block -- ptr:Ptr )
-  -> [ shape_block ] [
-    shape_block
-    shape_block arr_size shape_block len + 1 + hnew
-  ]
+  shape_block
+  shape_block arr_size shape_block len + 1 + hnew
   -> [ shape_block base_ptr ] [
     shape_block len base_ptr 0 hwrite
     shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] drop
@@ -17,30 +15,24 @@ end
 end
 
 #arr_offset ( ptr:Ptr coords_block:Block -- flat_offset:Scalar )
-  -> [ ptr coords_block ] [
-    0
-    coords_block [fold| idx acc coord _ |
-      ptr 1 idx + hread
-      acc * coord +
+  0
+  coords_block [fold| idx acc coord _ |
+    ptr 1 idx + hread
+    acc * coord +
     from 0 ]
-    ptr 0 hread + 1 + +
-  ]
+  ptr 0 hread + 1 + +
 end
 
 #arr_get ( ptr:Ptr coords_block:Block -- val:Unknown )
-  -> [ ptr coords_block ] [
-    ptr ptr coords_block arr_offset hread
-  ]
+  ptr ptr coords_block arr_offset hread
 end
 
 #arr_set ( val:Unknown ptr:Ptr coords_block:Block -- )
-  -> [ val ptr coords_block ] [
-    val ptr ptr coords_block arr_offset hwrite
-  ]
+  val ptr ptr coords_block arr_offset hwrite
 end
 
 #nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )
-  -> [ arr idx default ] idx 0 < not idx arr len < and
+  idx 0 < not idx arr len < and
   cond [ arr idx at ] else [ default ] ?
 end
 

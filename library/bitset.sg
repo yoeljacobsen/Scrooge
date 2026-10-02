@@ -4,23 +4,23 @@
 { ---- here is pure Scalar arithmetic.                                    ---- }
 
 #bs_add ( set:Scalar i:Scalar -- set2:Scalar )
-  -> [ set i ] [ set 1 i bitshl bitor ]
+  set 1 i bitshl bitor
 end
 
 #bs_test ( set:Scalar i:Scalar -- present:Scalar )
-  -> [ set i ] [ set 1 i bitshl bitand 0 != ]
+  set 1 i bitshl bitand 0 !=
 end
 
 #bs_union ( a:Scalar b:Scalar -- c:Scalar )
-  -> [ a b ] [ a b bitor ]
+  a b bitor
 end
 
 #bs_inter ( a:Scalar b:Scalar -- c:Scalar )
-  -> [ a b ] [ a b bitand ]
+  a b bitand
 end
 
 #bs_minus ( a:Scalar b:Scalar -- c:Scalar )
-  -> [ a b ] [ a b bitnot bitand ]
+  a b bitnot bitand
 end
 
 { bs_count and bs_first used to be 64-step loops of word calls; they are now
@@ -30,5 +30,5 @@ end
   bitcount
 end
 #bs_first ( set:Scalar -- i:Scalar found:Scalar )
-  -> [ set ] set 0 = cond [ 0 0 ] else [ set bitctz 1 ]
+  set 0 = cond [ 0 0 ] else [ set bitctz 1 ]
 end

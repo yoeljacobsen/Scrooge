@@ -1,4 +1,4 @@
-Scrooge v1.69 Language Specification
+Scrooge v1.70 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -94,7 +94,7 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Typed-heap-wrapper idiom: `hread` is typed `Unknown`, so raw heap access is a type-erasure boundary. Confine that erasure to a handful of named wrapper words whose declared signature states the real result type, which the checker trusts at the call site instead of re-deriving it:
   ```scrooge
   #row_at ( tbl:Ptr idx:Scalar -- row:Block )
-    -> [ tbl idx ] [ tbl idx hread ]
+    tbl idx hread
   end
   ```
   This is an unchecked assertion, exactly like any other signature: if the heap cell does not actually hold a `Block`, downstream code type-checks against a lie. Prefer this over spreading bare `hread` calls across the program.
@@ -195,53 +195,53 @@ Static checker enforces:
 Fold to a scalar:
 ```scrooge
 #sum ( block:Block -- total:Scalar )
-  -> [ block ] [ block [fold| idx acc val _ | acc val + from 0 ] ]
+  block [fold| idx acc val _ | acc val + from 0 ]
 end
 ```
 
 Map over a block:
 ```scrooge
 #double_all ( block:Block -- doubled:Block )
-  -> [ block ] [ block [map| idx val _ | val 2 * ] ]
+  block [map| idx val _ | val 2 * ]
 end
 ```
 
 Fold building a block ('from nil'):
 ```scrooge
 #copy_reverse ( block:Block -- reversed:Block )
-  -> [ block ] [ block [fold| idx acc val _ | val acc cons from nil ] ]
+  block [fold| idx acc val _ | val acc cons from nil ]
 end
 ```
 
 Tail-recursive loop:
 ```scrooge
 #fact_iter ( n:Scalar acc:Scalar -- r:Scalar )
-  -> [ n acc ] n 0 =
+  n 0 =
   cond [ acc ] else [ n 1 - n acc * fact_iter ] ?
 end
 #fact ( n:Scalar -- r:Scalar )
-  -> [ n ] [ n 1 fact_iter ]
+  n 1 fact_iter
 end
 ```
 
 Float conversion before division:
 ```scrooge
 #avg_calc ( total:Scalar count:Scalar -- avg:Scalar )
-  -> [ total count ] [ total to_float count to_float / ]
+  total to_float count to_float /
 end
 ```
 
 Typed-heap-wrapper (confines the `hread` type-erasure boundary to one named word, per §5):
 ```scrooge
 #row_at ( tbl:Ptr idx:Scalar -- row:Block )
-  -> [ tbl idx ] [ tbl idx hread ]
+  tbl idx hread
 end
 ```
 
 Abort on an unreachable branch (per §7/§10, the aborting branch is exempt from the cond stack-effect match):
 ```scrooge
 #safe_div ( a:Scalar b:Scalar -- r:Scalar )
-  -> [ a b ] b 0 =
+  b 0 =
   cond [ [ 68 105 118 32 98 121 32 122 101 114 111 ] abort ] else [ a b / ] ?
 end
 ```
@@ -250,12 +250,12 @@ Sequential file I/O, whole-file and character-at-a-time (per §12):
 ```scrooge
 use "file"
 #count_lines_loop ( fh:File n:Scalar -- total:Scalar )
-  -> [ fh n ] [ fh n fh fgetc ]
+  fh n fh fgetc
   -> [ fh n ch ok ] ok not
   cond [ n ] else [ fh n ch 10 = + count_lines_loop ] ?
 end
 #copy_file ( src:Block dst:Block -- ok:Scalar )
-  -> [ src dst ] [ dst src f_read_file ]
+  dst src f_read_file
   -> [ dst text ok ] ok not
   cond [ 0 ] else [ text dst f_write_file ] ?
 end
@@ -370,7 +370,7 @@ Worked example -- greet each argument, or the world if there are none:
 use "args"
 use "strings"
 #greet_step ( idx:Scalar acc:Scalar val:Block ctx:Scalar -- acc2:Scalar )
-  -> [ idx acc val ctx ] [ "Hello, " str_print val str_print 10 print_char acc ]
+  "Hello, " str_print val str_print 10 print_char acc
 end
 #main ( -- )
   arg_tail -> [ args ] args len 0 =

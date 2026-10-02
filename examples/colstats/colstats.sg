@@ -10,11 +10,10 @@ use "strings"
 use "readnums"
 use "stats"
 
-#show ( label:Block x:Scalar -- ) -> [ label x ] label str_print x 3 print_float 10 print_char end
-#show_int ( label:Block n:Scalar -- ) -> [ label n ] label str_print n print_int 10 print_char end
+#show ( label:Block x:Scalar -- ) label str_print x 3 print_float 10 print_char end
+#show_int ( label:Block n:Scalar -- ) label str_print n print_int 10 print_char end
 
 #report ( p:Ptr n:Scalar -- )
-  -> [ p n ]
   "count   " n show_int
   "mean    " p n st_mean show
   "sd      " p n st_sd show

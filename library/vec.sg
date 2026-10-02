@@ -89,13 +89,11 @@ end
 { and the right run is used up or its head is not less than the left's, so }
 { equal values keep their order }
 #_sort_left ( p:Ptr off:Scalar mid:Scalar hi:Scalar i:Scalar j:Scalar less:Word(Unknown,Unknown--Scalar) -- f:Scalar )
-  -> [ p off mid hi i j less ]
   i mid < and_then [ j hi < not or_else [ p off j + hread p off i + hread less not ] ]
 end
 
 { merges p[off+lo .. off+mid) and p[off+mid .. off+hi) into t[lo .. hi) }
 #_sort_merge ( p:Ptr off:Scalar t:Ptr lo:Scalar mid:Scalar hi:Scalar less:Word(Unknown,Unknown--Scalar) -- )
-  -> [ p off t lo mid hi less ]
   lo mid hi lo - [times| k |
     -> [ i j ]
     p off mid hi i j 'less _sort_left
@@ -107,7 +105,6 @@ end
 
 { one pass: merges each pair of runs of length w into t, then copies back }
 #_sort_pass ( p:Ptr off:Scalar n:Scalar t:Ptr w:Scalar less:Word(Unknown,Unknown--Scalar) -- )
-  -> [ p off n t w less ]
   n 2 w * + 1 - 2 w * / [times| r |
     2 w * r * -> [ lo ]
     p off t lo lo w + n min lo 2 w * + n min 'less _sort_merge
@@ -116,7 +113,6 @@ end
 end
 
 #sort_by ( p:Ptr off:Scalar n:Scalar less:Word(Unknown,Unknown--Scalar) -- )
-  -> [ p off n less ]
   hmark -> [ mk ]
   n 1 max hnew -> [ t ]
   1 64 [times| k | -> [ w ] w n < cond [ p off n t w 'less _sort_pass w 2 * ] else [ w ] ]
@@ -126,6 +122,5 @@ end
 
 { sorts a Vec with sort_by's order: `v 'by_age vec_sort_by` }
 #vec_sort_by ( v:Vec less:Word(Unknown,Unknown--Scalar) -- )
-  -> [ v less ]
   v vec_data 0 v vec_len 'less sort_by
 end

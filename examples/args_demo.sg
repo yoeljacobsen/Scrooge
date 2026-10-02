@@ -24,25 +24,21 @@ use "util"
   argument is an operand, not a flag: `args_demo ""` names a file whose
   path is the empty string, which f_read_file will then fail to open. }
 #is_flag ( s:Block -- flag:Scalar )
-  -> [ s ] s len 0 >
+  s len 0 >
   cond [ s 0 at 45 = ] else [ 0 ] ?
 end
 
 #keep_step ( idx:Scalar acc:Block val:Block ctx:Scalar -- acc2:Block )
-  -> [ idx acc val ctx ] [
-    val is_flag cond [ acc ] else [ val acc cons ] ?
-  ]
+  val is_flag cond [ acc ] else [ val acc cons ] ?
 end
 #operands ( args:Block -- files:Block )
-  -> [ args ] [
-    args [fold| idx acc val _ | idx acc val 0 keep_step from nil ] reverse
-  ]
+  args [fold| idx acc val _ | idx acc val 0 keep_step from nil ] reverse
 end
 
 { One file: contents to stdout, or just its length when counting.
   ok=0 means the file could not be read. }
 #emit_file ( path:Block counting:Scalar -- ok:Scalar )
-  -> [ path counting ] [ path counting path f_read_file ]
+  path counting path f_read_file
   -> [ path counting text ok ] ok
   cond [
     counting
@@ -58,7 +54,7 @@ end
 end
 
 #emit_step ( idx:Scalar acc:Scalar val:Block ctx:Scalar -- acc2:Scalar )
-  -> [ idx acc val ctx ] [ val ctx emit_file acc and ]
+  val ctx emit_file acc and
 end
 
 #main ( -- )

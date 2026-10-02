@@ -28,10 +28,8 @@
 { ---- BUGFIX_TASK_PLAN.md and PHASE2_HANDOFF.md task #21.                    ---- }
 
 #lst_make ( initial_capacity:Scalar -- ptr:Ptr )
-  -> [ initial_capacity ] [
-    initial_capacity
-    3 hnew
-  ]
+  initial_capacity
+  3 hnew
   -> [ initial_capacity head_ptr ] [
     initial_capacity head_ptr 0 hwrite
     0 head_ptr 1 hwrite
@@ -41,34 +39,30 @@
 end
 
 #lst_get ( ptr:Ptr idx:Scalar -- val:Unknown )
-  -> [ ptr idx ] [ ptr 2 hread idx hread ]
+  ptr 2 hread idx hread
 end
 
 #lst_set ( val:Unknown ptr:Ptr idx:Scalar -- )
-  -> [ val ptr idx ] [ val ptr 2 hread idx hwrite ]
+  val ptr 2 hread idx hwrite
 end
 
 #lst_new_cap ( old_cap:Scalar -- new_cap:Scalar )
-  -> [ old_cap ] old_cap 0 =
+  old_cap 0 =
   cond [ 1 ] else [ old_cap 2 * ] ?
 end
 
 #lst_copy_step ( src:Ptr dst:Ptr idx:Scalar stop:Scalar -- src2:Ptr dst2:Ptr idx2:Scalar stop2:Scalar )
-  -> [ src dst idx stop ] [
-    src idx hread dst idx hwrite
-    src dst idx 1 + stop
-  ]
+  src idx hread dst idx hwrite
+  src dst idx 1 + stop
 end
 #lst_copy_loop ( src:Ptr dst:Ptr idx:Scalar stop:Scalar -- )
-  -> [ src dst idx stop ] [ idx stop < ]
+  idx stop <
   cond [ src dst idx stop lst_copy_step lst_copy_loop ] else [ ] ?
 end
 
 #lst_grow ( ptr:Ptr -- )
-  -> [ ptr ] [
-    ptr
-    ptr 0 hread
-  ]
+  ptr
+  ptr 0 hread
   -> [ ptr old_cap ] [
     ptr
     old_cap
@@ -88,9 +82,7 @@ end
 end
 
 #lst_push ( val:Unknown ptr:Ptr -- )
-  -> [ val ptr ] [
-    ptr 1 hread ptr 0 hread <
-  ]
+  ptr 1 hread ptr 0 hread <
   cond [
     val ptr ptr 1 hread lst_set
     ptr 1 hread 1 + ptr 1 hwrite
@@ -102,9 +94,7 @@ end
 end
 
 #lst_try_push ( val:Unknown ptr:Ptr -- ok:Scalar )
-  -> [ val ptr ] [
-    ptr 1 hread ptr 0 hread <
-  ]
+  ptr 1 hread ptr 0 hread <
   cond [
     val ptr ptr 1 hread lst_set
     ptr 1 hread 1 + ptr 1 hwrite

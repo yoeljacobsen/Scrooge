@@ -38,13 +38,13 @@ end
 { ---- file, no permission, or the 61 openable slots are all in use) and   ---- }
 { ---- the returned handle must not be used.                              ---- }
 #f_open_read ( path:Block -- fh:File ok:Scalar )
-  -> [ path ] [ path f_read fopen ]
+  path f_read fopen
 end
 #f_open_write ( path:Block -- fh:File ok:Scalar )
-  -> [ path ] [ path f_write fopen ]
+  path f_write fopen
 end
 #f_open_append ( path:Block -- fh:File ok:Scalar )
-  -> [ path ] [ path f_append fopen ]
+  path f_append fopen
 end
 
 { ---- Private: reverse and concatenate Blocks. Duplicated from util.sg's ---- }
@@ -57,17 +57,17 @@ end
   [fold| idx acc val _ | val acc cons from nil ]
 end
 #f_cat_loop ( a:Block b:Block -- joined:Block )
-  -> [ a b ] [ a f_rev_loop [fold| idx acc val _ | val acc cons from b ] ]
+  a f_rev_loop [fold| idx acc val _ | val acc cons from b ]
 end
 
 { ---- Sequential write. `fwrite` moves the whole Block in one C-level    ---- }
 { ---- pass, so this is O(len) rather than a word call per character;      ---- }
 { ---- ok=0 means fewer characters were written than the string holds.     ---- }
 #f_write_str ( str:Block fh:File -- ok:Scalar )
-  -> [ str fh ] [ str len str fh fwrite = ]
+  str len str fh fwrite =
 end
 #f_write_line ( str:Block fh:File -- ok:Scalar )
-  -> [ str fh ] [ str fh f_write_str 10 fh fputc and ]
+  str fh f_write_str 10 fh fputc and
 end
 
 { ---- Bulk sequential read: pull chunks until an empty one signals end   ---- }
@@ -83,15 +83,15 @@ end
   65536
 end
 #f_next_chunk ( n:Scalar -- n2:Scalar )
-  -> [ n ] [ n 2 * 4194304 min ]
+  n 2 * 4194304 min
 end
 #f_read_all_loop ( fh:File acc:Block n:Scalar -- str:Block )
-  -> [ fh acc n ] [ fh acc n fh n fread ]
+  fh acc n fh n fread
   -> [ fh acc n chunk ] chunk len 0 =
   cond [ acc ] else [ fh acc chunk f_cat_loop n f_next_chunk f_read_all_loop ] ?
 end
 #f_read_all ( fh:File -- str:Block )
-  -> [ fh ] [ fh nil f_chunk f_read_all_loop ]
+  fh nil f_chunk f_read_all_loop
 end
 
 { ---- Line-at-a-time sequential read, one C pass per line (the          ---- }
@@ -108,17 +108,17 @@ end
 { ---- or the close failed; on a failed open the result is the empty       ---- }
 { ---- Block, never a partial file passed off as complete.                 ---- }
 #f_read_file ( path:Block -- str:Block ok:Scalar )
-  -> [ path ] [ path f_open_read ]
+  path f_open_read
   -> [ fh ok ] ok not
   cond [ nil 0 ] else [ fh f_read_all fh fclose ] ?
 end
 #f_write_file ( str:Block path:Block -- ok:Scalar )
-  -> [ str path ] [ str path f_open_write ]
+  str path f_open_write
   -> [ str fh ok ] ok not
   cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
 end
 #f_append_file ( str:Block path:Block -- ok:Scalar )
-  -> [ str path ] [ str path f_open_append ]
+  str path f_open_append
   -> [ str fh ok ] ok not
   cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
 end
@@ -130,20 +130,20 @@ end
   unchanged. Self-contained like every lexicon, so it joins with its own
   loop rather than util's concat. }
 #feh_cat_loop ( a:Block b:Block i:Scalar -- ab:Block )
-  -> [ a b i ] i 0 = cond [ b ] else [ a a i 1 - at b cons i 1 - feh_cat_loop ]
+  i 0 = cond [ b ] else [ a a i 1 - at b cons i 1 - feh_cat_loop ]
 end
 #feh_join_check ( path:Block -- path2:Block )
-  -> [ path ] "HOME" getenv -> [ home ok ] [
+  "HOME" getenv -> [ home ok ] [
     ok cond [ home path 1 path len block_slice home len feh_cat_loop ] else [ path ]
   ]
 end
 #feh_tilde_check ( path:Block -- path2:Block )
-  -> [ path ] path len 1 = cond [ path feh_join_check ] else [
+  path len 1 = cond [ path feh_join_check ] else [
     path 1 at 47 = cond [ path feh_join_check ] else [ path ]
   ]
 end
 #f_expand_home ( path:Block -- path2:Block )
-  -> [ path ] path len 0 = cond [ path ] else [
+  path len 0 = cond [ path ] else [
     path 0 at 126 = cond [ path feh_tilde_check ] else [ path ]
   ]
 end

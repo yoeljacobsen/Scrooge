@@ -5,33 +5,33 @@
 
 { ---- Print a whole string to stdout ---- }
 #sp_step ( idx:Scalar acc:Scalar val:Scalar ctx:Scalar -- acc2:Scalar )
-  -> [ idx acc val ctx ] [ val print_char acc ]
+  val print_char acc
 end
 #str_print ( str:Block -- )
-  -> [ str ] [ str [fold| idx acc val _ | idx acc val 0 sp_step from 0 ] drop ]
+  str [fold| idx acc val _ | idx acc val 0 sp_step from 0 ] drop
 end
 
 { ---- Character predicates (fixed comparisons; return 1/0) ---- }
 #is_digit ( ch:Scalar -- flag:Scalar )
-  -> [ ch ] [ ch 47 > ch 58 < and ]
+  ch 47 > ch 58 < and
 end
 #is_space ( ch:Scalar -- flag:Scalar )
-  -> [ ch ] [ ch 32 = ch 9 = or ch 10 = or ch 13 = or ]
+  ch 32 = ch 9 = or ch 10 = or ch 13 = or
 end
 #is_upper ( ch:Scalar -- flag:Scalar )
-  -> [ ch ] [ ch 64 > ch 91 < and ]
+  ch 64 > ch 91 < and
 end
 #is_lower ( ch:Scalar -- flag:Scalar )
-  -> [ ch ] [ ch 96 > ch 123 < and ]
+  ch 96 > ch 123 < and
 end
 
 { ---- Integer -> string (supports negative integers) ---- }
 #its_loop ( n:Scalar acc:Block -- result:Block )
-  -> [ n acc ] [ n 0 = ]
+  n 0 =
   cond [ acc ] else [ n 10 / n 10 \ 48 + acc cons its_loop ] ?
 end
 #int_to_str ( n:Scalar -- str:Block )
-  -> [ n ] [ n 0 = ]
+  n 0 =
   cond [ "0" ] else [ n 0 < cond [ 45 0 n - nil its_loop cons ] else [ n nil its_loop ] ? ] ?
 end
 
@@ -40,10 +40,10 @@ end
 { int_to_str_pad pads with zeros to a total width, the sign counted in it,
   as printf's %0Nd does: -5 3 int_to_str_pad is "-05". }
 #itsp_pad_loop ( s:Block neg:Scalar width:Scalar -- s2:Block )
-  -> [ s neg width ] s len neg + width < cond [ 48 s cons neg width itsp_pad_loop ] else [ s ]
+  s len neg + width < cond [ 48 s cons neg width itsp_pad_loop ] else [ s ]
 end
 #int_to_str_pad ( n:Scalar width:Scalar -- s:Block )
-  -> [ n width ] [ n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 swap cons ] ]
+  n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 swap cons ]
 end
 { print_fixed prints an integer as a fixed-point number with `decimals`
   digits after the point: 12345 3 print_fixed is 12.345, -5 2 is -0.05,
@@ -53,39 +53,37 @@ end
   "Modulo requires integers" and the words that called print_fixed,
   instead of printing half a number first. }
 #pf_pow10_loop ( d:Scalar acc:Scalar -- p:Scalar )
-  -> [ d acc ] d 0 = cond [ acc ] else [ d 1 - acc 10 * pf_pow10_loop ]
+  d 0 = cond [ acc ] else [ d 1 - acc 10 * pf_pow10_loop ]
 end
 #print_fixed ( v:Scalar decimals:Scalar -- )
   -> [ v d ] [
     v abs -> [ a ] [ d 1 pf_pow10_loop -> [ sc ] [ a sc \ -> [ fr ] [
-      v 0 < cond [ 45 print_char ]
-      a sc / print_int
-      d 0 > cond [ 46 print_char fr d int_to_str_pad str_print ]
-    ] ] ]
+          v 0 < cond [ 45 print_char ]
+          a sc / print_int
+          d 0 > cond [ 46 print_char fr d int_to_str_pad str_print ]
+        ] ] ]
   ]
 end
 
 #print_line ( n:Scalar -- )
-  -> [ n ] [ n int_to_str str_print 10 print_char ]
+  n int_to_str str_print 10 print_char
 end
 
 { ---- String -> integer (multi-digit, signed, found-flag rather than a  ---- }
 { ---- sentinel). ok=0 for an empty range or any non-digit character in  ---- }
 { ---- [start,end) other than a single optional leading '-'.            ---- }
 #s2i_step ( chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar -- chars2:Block idx2:Scalar stop2:Scalar acc2:Scalar ok2:Scalar )
-  -> [ chars idx stop acc ok ] [
-    chars idx array_at -> [ ch ] [
-      ch is_digit
-      cond [
-        chars idx 1 + stop acc 10 * ch 48 - + 1
-      ] else [
-        chars stop stop acc 0
-      ] ?
-    ]
+  chars idx array_at -> [ ch ] [
+    ch is_digit
+    cond [
+      chars idx 1 + stop acc 10 * ch 48 - + 1
+    ] else [
+      chars stop stop acc 0
+    ] ?
   ]
 end
 #s2i_loop ( chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar -- acc2:Scalar ok2:Scalar )
-  -> [ chars idx stop acc ok ] [ idx stop < ]
+  idx stop <
   cond [ chars idx stop acc ok s2i_step s2i_loop ] else [ acc ok ] ?
 end
 { Note: the parameter is documented as `end` in the signature (harmless --
@@ -125,24 +123,22 @@ end
 { ---- i >= from. Compares characters in place (no substring is ever      ---- }
 { ---- materialized); found=0, pos=0 if there is no such i.               ---- }
 #fs_cmp_step ( hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar -- hay2:Block needle2:Block i2:Scalar j2:Scalar nlen2:Scalar ok2:Scalar )
-  -> [ hay needle i j nlen ok ] [
-    hay needle i
-    hay i j + array_at needle j array_at =
-    cond [ j 1 + nlen 1 ] else [ nlen nlen 0 ] ?
-  ]
+  hay needle i
+  hay i j + array_at needle j array_at =
+  cond [ j 1 + nlen 1 ] else [ nlen nlen 0 ] ?
 end
 #fs_cmp_loop ( hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar -- match:Scalar )
-  -> [ hay needle i j nlen ok ] [ j nlen < ok and ]
+  j nlen < ok and
   cond [ hay needle i j nlen ok fs_cmp_step fs_cmp_loop ] else [ ok ] ?
 end
 #fs_matches_at ( hay:Block needle:Block i:Scalar nlen:Scalar -- match:Scalar )
-  -> [ hay needle i nlen ] [ hay needle i 0 nlen 1 fs_cmp_loop ]
+  hay needle i 0 nlen 1 fs_cmp_loop
 end
 #fs_scan_step ( hay:Block needle:Block i:Scalar hlen:Scalar nlen:Scalar -- hay2:Block needle2:Block i2:Scalar hlen2:Scalar nlen2:Scalar )
-  -> [ hay needle i hlen nlen ] [ hay needle i 1 + hlen nlen ]
+  hay needle i 1 + hlen nlen
 end
 #fs_scan_loop ( hay:Block needle:Block i:Scalar hlen:Scalar nlen:Scalar -- pos:Scalar found:Scalar )
-  -> [ hay needle i hlen nlen ] [ i nlen + hlen > not ]
+  i nlen + hlen > not
   cond [
     hay needle i nlen fs_matches_at
     cond [ i 1 ] else [ hay needle i hlen nlen fs_scan_step fs_scan_loop ] ?
@@ -155,5 +151,5 @@ end
   because lexicon source was never run through the checker at all; a gate now
   requires every library/*.sg to pass --check-only standalone. }
 #find_sub ( hay:Block needle:Block start:Scalar -- pos:Scalar found:Scalar )
-  -> [ hay needle start ] [ hay needle start hay len needle len fs_scan_loop ]
+  hay needle start hay len needle len fs_scan_loop
 end

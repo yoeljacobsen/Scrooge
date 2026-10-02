@@ -10,13 +10,11 @@
 #type IntMap Ptr end
 
 #map_make ( buckets_size:Scalar -- m:IntMap )
-  -> [ buckets_size ] [
-    buckets_size 2 * hnew -> [ data_ptr ] [
-      2 hnew -> [ hdr ] [
-        buckets_size hdr 0 hwrite
-        data_ptr hdr 1 hwrite
-        hdr IntMap_of
-      ]
+  buckets_size 2 * hnew -> [ data_ptr ] [
+    2 hnew -> [ hdr ] [
+      buckets_size hdr 0 hwrite
+      data_ptr hdr 1 hwrite
+      hdr IntMap_of
     ]
   ]
 end
@@ -26,11 +24,9 @@ end
 end
 
 #map_find ( m:IntMap key:Scalar -- val:Unknown found:Scalar )
-  -> [ m key ] [
-    m IntMap_raw 1 hread
-    key
-    key m IntMap_raw 0 hread map_hash
-  ]
+  m IntMap_raw 1 hread
+  key
+  key m IntMap_raw 0 hread map_hash
   -> [ data_ptr key bucket_idx ] [
     data_ptr bucket_idx hread key =
     cond [
@@ -44,11 +40,9 @@ end
 end
 
 #map_get ( m:IntMap key:Scalar -- val:Unknown )
-  -> [ m key ] [
-    m IntMap_raw 1 hread
-    key
-    key m IntMap_raw 0 hread map_hash
-  ]
+  m IntMap_raw 1 hread
+  key
+  key m IntMap_raw 0 hread map_hash
   -> [ data_ptr key bucket_idx ] [
     data_ptr bucket_idx hread key =
     cond [
@@ -66,12 +60,10 @@ end
 { "the table is full" -- the alternative (silently overwriting) would }
 { corrupt the other key's entry with no signal to the caller. }
 #map_set ( val:Unknown m:IntMap key:Scalar -- ok:Scalar )
-  -> [ val m key ] [
-    val
-    m IntMap_raw 1 hread
-    key
-    key m IntMap_raw 0 hread map_hash
-  ]
+  val
+  m IntMap_raw 1 hread
+  key
+  key m IntMap_raw 0 hread map_hash
   -> [ val data_ptr key bucket_idx ] [
     val
     data_ptr

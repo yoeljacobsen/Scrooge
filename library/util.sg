@@ -14,27 +14,25 @@ end
   [fold| idx acc val _ | acc val + from 0 ]
 end
 #contains ( block:Block target:Scalar -- flag:Scalar )
-  -> [ block target ] [ target block [fold| idx acc val ctx | acc val ctx = or from 0 ] ]
+  target block [fold| idx acc val ctx | acc val ctx = or from 0 ]
 end
 #feq_step ( idx:Scalar acc:Block val:Scalar ctx:Scalar -- acc2:Block )
-  -> [ idx acc val ctx ] [ val ctx = ]
+  val ctx =
   cond [ val acc cons ] else [ acc ] ?
 end
 #filter_eq ( block:Block target:Scalar -- filtered:Block )
-  -> [ block target ] [
-    target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
-  ]
+  target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
   reverse
 end
 #idx_step ( idx:Scalar acc:Scalar val:Scalar ctx:Scalar -- acc2:Scalar )
-  -> [ idx acc val ctx ] [ acc -1 = val ctx = and ]
+  acc -1 = val ctx = and
   cond [ idx ] else [ acc ] ?
 end
 #index_of ( block:Block target:Scalar -- idx:Scalar )
-  -> [ block target ] [ target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ] ]
+  target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ]
 end
 #concat ( b1:Block b2:Block -- joined:Block )
-  -> [ b1 b2 ] [ b1 reverse [fold| idx acc val _ | val acc cons from b2 ] ]
+  b1 reverse [fold| idx acc val _ | val acc cons from b2 ]
 end
 
 #>= ( a:Scalar b:Scalar -- bool:Scalar )
@@ -53,11 +51,11 @@ end
   ("Fatal: len operand must be a block/list"); `=` alone would compare it
   and carry on. They keep that behaviour, in the same order, for O(1). }
 #block_eq ( b1:Block b2:Block -- equal:Scalar )
-  -> [ b1 b2 ] [ b1 len drop b2 len drop b1 b2 = ]
+  b1 len drop b2 len drop b1 b2 =
 end
 
 #insert_sort_step ( idx:Scalar acc:Block val:Unknown ctx:Unknown -- acc2:Block )
-  -> [ idx acc val ctx ] acc 0 at
+  acc 0 at
   cond [
     val acc 1 at cons acc 0 at swap pair
   ] else [
@@ -70,12 +68,10 @@ end
   ] ?
 end
 #insert_sorted ( val:Unknown blk:Block -- result:Block )
-  -> [ val blk ] [
-    val blk [fold| idx acc elem x | idx acc elem x insert_sort_step from [ 0 nil ] ]
-    -> [ res_pair ] res_pair 0 at 0 =
-    cond [ val res_pair 1 at cons ] else [ res_pair 1 at ] ?
-    reverse
-  ]
+  val blk [fold| idx acc elem x | idx acc elem x insert_sort_step from [ 0 nil ] ]
+  -> [ res_pair ] res_pair 0 at 0 =
+  cond [ val res_pair 1 at cons ] else [ res_pair 1 at ] ?
+  reverse
 end
 { block_sort was an insertion sort that rebuilt its result on every insert:
   O(n^2) comparisons and allocations. It now copies into a marked heap
@@ -85,21 +81,19 @@ end
   in byte order and a Block of rows column by column; numbers sort before
   Blocks. A Ptr element is a fatal error. }
 #bsort_fill_step ( idx:Scalar acc:Scalar val:Unknown p:Ptr -- acc2:Scalar )
-  -> [ idx acc val p ] [ val p idx hwrite acc ]
+  val p idx hwrite acc
 end
 #bsort_collect_loop ( p:Ptr i:Scalar acc:Block -- sorted:Block )
-  -> [ p i acc ] i 0 = cond [ acc ] else [ p i 1 - p i 1 - hread acc cons bsort_collect_loop ]
+  i 0 = cond [ acc ] else [ p i 1 - p i 1 - hread acc cons bsort_collect_loop ]
 end
 #block_sort ( blk:Block -- sorted:Block )
-  -> [ blk ] [
-    hmark -> [ m ] [
-      blk len -> [ n ] [
-        n hnew -> [ p ] [
-          p blk [fold| idx acc val p2 | idx acc val p2 bsort_fill_step from 0 ] drop
-          p 0 n hsort
-          p n nil bsort_collect_loop
-          m hrelease
-        ]
+  hmark -> [ m ] [
+    blk len -> [ n ] [
+      n hnew -> [ p ] [
+        p blk [fold| idx acc val p2 | idx acc val p2 bsort_fill_step from 0 ] drop
+        p 0 n hsort
+        p n nil bsort_collect_loop
+        m hrelease
       ]
     ]
   ]
@@ -110,22 +104,22 @@ end
 { ---- prints msg to stderr and exits nonzero; a true flag costs one ---- }
 { ---- test. For looking at a value while debugging, see `trace`.   ---- }
 #assert ( ok:Scalar msg:Block -- )
-  -> [ ok msg ] ok cond [ ] else [ msg abort ]
+  ok cond [ ] else [ msg abort ]
 end
 { ---- Test helpers, for #test_ words run by `scroogec_fast --test`: each     ---- }
 { ---- returns its flag, so several combine with `and`, and prints the      ---- }
 { ---- message (and the values) when it fails.                              ---- }
-#ex_say_step ( s:Block -- ) -> [ s ] s [fold| i acc c _ | c print_char acc from 0 ] drop end
+#ex_say_step ( s:Block -- ) s [fold| i acc c _ | c print_char acc from 0 ] drop end
 #ex_num_step ( x:Unknown -- )
-  -> [ x ] x type_of 0 = cond [ x print_int ] else [
+  x type_of 0 = cond [ x print_int ] else [
     x type_of 1 = cond [ x 6 print_float ] else [ "(not a number)" ex_say_step ] ?
   ] ?
 end
 #expect ( ok:Scalar msg:Block -- ok2:Scalar )
-  -> [ ok msg ] ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
+  ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
 end
 #expect_eq ( got:Unknown want:Unknown msg:Block -- ok:Scalar )
-  -> [ got want msg ] got want = -> [ ok ] [
+  got want = -> [ ok ] [
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step 10 print_char
@@ -133,7 +127,7 @@ end
   ]
 end
 #expect_near ( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Scalar )
-  -> [ got want tol msg ] got want - abs tol > not -> [ ok ] [
+  got want - abs tol > not -> [ ok ] [
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step " within " ex_say_step tol ex_num_step 10 print_char

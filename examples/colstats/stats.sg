@@ -26,11 +26,11 @@ end
 #st_max ( p:Ptr n:Scalar -- x:Scalar ) 'max _reduce end
 
 { a sorted copy, so the median leaves the caller's cells as they were }
-#_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) -> [ p n ] n hnew -> [ q ] p 0 q 0 n hmove q 0 n hsort q end
+#_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) n hnew -> [ q ] p 0 q 0 n hmove q 0 n hsort q end
 
 { the middle of n sorted values: the middle one, or the mean of the two middle ones }
 #_middle ( q:Ptr n:Scalar -- m:Scalar )
-  -> [ q n ] n 2 / -> [ h ]
+  n 2 / -> [ h ]
   n 2 \ 1 = cond [ q h hread ] else [ q h 1 - hread q h hread + 2.0 / ] ?
 end
 
