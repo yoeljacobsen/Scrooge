@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.63)
+# Skill: Writing Correct Scrooge (v1.64)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -8,7 +8,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 
 Learn the language from its documents and from small experiments, in this order:
 
-1. **Read the specification** (`spec/scrooge_spec_v1_63.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+1. **Read the specification** (`spec/scrooge_spec_v1_64.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 2. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 3. **Look every word up in `library/manifest.sm`**: one typed line per library word (`tool`) with a one-line description, and one per primitive (`prim`), e.g. `hwrite ( v:Unknown p:Ptr i:Scalar -- )`. Spec Sec.8 lists the same signatures per lexicon. It is generated from the sources and checked against the compiler, so it is exact. Check it before writing a helper: sorting, string conversion, argument parsing, bit counts, file reading and more already exist.
 4. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
@@ -63,7 +63,7 @@ Build every program from small words, each doing one job, and combine them into 
 
 **Private helpers.** In a module, a word whose name starts with `_` (`#_sq_dev`) is visible only in that file, so helpers do not crowd the program's namespace and two modules can each have their own `_step`.
 
-**State travels in records.** When several words need the same five values, keep them in a `#record` and pass its Ptr: the getters are small words, so reading a field costs no call. A getter consumes the Ptr like any word taking an input: `tb TB_bcnt` leaves only the field, so a call that needs the record and one of its fields pushes the record twice: `tb tb TB_bcnt tb_apply` (with `tb` a frame name, each mention pushes it again).
+**State travels in records.** When several words need the same five values, keep them in a `#record` and pass its Ptr: the getters are small words, so reading a field costs no call. A getter consumes the Ptr like any word taking an input: `tb TB_bcnt` leaves only the field, so a call that needs the record and one of its fields pushes the record twice: `tb tb TB_bcnt tb_apply` (with `tb` a frame name, each mention pushes it again). A field's offset word takes no record: `Tab_cols_off` is the cell where the field starts, so write `Tab_cols_off`, not `t Tab_cols_off`.
 
 **Comments nest, so braces in comment text must pair.** `{ ... }` comments nest (spec section 1), so a lone `}` in the prose (`{ the } ends here }`) closes the comment, and the rest of the line is read as code (as unknown words). Write braces in comment text in pairs, or not at all.
 
@@ -123,7 +123,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `array_at` / `list_at` / `block_at` or `at`.
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
-- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically). Use them instead of a per-cell loop.
+- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically; a cell holding a Ptr anywhere inside it, `hnull` included, stops the program, so a NULL marker in rows to be sorted must be a number or a Block). Use them instead of a per-cell loop.
 - **An absent link**: `hnull` is a Ptr that refers to nothing (a tree's missing child, an empty list head). Test it with `p hnull =`; reading or writing through it is a fatal error.
 - **Memory**: a Block owns the Blocks inside it and frees them with itself, and a heap cell owns what it holds, so nested data costs nothing once released. Bracket per-item work with `hmark`/`hrelease` so a long run does not keep every allocation alive.
 - **Heap state with named fields**: declare it with `#record Name  field Type count ...  end` (spec Sec.5) instead of hand-numbering offsets. It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` (both take an index argument unless the count is 1: a count-1 setter is `v s Name_field_set`, with no index) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset: `#record Board cells Scalar 81 solved Scalar 1 end` then `Board_new -> [ b ] [ 5 b 0 Board_cells_set 1 b Board_solved_set b 0 Board_cells print_int ]`.
@@ -250,13 +250,13 @@ use "args"
 
 ## 6d. Your Own Modules
 
-A program of more than a few hundred lines belongs in several files. `use "geo"` loads the file "geo.sg" from the directory of the file that says it (when no library lexicon is called `geo`), and a relative path works too, so a test in `t/` can say `use "../src/geo"`; a module is ordinary Scrooge (word definitions and its own `use` lines), modules may use each other, and each is loaded once. Errors, warnings, runtime word chains and `trace` name the module and its own line: `REJECT UnknownWordError geo.sg line 2 ...`. Give each module a test program that `use`s it.
+A program of more than a few hundred lines belongs in several files. Each module `use`s the lexicons and modules it calls: a whole-program build also finds a lexicon that only another module imports, but `--check-only` or `--test` on that module alone rejects the call. `use "geo"` loads the file "geo.sg" from the directory of the file that says it (when no library lexicon is called `geo`), and a relative path works too, so a test in `t/` can say `use "../src/geo"`; a module is ordinary Scrooge (word definitions and its own `use` lines), modules may use each other, and each is loaded once. Errors, warnings, runtime word chains and `trace` name the module and its own line: `REJECT UnknownWordError geo.sg line 2 ...`. Give each module a test program that `use`s it.
 
 ---
 
 ## 7. Failure Checklist (Check Before Emitting Code)
 
-1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `and_then`, `or_else`, `sort_cmp`, `fwrite_from`). This is the list in spec Sec.10.
+1. **Reserved Words**: Never use reserved words as parameter names or frame aliases (`use`, `lexicon`, `to`, `from`, `and`, `or`, `not`, `cond`, `else`, `map`, `fold`, `pk`, `roll`, `select`, `nil`, `cons`, `pair`, `end`, `dup`, `drop`, `swap`, `rot`, `over`, `fill`, `len`, `seed`, `rand`, `exp`, `log`, `pow`, `sqrt`, `floor`, `abs`, `max`, `min`, `to_float`, `bitand`, `bitor`, `bitxor`, `bitshl`, `bitshr`, `bitnot`, `hnew`, `hread`, `hwrite`, `print_char`, `print_int`, `abort`, `hmark`, `hrelease`, `fopen`, `fclose`, `fgetc`, `fputc`, `fread`, `fwrite`, `argc`, `argv`, `clock_ns`, `block_slice`, `bitcount`, `bitctz`, `bitclz`, `hsort`, `print_float`, `getenv`, `freadline`, `fread_into`, `fseek`, `ftell`, `trace`, `hmove`, `hfill`, `exit`, `to_int`, `float_to_str`, `type_of`, `hnull`, `when`, `unless`, `and_then`, `or_else`, `sort_cmp`, `fwrite_from`, `fflush`). This is the list in spec Sec.10.
 2. **Lexicon Shadowing**: Never define a `#word` that shadows a `use`-imported word or standard primitive; the error names what it collides with.
 3. **Unbracketed `cond` Condition**: Ensure `cond` condition is unbracketed expression (`flag cond [ ... ] else [ ... ]`).
 4. **Only Five Stack Shufflers**: `dup`, `drop`, `swap`, `rot`, `over`. There is no `pk`, `roll` or `nip`: each is an `UnknownWordError` (`pk` and `roll` are reserved for a possible future implementation). When a value is needed deeper than `over` reaches, bind it with a frame.
@@ -276,7 +276,7 @@ From the repository root:
 compiler/scroogec_fast -L library --check-only prog.sg   # ACCEPT, or every error found
 compiler/scroogec_fast -L library -O0 -o prog prog.sg     # fast build while developing
 compiler/scroogec_fast -L library -o prog prog.sg         # optimised build (-O3)
-compiler/scroogec_fast -L library --test src/stats.sg      # run the file's #test_ words (section 1)
+compiler/scroogec_fast -L library --test src/stats.sg      # run the file's #test_ words (section 1); --test-timeout N (default 600 s)
 compiler/scroogec_fast --words src/stats.sg                # every word, its lines and size in tokens
 ```
 
@@ -325,7 +325,7 @@ A program that runs for minutes can also run away: an unbounded join, a leak, a 
 
 - **Cap its memory** when you run it: `(ulimit -v 4000000; ./prog ...)` stops it at about 4 GB instead of letting it exhaust the machine.
 - **Start small**: run on the first few inputs (a `-n` flag) before the whole data set, and scale up only when the small run is correct and its time and memory look proportionate.
-- **Make it report progress** (a line every N items, to stderr) so a stalled or slowing run is visible.
+- **Make it report progress** (a line every N items) so a stalled or slowing run is visible: write it to stderr (`f_stderr`, unbuffered), or to stdout followed by `f_stdout fflush drop`, since redirected stdout is buffered and would show nothing until the buffer fills.
 - **Measure memory as resident memory**: `VmHWM` in `/proc/self/status` (`proc_peak_kb` in the procinfo lexicon), or the maximum resident set size from `/usr/bin/time -v`. `VmPeak` counts reserved address space too (every program reserves a 1 GB stack it mostly never touches), so it overstates by about 1 GB.
 - **Watch it and stop it early**: if memory keeps growing, progress stops, or the output is already wrong, kill it and fix the cause rather than waiting for it to finish.
 

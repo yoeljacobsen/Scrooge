@@ -1,6 +1,15 @@
-# Scrooge Programming Language (v1.63)
+# Scrooge Programming Language (v1.64)
 
-Repository status: **Scrooge v1.63**.
+Repository status: **Scrooge v1.64**.
+
+### What changed in v1.64
+
+Every program in this project's corpus that compiled under v1.63 still compiles, with the same output. A word named `fflush` is now rejected (it is a new primitive).
+
+- **`fflush ( fh -- ok )`** writes out buffered output now: redirected stdout is block-buffered, so a long run's progress lines on stdout stayed invisible until the end.
+- **`--test` stops a test that never ends**, after 600 s by default (`--test-timeout N`), keeping the PASS/FAIL lines already printed, and reports the timeout as a failure.
+- **Clearer messages.** An input name that is unbound because the body begins with its own frame says so and shows the frame to write; `LargeWord` names its limit (60 tokens or 3 levels) plainly; `--words` marks a word over 60 tokens.
+- **Docs.** A record field's offset word takes no record (`Tab_cols_off`, not `t Tab_cols_off`); `hsort` stops on a row holding a Ptr, `hnull` included; each module must `use` the lexicons it calls (a whole-program build is more lenient than checking the module alone); progress output and `fflush`.
 
 ### What changed in v1.63
 
@@ -244,7 +253,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 
 ## 2. Language Specification & Skill Guide
 
-- **Core Language Specification**: [`spec/scrooge_spec_v1_63.txt`](spec/scrooge_spec_v1_63.txt) (defines v1.63 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_64.txt`](spec/scrooge_spec_v1_64.txt) (defines v1.64 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
