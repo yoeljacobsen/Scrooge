@@ -1,6 +1,10 @@
-# Scrooge Programming Language (v1.75)
+# Scrooge Programming Language (v1.76)
 
-Repository status: **Scrooge v1.75**.
+Repository status: **Scrooge v1.76**.
+
+### What changed in v1.76
+
+- The `ArgumentOrder` warning no longer fires for commutative primitives (`+`, `*`, `=`, `!=`, `and`, `or`, `bitand`, `bitor`, `bitxor`, `min` and `max`). Swapped operands of these mean the same thing. `b a -` still warns.
 
 ### What changed in v1.75
 
@@ -384,7 +388,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_75.txt`](spec/scrooge_spec_v1_75.txt) (defines v1.75 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_76.txt`](spec/scrooge_spec_v1_76.txt) (defines v1.76 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
