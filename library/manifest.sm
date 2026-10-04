@@ -149,7 +149,7 @@ tool "vec" name "vec_pop" sig "( v:Vec -- x:Unknown )" desc "Removes and returns
 tool "vec" name "vec_clear" sig "( v:Vec -- )" desc "Empties the Vec, keeping its capacity."
 tool "vec" name "vec_from_block" sig "( b:Block -- v:Vec )" desc "A Vec holding the elements of b, in order."
 tool "vec" name "vec_to_block" sig "( v:Vec -- b:Block )" desc "The values as a Block, in order."
-tool "vec" name "vec_sort" sig "( v:Vec -- )" desc "Sorts the values ascending as hsort orders them (numbers by value, strings and rows element by element), stably."
+tool "vec" name "vec_sort" sig "( v:Vec -- )" desc "Sorts the values ascending as hsort orders them (numbers by value, strings and rows element by element), stably. A Ptr value (a Vec, a Dict, hnull) stops the program: sort rows as Blocks or #struct values, and turn a NULL into a number first."
 tool "vec" name "sort_by" sig "( p:Ptr off:Scalar n:Scalar less:Word(Unknown,Unknown--Scalar) -- )" desc "Sorts the n cells of p from off, stably, in the order of the word passed: less ( a b -- f ) is nonzero when a must come before b. `p 0 n 'by_age sort_by`."
 tool "vec" name "vec_sort_by" sig "( v:Vec less:Word(Unknown,Unknown--Scalar) -- )" desc "Sorts the Vec as sort_by does: `v 'by_age vec_sort_by`."
 
@@ -182,7 +182,7 @@ prim name "hread" sig "( p:Ptr i:Scalar -- v:Unknown )" desc "Read heap cell i. 
 prim name "hwrite" sig "( v:Unknown p:Ptr i:Scalar -- )" desc "Write v into heap cell i. Note the value comes first."
 prim name "hmark" sig "( -- mark:Scalar )" desc "Mark the heap arena (spec Sec.5)."
 prim name "hrelease" sig "( mark:Scalar -- )" desc "Release every heap cell allocated since mark."
-prim name "hsort" sig "( p:Ptr start:Scalar count:Scalar -- )" desc "Sort heap cells [start, start+count) ascending, in place, stably, ordered as `<` orders; a non-number cell is a fatal error."
+prim name "hsort" sig "( p:Ptr start:Scalar count:Scalar -- )" desc "Sort heap cells [start, start+count) ascending, in place, stably: numbers by value, Blocks (strings, rows, #struct values) element by element. A cell holding a Ptr (a Vec, a Dict, hnull) is a fatal error."
 prim name "+" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Add."
 prim name "-" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Subtract."
 prim name "*" sig "( a:Scalar b:Scalar -- c:Scalar )" desc "Multiply."
