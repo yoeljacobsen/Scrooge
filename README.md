@@ -1,6 +1,20 @@
-# Scrooge Programming Language (v1.76)
+# Scrooge Programming Language (v1.77)
 
-Repository status: **Scrooge v1.76**.
+Repository status: **Scrooge v1.77**.
+
+### What changed in v1.77
+
+Fast numeric kernels, one checker hole closed, and stricter integer operations. A program changes only if it used the new names, passed floats to the bit operations, or had a body that takes more values than its inputs.
+
+- **Kernels over compact arrays**, written in C and vectorised:
+  - `floats_dot`, `floats_axpy` (y += g·x), `floats_add`, `floats_mul`, `floats_scale`, `floats_sum`, `floats_max`, `floats_argmax`, and `floats_from_bytes` (pixels to floats);
+  - `ints_sum`, `ints_max`, `ints_argmax`;
+  - `bytes_be32`/`bytes_le32` (signed) and `bytes_be16`/`bytes_le16` (unsigned), for binary headers.
+
+  Every range is checked. A QMNIST trainer whose loops were rewritten with them ran 2.8 times faster (22,000 against 7,900 images/s).
+- **A word whose body takes more values than its inputs is rejected**, even when its net effect balances: `test_images dir -> [ ti ]` used to pass the check and stop at run time with Stack underflow. The message names the call where the stack runs out.
+- **The bit operations check that their operands are integers.** Until now a float's raw bits were silently used: `2.5 1 bitand` gave 0. They now stop and name the float, and so does `\`.
+- **`ArgumentOrder` warns only when two arguments are swapped**, not when a name merely equals another parameter's (a loop index `v` stored with `hwrite`).
 
 ### What changed in v1.76
 
@@ -388,7 +402,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_76.txt`](spec/scrooge_spec_v1_76.txt) (defines v1.76 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_77.txt`](spec/scrooge_spec_v1_77.txt) (defines v1.77 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
