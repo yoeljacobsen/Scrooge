@@ -1,6 +1,15 @@
-# Scrooge Programming Language (v1.80)
+# Scrooge Programming Language (v1.81)
 
-Repository status: **Scrooge v1.80**.
+Repository status: **Scrooge v1.81**.
+
+### What changed in v1.81
+
+Control flow. Nothing breaks except a word named `until` or `while`, which are now reserved (none of the benchmark programs had one).
+
+- **Stopping a loop early** (as in Common Lisp's `loop`): `until [ c ]` or `while [ c ]` as the first thing in a `times`/`for` body ends the loop before a trip. The test sees the index and the names in scope, and may read a value the loop carries: `0 100 [times| i | until [ dup 20 > ] i + ]`.
+- **Search:** `n [find| i | c ]` leaves the first i whose c is true, or -1, and stops there: `v vec_len [find| i | v i vec_get k = ]`.
+- **Words calling each other in tail position run as a loop**, like a word calling itself: a two- or three-word state machine runs ten million trips without the 65,536-call limit. `MutualRecursion` now warns only about a cycle through a word without inputs, which still nests a call each trip.
+- **`-> [ x ] [ 1 2 3 ]`** (a data literal right after a frame, which is read as the frame's body) gets the hint "write `[ [ 1 2 3 ] ]` or put the literal before the frame" wherever it is in the word, not only at its end.
 
 ### What changed in v1.80
 
@@ -441,7 +450,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_80.txt`](spec/scrooge_spec_v1_80.txt) (defines v1.80 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_81.txt`](spec/scrooge_spec_v1_81.txt) (defines v1.81 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

@@ -1,12 +1,12 @@
-# Scrooge v1.80 Workspace Rules & Agent Directives
+# Scrooge v1.81 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_80.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_81.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
 ## 1. Antigravity Agent Directives
 
-1. **Enforce Postfix Stack Syntax:** Scrooge is strictly a postfix stack language. Infix and imperative constructs (`fn`, `ret`, `while`, `.push`, `.pop`, a C-style `for`) do not exist; the counted loops are `n [times| i | body ]` and `lo hi [for| i | body ]`. Counted loops are `[times| ]` / `[for| ]`; other loops are tail-recursive words, and only direct self-recursion in terminal position runs as a loop.
+1. **Enforce Postfix Stack Syntax:** Scrooge is strictly a postfix stack language. Infix and imperative constructs (`fn`, `ret`, a C-style `while` statement, `.push`, `.pop`, a C-style `for`) do not exist; the counted loops are `n [times| i | body ]` and `lo hi [for| i | body ]`. Counted loops are `[times| ]` / `[for| ]`; other loops are tail-recursive words: a word calling itself in terminal position, or words calling each other there with their state as inputs, run as a loop.
 2. **First-Pass Static Verification Invariant:** Code is only valid when the checker prints `ACCEPT`:
    ```bash
    compiler/scroogec_fast -L library --check-only <file.sg>
@@ -20,7 +20,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.80 Language Reference
+## 2. Core Scrooge v1.81 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -60,7 +60,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
   - A closing `?` after the last branch is optional (older code writes `... else [ f ] ?`). A `?` or `else` anywhere else is a ParseError.
   - Iterators: `[map| idx val ctx | body ]` and `[fold| idx acc val ctx | body from init ]` (spec Sec.3).
   - Statements: `a when [ body ]` / `a unless [ body ]` run the body (net effect 0) when a is true / false. Short-circuit values: `a and_then [ b ]` is b if a is true, else 0; `a or_else [ b ]` is 1 if a is true, else b (b evaluated only when needed). `and`/`or` evaluate both sides.
-  - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); the body is net 0 and threads accumulators left below the loop (`0 10 [times| i | i + ]`). No `break`: an early-exit loop is a self-recursive word.
+  - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); the body is net 0 and threads accumulators left below the loop (`0 10 [times| i | i + ]`). To stop early, `until [ c ]` or `while [ c ]` is the first thing in the body; `n [find| i | c ]` leaves the first index whose c is true, or -1.
 * Debugging: `x trace` prints a value and its line to stderr; `flag msg assert` (util) stops on a failed invariant; spec Sec.7 and the skill guide's debugging section.
 * Files: `f_read_line` (one pass per line), `fread_into` (bytes into heap cells), `fseek`/`ftell`.
 * Learning: learn Scrooge from the spec, the skill guide (sections 0 and 0b: how to learn, how to build) and `library/manifest.sm`, then by running small probe programs; not from generated C or compiler internals.

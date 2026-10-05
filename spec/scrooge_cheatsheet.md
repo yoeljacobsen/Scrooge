@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.80)
+# Scrooge on one screen (v1.81)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_80.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_81.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Scalar (an integer or a float), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -11,7 +11,8 @@ Postfix: every word takes its inputs from the stack and leaves its outputs there
 | `f cond [ t ] else [ e ]` | ( f -- ... ) | both branches have the same net effect; with no `else`, the true branch is net 0 |
 | `f when [ b ]`, `f unless [ b ]` | ( f -- ) | body net 0 |
 | `a and_then [ b ]`, `a or_else [ b ]` | ( a -- v ) | short-circuit; the body leaves one value |
-| `n [times| i | b ]`, `lo hi [for| i | b ]` | ( n -- ), ( lo hi -- ) | body net 0; carry state on the stack below: `0 10 [times| i | i + ]` leaves 45 |
+| `n [times| i | b ]`, `lo hi [for| i | b ]` | ( n -- ), ( lo hi -- ) | body net 0; carry state on the stack below: `0 10 [times| i | i + ]` leaves 45; `until [ c ]` / `while [ c ]` first in the body stops it |
+| `n [find| i | c ]` | ( n -- i ) | the first i whose c is true, or -1 |
 | `blk [map| i v _ | b ]` | ( blk -- blk' ) | b ( i v -- v' ) |
 | `blk [fold| i acc v _ | b from init ]` | ( blk -- acc ) | b ( i acc v -- acc' ) |
 | `'w` before a word with a `f:Word(..--..)` input | | compile-time word parameter: `v 'by_age vec_sort_by` |

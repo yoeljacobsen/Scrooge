@@ -179,6 +179,8 @@ prim name "list_set" sig "( b:Block k:Scalar v:Unknown -- b2:Block )" desc "Spel
 prim name "record_set" sig "( r:Block k:Scalar v:Unknown -- r2:Block )" desc "Spelling of `_set` for records."
 prim name "hnew" sig "( size:Scalar -- p:Ptr )" desc "Allocate size heap cells (spec Sec.5)."
 prim name "hread" sig "( p:Ptr i:Scalar -- v:Unknown )" desc "Read heap cell i. Untyped: wrap it in a word whose signature states the real type."
+prim name "until" sig "( flag:Scalar -- )" desc "Only as `until [ c ]`, the first thing in a times/for body: the loop ends when c is true; the stack keeps the loop's shape."
+prim name "while" sig "( flag:Scalar -- )" desc "Only as `while [ c ]`, the first thing in a times/for body: the loop ends when c is false."
 prim name "hwrite" sig "( p:Ptr i:Scalar v:Unknown -- )" desc "Write v into heap cell i (the cell first, the value last)."
 prim name "hmark" sig "( -- mark:Scalar )" desc "Mark the heap arena (spec Sec.5)."
 prim name "hrelease" sig "( mark:Scalar -- )" desc "Release every heap cell allocated since mark."
