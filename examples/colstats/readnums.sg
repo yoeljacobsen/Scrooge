@@ -16,7 +16,7 @@ end
   fh f_read_line -> [ line got ]
   got not cond [ i ] else [
     line _parse -> [ v ok ]
-    ok cond [ v p i hwrite fh p i 1 + _fill_loop ] else [ fh p i _fill_loop ] ?
+    ok cond [ p i v hwrite fh p i 1 + _fill_loop ] else [ fh p i _fill_loop ] ?
   ] ?
 end
 

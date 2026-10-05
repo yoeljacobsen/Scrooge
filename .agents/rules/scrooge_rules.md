@@ -1,6 +1,6 @@
-# Scrooge v1.79 Workspace Rules & Agent Directives
+# Scrooge v1.80 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_79.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_80.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -14,13 +14,13 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
    It reports every error at once, in source order, with line numbers (and columns for `cond` and `end` structure). Fix them all before rebuilding. A build is `compiler/scroogec_fast -L library -o <bin> <file.sg>`.
 3. **Immutability Model:** Block updates (`_set`) are copy-on-write: they return a new Block and leave the original valid. Pass updated state down the call chain. The heap (`hnew`/`hread`/`hwrite`) is the one mutable store.
 4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (85 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
-5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `val ptr offset hwrite` (the value comes first).
+5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `ptr offset val hwrite`. Every word that stores into something takes it first and the value last (`b x cons`, `fh ch fputc`, `d k v dict_set`).
 6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler.
 7. **Small Words, Tested One by One:** Build programs from small words (under about 30 tokens, one job each) combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Scalar ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
 
 ---
 
-## 2. Core Scrooge v1.79 Language Reference
+## 2. Core Scrooge v1.80 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -39,9 +39,9 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 ### 2.3 Operator Registry Highlights
 * Stack Shufflers: `dup`, `drop`, `swap`, `rot`, `over`, the only five. `pk`, `roll` and `nip` do not exist (`pk`/`roll` are reserved for a possible future implementation). Prefer frames: shufflers erase types to `Unknown`.
 * Block Operations: `cons`, `pair`, `len`, `nil`, and the `_at`/`_get`/`_set` access words (spec Sec.4).
-* Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `val ptr idx hwrite`, `hmark`/`hrelease`; bulk `hmove`, `hfill`, `hsort`.
+* Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `ptr idx val hwrite`, `hmark`/`hrelease`; bulk `hmove`, `hfill`, `hsort`.
 * Records: `#record Name  field Type count init ...  end` (every field names its initial value: `0`, `nil`, `hnull`, an enum member or a constructor word) declares the type `Name` and generates `Name_new`, `Name_size`, typed `Name_field` and record-first `Name_field_set` (`s v`, or `s i v`); use it instead of hand-numbered heap offsets (spec Sec.5).
-* Argument labels: `x :name` names the parameter a value is for (`5 :v p :p 0 :i hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's.
+* Argument labels: `x :name` names the parameter a value is for (`p :p 0 :i 5 :v hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's.
 * Edit with the compiler, not with text replacement: `--replace`, `--replace-all`, `--rename OLD NEW MAIN`, `--move NAME FROM TO`; each edit is checked and undone if it would make the program rejected.
 * Look things up instead of guessing: `compiler/scroogec_fast -L library --lookup NAME [FILE]`, `--apropos TEXT`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line).
 * Compact arrays (primitives): `Bytes`, `Ints`, `Floats` (1, 8, 8 bytes per element): `n floats_new`, `a i floats_get`, `a i x floats_set`, `K_len`, `K_fill`, `K_move`, `bytes_read`/`bytes_write`, `ints_sort`. Prefer them to hnew cells for numeric or byte data.

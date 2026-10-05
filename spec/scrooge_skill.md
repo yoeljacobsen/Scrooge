@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.79)
+# Skill: Writing Correct Scrooge (v1.80)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,9 +9,9 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_79.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_80.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
-4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( v:Unknown p:Ptr i:Scalar -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
+4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Scalar v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
 6. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
 
@@ -81,13 +81,13 @@ Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only f
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
-    blk [fold| idx acc val _ | val acc cons from nil ] reverse
+    blk [fold| idx acc val _ | acc val cons from nil ] reverse
   end
   ```
 
 ---
 
-**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `5 :v p :p 0 :i hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name); a parameter whose type no other parameter has (the one Ptr, Bytes or Dict among Scalars) needs neither, since a swap there is a TypeError. So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Scalar acc:Scalar -- i:Scalar acc:Scalar )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`) draws the warning ArgumentOrder.
+**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `p :p 0 :i 5 :v hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name); a parameter whose type no other parameter has (the one Ptr, Bytes or Dict among Scalars) needs neither, since a swap there is a TypeError. So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Scalar acc:Scalar -- i:Scalar acc:Scalar )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`) draws the warning ArgumentOrder.
 
 ## 2b. How Stack Effects Add Up
 
@@ -101,7 +101,7 @@ The checker counts, for every word, how far each token moves the stack, and reje
 - **A call has its signature's effect**, a word's call to itself included: in `#count ( n:Scalar -- )`, the body `-> [ n ] n 0 = cond [ ] else [ n 1 - count ]` is -1 for the frame, then 0 for the cond (its else-branch pushes `n 1 -`, +1, and the call `count` takes it, -1), total -1 as the signature says.
 - **Record accessors:** a field with a count above 1 takes an index, `v s i Name_field_set` and `s i Name_field`; a count-1 field does not, `v s Name_field_set` and `s Name_field`.
 - When a word is rejected with `ArityMismatch`, the message lists the stack depth at the end of each line of the body, relative to entry: the first line whose depth is not what you intended is where the stray value is.
-- **Errors are reported at the call.** When the stack runs out, the message names the call, the inputs it takes and what it found: ``The stack runs out at `pa` (line 6), which takes 3 values ( label:Block v:Scalar n:Scalar ) and finds 2 ( v:Scalar n:Scalar ): the missing one is the deepest, ( label:Block )``. Push the missing value before the others. A TypeError at a call shows what the callee takes beside what the stack holds (deepest first); "check the order of the arguments" means the right values are there in the wrong order: `p 0 5 hwrite` for `5 p 0 hwrite`.
+- **Errors are reported at the call.** When the stack runs out, the message names the call, the inputs it takes and what it found: ``The stack runs out at `pa` (line 6), which takes 3 values ( label:Block v:Scalar n:Scalar ) and finds 2 ( v:Scalar n:Scalar ): the missing one is the deepest, ( label:Block )``. Push the missing value before the others. A TypeError at a call shows what the callee takes beside what the stack holds (deepest first); "check the order of the arguments" means the right values are there in the wrong order: `5 p 0 hwrite` for `p 0 5 hwrite`. One rule fixes most of these: every word that stores into something (a heap cell, a Block, a collection, a file) takes it first and the value last.
 
 ---
 
@@ -127,8 +127,8 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 - **Record (Mixed Types)**: Key / slot $\rightarrow$ `record_get` / `map_get`. Records do NOT provide `_at`.
 - **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `_at` or `_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
 - **Numeric inner loops are kernels**: `a :a 0 :ao b :b 0 :bo n :n floats_dot`, `y :y 0 :yo x :x 0 :xo n :n g :g floats_axpy` (y += g*x), `floats_add`, `floats_mul`, `floats_scale`, `floats_sum`, `floats_max`, `floats_argmax`, `floats_from_bytes` (pixels to floats), `ints_sum`/`ints_max`/`ints_argmax`, and `bytes_be32`/`bytes_le32`/`bytes_be16`/`bytes_le16` for headers. They are written in C and run several times faster than the same loop in Scrooge (a QMNIST trainer went from 7,900 to 22,000 images/s). The `numeric` lexicon's `vec_*` words do the same on Ptr cells, slower.
-- **Large numeric or byte data goes in compact arrays**: `n floats_new`, `n ints_new` and `n bytes_new` store 8, 8 and 1 bytes per element, where a Ptr's cells take 16 each, and the words check every index: `a i floats_get`, `a i x floats_set`, `a 0 :start n :count 0.0 :x floats_fill`, `src :src 0 :soff dst :dst 0 :doff n :count floats_move`, `a 0 n ints_sort`. Stream a file through `bytes_read ( a start count fh -- got )`. A record field may hold one (`grid Floats 1`).
-- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( v p start count -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically; a cell holding a Ptr anywhere inside it, `hnull` included, stops the program, so a NULL marker in rows to be sorted must be a number or a Block). Use them instead of a per-cell loop.
+- **Large numeric or byte data goes in compact arrays**: `n floats_new`, `n ints_new` and `n bytes_new` store 8, 8 and 1 bytes per element, where a Ptr's cells take 16 each, and the words check every index: `a i floats_get`, `a i x floats_set`, `a 0 :start n :count 0.0 :x floats_fill`, `src :src 0 :soff dst :dst 0 :doff n :count floats_move`, `a 0 n ints_sort`. Stream a file through `bytes_read ( fh a start count -- got )`. A record field may hold one (`grid Floats 1`).
+- **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( p start count v -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically; a cell holding a Ptr anywhere inside it, `hnull` included, stops the program, so a NULL marker in rows to be sorted must be a number or a Block). Use them instead of a per-cell loop.
 - **An absent link**: `hnull` is a Ptr that refers to nothing (a tree's missing child, an empty list head). Test it with `p hnull =`; reading or writing through it is a fatal error.
 - **Memory**: a Block owns the Blocks inside it and frees them with itself, and a heap cell owns what it holds, so nested data costs nothing once released. Bracket per-item work with `hmark`/`hrelease` so a long run does not keep every allocation alive.
 - **Codes get their own type**: a token kind, an opcode or a state is an `#enum`, not a number: `#enum Kw select from where union end` gives `Kw_select` .. `Kw_union` (0 .. 3), `Kw_count`, `Kw_name ( k:Kw -- s:Block )` for messages, and `Kw_of`/`Kw_raw` to convert from and to the number (an enum's `Kw_of` stops on a number that is not a code). Declare record fields and parameters as `Kw`, and the checker rejects comparing a code with a plain number (`t Tk_val Kw_union =`), arithmetic on a code, and a number passed where a code is expected; the SQL runs' worst bug (keyword 118 matching the literal 118) is then a compile error. `#type Name Base end` makes any Scalar or Ptr its own type the same way (`#type Row Scalar end`, `Row_of`, `Row_raw`). Both cost nothing at run time. Library handles have types too: `map_make` gives an `IntMap`, so a word that takes a map declares `m:IntMap`, not `m:Ptr`.
@@ -142,17 +142,17 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 ## 4. Block-Building Idioms
 
 - **Sequential `cons` (Order-Preserving)**:
-  Pushing values sequentially onto `nil` (`v0 v1 cons ... nil cons`) preserves original input order (`[v0, v1]`). Do NOT follow with `reverse`.
+  Consing the values onto `nil` last one first (`nil v1 cons v0 cons`) gives them in order (`[v0, v1]`). Do NOT follow with `reverse`.
   ```scrooge
   { Preserves original order [10, 20] }
-  10 20 nil cons cons
+  nil 20 cons 10 cons
   ```
 
 - **`fold` Accumulation (Inverting)**:
-  Accumulating values during `[fold| ... | val acc cons from nil ]` prepends elements one-by-one, which inherently reverses iteration order. Use a trailing `reverse` step when input order must be preserved:
+  Accumulating values during `[fold| ... | acc val cons from nil ]` prepends elements one-by-one, which inherently reverses iteration order. Use a trailing `reverse` step when input order must be preserved:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
-    blk [fold| idx acc val _ | val acc cons from nil ] reverse
+    blk [fold| idx acc val _ | acc val cons from nil ] reverse
   end
   ```
 
@@ -182,7 +182,7 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
   - Sorting in your own order: write the order as a small word and pass it. `#by_age ( a:Ptr b:Ptr -- f:Scalar ) a Person_age b Person_age < end` then `v 'by_age vec_sort_by`, or `p 0 n 'by_age sort_by` for heap cells. The sort is stable, so to sort by two keys, sort by the second key first, then by the first. `v vec_sort` sorts in hsort's order (numbers, then strings and rows element by element).
   - `Dict`, a hash map from integer or string keys: `100 dict_new -> [ d ]`, `d k v dict_set`, `d k dict_get` (stops when absent), `d k dict_find -> [ v found ]`, `d k default dict_get_or`, `d k dict_has`, `d k dict_del`, `d k 1 dict_add` (counting), `d dict_keys`, or every slot with `d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ ... ] ]`.
 
-- **Numeric kernels (`numeric.sg`)**: a vector is a Ptr, a start cell and a length, so one allocation holds a whole matrix (row r of a c-column matrix starts at `r c *`). `vec_dot ( a ao b bo n -- s )`, `vec_axpy ( g x xo y yo n -- )` (y += g*x), `vec_add`, `vec_scale`, `vec_sum`, `vec_max`, `vec_argmax`, and `vec_be32` / `vec_le32 ( p off -- n )` for a 32-bit integer in four byte cells after `fread_into` (binary headers).
+- **Numeric kernels (`numeric.sg`)**: a vector is a Ptr, a start cell and a length, so one allocation holds a whole matrix (row r of a c-column matrix starts at `r c *`). `vec_dot ( a ao b bo n -- s )`, `vec_axpy ( y yo x xo n g -- )` (y += g*x, like `floats_axpy`), `vec_add`, `vec_scale`, `vec_sum`, `vec_max`, `vec_argmax`, and `vec_be32` / `vec_le32 ( p off -- n )` for a 32-bit integer in four byte cells after `fread_into` (binary headers).
 - **Process figures (`procinfo.sg`)**: `proc_peak_kb ( -- kb )` is the peak resident memory (VmHWM) to report; `proc_rss_kb`, and `proc_status_kb ( key -- kb ok )` for any /proc/self/status field.
 
 - **Signed Integer Formatting (`strings.sg`)**:
@@ -207,14 +207,14 @@ A file is read and written as a Block of character codes -- the same representat
 ```scrooge
 use "file"
 #save_report ( text:Block -- ok:Scalar )
-  text "report.txt" f_write_file
+  "report.txt" text f_write_file
 end
 ```
-- `f_read_file ( path:Block -- str:Block ok:Scalar )` / `f_write_file ( str:Block path:Block -- ok:Scalar )` / `f_append_file ( str:Block path:Block -- ok:Scalar )`.
+- `f_read_file ( path:Block -- str:Block ok:Scalar )` / `f_write_file ( path:Block str:Block -- ok:Scalar )` / `f_append_file ( path:Block str:Block -- ok:Scalar )`.
 
 **Open explicitly when one handle serves several operations.** Use the named mode helpers, never a bare mode integer:
 - `f_open_read` / `f_open_write` / `f_open_append` `( path:Block -- fh:File ok:Scalar )`, then `fclose ( fh:File -- ok:Scalar )`.
-- `f_read_all ( fh:File -- str:Block )`, `f_read_line ( fh:File -- line:Block got:Scalar )`, `f_write_str ( str:Block fh:File -- ok:Scalar )`, `f_write_line ( str:Block fh:File -- ok:Scalar )`.
+- `f_read_all ( fh:File -- str:Block )`, `f_read_line ( fh:File -- line:Block got:Scalar )`, `f_write_str ( fh:File str:Block -- ok:Scalar )`, `f_write_line ( fh:File str:Block -- ok:Scalar )`.
 
 **Check the flag, always.** Nothing in this lexicon aborts on a missing file, a full handle table or a short write -- it returns `ok=0`, `got=0`, or a written count below `str len`. A `cond` on that flag is not optional politeness; skipping it means using a handle that was never opened.
 

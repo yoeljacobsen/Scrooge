@@ -54,20 +54,20 @@ end
 { ---- loop holding a Block parameter unchanged while growing a cons       ---- }
 { ---- accumulator is Bug 13's leak class.                                ---- }
 #f_rev_loop ( str:Block -- reversed:Block )
-  [fold| idx acc val _ | val acc cons from nil ]
+  [fold| idx acc val _ | acc val cons from nil ]
 end
 #f_cat_loop ( a:Block b:Block -- joined:Block )
-  a f_rev_loop [fold| idx acc val _ | val acc cons from b ]
+  a f_rev_loop [fold| idx acc val _ | acc val cons from b ]
 end
 
 { ---- Sequential write. `fwrite` moves the whole Block in one C-level    ---- }
 { ---- pass, so this is O(len) rather than a word call per character;      ---- }
 { ---- ok=0 means fewer characters were written than the string holds.     ---- }
-#f_write_str ( str:Block fh:File -- ok:Scalar )
-  str len str fh fwrite =
+#f_write_str ( fh:File str:Block -- ok:Scalar )
+  str len fh str fwrite =
 end
-#f_write_line ( str:Block fh:File -- ok:Scalar )
-  str fh f_write_str 10 fh fputc and
+#f_write_line ( fh:File str:Block -- ok:Scalar )
+  fh str f_write_str fh 10 fputc and
 end
 
 { ---- Bulk sequential read: pull chunks until an empty one signals end   ---- }
@@ -112,15 +112,15 @@ end
   -> [ fh ok ] ok not
   cond [ nil 0 ] else [ fh f_read_all fh fclose ] ?
 end
-#f_write_file ( str:Block path:Block -- ok:Scalar )
+#f_write_file ( path:Block str:Block -- ok:Scalar )
   str path f_open_write
   -> [ str fh ok ] ok not
-  cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
+  cond [ 0 ] else [ fh str f_write_str fh fclose and ] ?
 end
-#f_append_file ( str:Block path:Block -- ok:Scalar )
+#f_append_file ( path:Block str:Block -- ok:Scalar )
   str path f_open_append
   -> [ str fh ok ] ok not
-  cond [ 0 ] else [ str fh f_write_str fh fclose and ] ?
+  cond [ 0 ] else [ fh str f_write_str fh fclose and ] ?
 end
 
 { ---- Home-directory expansion (GAPS_TASK_PLAN.md G4) ---- }
@@ -130,7 +130,7 @@ end
   unchanged. Self-contained like every lexicon, so it joins with its own
   loop rather than util's concat. }
 #feh_cat_loop ( a:Block b:Block i:Scalar -- ab:Block )
-  i 0 = cond [ b ] else [ a a i 1 - at b cons i 1 - feh_cat_loop ]
+  i 0 = cond [ b ] else [ a b a i 1 - at cons i 1 - feh_cat_loop ]
 end
 #feh_join_check ( path:Block -- path:Block )
   "HOME" getenv -> [ home ok ] [

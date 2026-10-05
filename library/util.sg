@@ -1,5 +1,5 @@
 #reverse ( block:Block -- reversed:Block )
-  [fold| idx acc val _ | val acc cons from nil ]
+  [fold| idx acc val _ | acc val cons from nil ]
 end
 { `len` is O(1). This word used to count by folding over every element --
   a frame entered and left per element -- and was 94% of the instructions
@@ -18,7 +18,7 @@ end
 end
 #feq_step ( idx:Scalar acc:Block val:Scalar ctx:Scalar -- acc:Block )
   val ctx =
-  cond [ val acc cons ] else [ acc ] ?
+  cond [ acc val cons ] else [ acc ] ?
 end
 #filter_eq ( block:Block target:Scalar -- filtered:Block )
   target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
@@ -32,7 +32,7 @@ end
   target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ]
 end
 #concat ( b1:Block b2:Block -- joined:Block )
-  b1 reverse [fold| idx acc val _ | val acc cons from b2 ]
+  b1 reverse [fold| idx acc val _ | acc val cons from b2 ]
 end
 
 #>= ( a:Scalar b:Scalar -- bool:Scalar )
@@ -57,20 +57,20 @@ end
 #insert_sort_step ( idx:Scalar acc:Block val:Unknown ctx:Unknown -- acc:Block )
   acc 0 at
   cond [
-    val acc 1 at cons acc 0 at swap pair
+    acc 1 at val cons acc 0 at swap pair
   ] else [
     ctx val <
     cond [
-      val ctx acc 1 at cons cons 1 swap pair
+      acc 1 at ctx cons val cons 1 swap pair
     ] else [
-      val acc 1 at cons 0 swap pair
+      acc 1 at val cons 0 swap pair
     ] ?
   ] ?
 end
 #insert_sorted ( val:Unknown blk:Block -- result:Block )
   val blk [fold| idx acc elem x | idx acc elem :val x :ctx insert_sort_step from [ 0 nil ] ]
   -> [ res_pair ] res_pair 0 at 0 =
-  cond [ val res_pair 1 at cons ] else [ res_pair 1 at ] ?
+  cond [ res_pair 1 at val cons ] else [ res_pair 1 at ] ?
   reverse
 end
 { block_sort was an insertion sort that rebuilt its result on every insert:
@@ -81,10 +81,10 @@ end
   in byte order and a Block of rows column by column; numbers sort before
   Blocks. A Ptr element is a fatal error. }
 #bsort_fill_step ( idx:Scalar acc:Scalar val:Unknown p:Ptr -- acc:Scalar )
-  val p idx hwrite acc
+  p idx val hwrite acc
 end
 #bsort_collect_loop ( p:Ptr i:Scalar acc:Block -- sorted:Block )
-  i 0 = cond [ acc ] else [ p i 1 - p i 1 - hread acc cons bsort_collect_loop ]
+  i 0 = cond [ acc ] else [ p i 1 - acc p i 1 - hread cons bsort_collect_loop ]
 end
 #block_sort ( blk:Block -- sorted:Block )
   hmark -> [ m ] [

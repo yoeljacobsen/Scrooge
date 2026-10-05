@@ -12,19 +12,19 @@
 end
 
 { ---- y[yo+i] += g * x[xo+i] for i < n ---- }
-#vec_axpy ( g:Scalar x:Ptr xo:Scalar y:Ptr yo:Scalar n:Scalar -- )
+#vec_axpy ( y:Ptr yo:Scalar x:Ptr xo:Scalar n:Scalar g:Scalar -- )
   g to_float -> [ gf ]
-  n [times| i | y yo i + hread gf x xo i + hread * + y yo i + hwrite ]
+  n [times| i | y yo i + y yo i + hread gf x xo i + hread * + hwrite ]
 end
 
 { ---- y[yo+i] += x[xo+i] for i < n ---- }
 #vec_add ( x:Ptr xo:Scalar y:Ptr yo:Scalar n:Scalar -- )
-  n [times| i | y yo i + hread x xo i + hread + y yo i + hwrite ]
+  n [times| i | y yo i + y yo i + hread x xo i + hread + hwrite ]
 end
 
 { ---- p[off+i] *= g for i < n ---- }
-#vec_scale ( g:Scalar p:Ptr off:Scalar n:Scalar -- )
-  n [times| i | p off i + hread g * p off i + hwrite ]
+#vec_scale ( p:Ptr off:Scalar n:Scalar g:Scalar -- )
+  n [times| i | p off i + p off i + hread g * hwrite ]
 end
 
 { ---- the sum of p[off..off+n) (0 when n is 0) ---- }

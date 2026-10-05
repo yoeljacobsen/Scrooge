@@ -1,5 +1,5 @@
 #hclear_step ( p:Ptr idx:Scalar stop_idx:Scalar -- p:Ptr idx:Scalar stop_idx:Scalar )
-  0 p idx hwrite p idx 1 + stop_idx
+  p idx 0 hwrite p idx 1 + stop_idx
 end
 #hclear_loop ( p:Ptr idx:Scalar stop_idx:Scalar --  )
   idx stop_idx <
@@ -9,7 +9,7 @@ end
   p start start size + hclear_loop
 end
 #hfill_step ( val:Scalar p:Ptr idx:Scalar stop_idx:Scalar -- val:Scalar p:Ptr idx:Scalar stop_idx:Scalar )
-  val p idx hwrite val p idx 1 + stop_idx
+  p idx val hwrite val p idx 1 + stop_idx
 end
 #hfill_loop ( val:Scalar p:Ptr idx:Scalar stop_idx:Scalar --  )
   idx stop_idx <
@@ -19,7 +19,7 @@ end
   val p start :idx stop :stop_idx hfill_loop
 end
 #hadd_step ( val:Scalar p:Ptr idx:Scalar stop_idx:Scalar -- val:Scalar p:Ptr idx:Scalar stop_idx:Scalar )
-  p idx hread val + p idx hwrite val p idx 1 + stop_idx
+  p idx p idx hread val + hwrite val p idx 1 + stop_idx
 end
 #hadd_loop ( val:Scalar p:Ptr idx:Scalar stop_idx:Scalar --  )
   idx stop_idx <

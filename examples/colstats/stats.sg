@@ -40,7 +40,7 @@ end
 { 2 4 4 4 5 5 7 9: mean 5, variance 4, sd 2, median 4.5, min 2, max 9 }
 #_sample ( -- p:Ptr n:Scalar )
   [ 2 4 4 4 5 5 7 9 ] 8 hnew -> [ vals p ]
-  vals [fold| i acc v _ | v p i hwrite acc from 0 ] drop p 8
+  vals [fold| i acc v _ | p i v hwrite acc from 0 ] drop p 8
 end
 #test_sq_dev ( -- ok:Scalar ) 7 5 _sq_dev 4 "7 5 _sq_dev" expect_eq end
 #test_mean ( -- ok:Scalar ) _sample st_mean :got 5.0 :want 0.000001 :tol "mean" :msg expect_near end
@@ -49,6 +49,6 @@ end
 #test_min_max ( -- ok:Scalar ) _sample st_min 2 "min" expect_eq _sample st_max 9 "max" expect_eq and end
 #test_median_even ( -- ok:Scalar ) _sample st_median :got 4.5 :want 0.000001 :tol "median of 8 values" :msg expect_near end
 #test_median_odd ( -- ok:Scalar )
-  3 hnew -> [ p ] 9 p 0 hwrite 1 p 1 hwrite 5 p 2 hwrite
+  3 hnew -> [ p ] p 0 9 hwrite p 1 1 hwrite p 2 5 hwrite
   p 3 st_median 5 "median of 9 1 5" expect_eq p 0 hread 9 "the input is left unsorted" expect_eq and
 end

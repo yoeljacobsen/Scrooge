@@ -28,11 +28,11 @@ end
 { ---- Integer -> string (supports negative integers) ---- }
 #its_loop ( n:Scalar acc:Block -- result:Block )
   n 0 =
-  cond [ acc ] else [ n 10 / n 10 \ 48 + acc cons its_loop ] ?
+  cond [ acc ] else [ n 10 / acc n 10 \ 48 + cons its_loop ] ?
 end
 #int_to_str ( n:Scalar -- str:Block )
   n 0 =
-  cond [ "0" ] else [ n 0 < cond [ 45 0 n - nil its_loop cons ] else [ n nil its_loop ] ? ] ?
+  cond [ "0" ] else [ n 0 < cond [ 0 n - nil its_loop 45 cons ] else [ n nil its_loop ] ? ] ?
 end
 
 { ---- Print an integer via string conversion, then newline ---- }
@@ -40,10 +40,10 @@ end
 { int_to_str_pad pads with zeros to a total width, the sign counted in it,
   as printf's %0Nd does: -5 3 int_to_str_pad is "-05". }
 #itsp_pad_loop ( s:Block neg:Scalar width:Scalar -- s:Block )
-  s len neg + width < cond [ 48 s cons neg width itsp_pad_loop ] else [ s ]
+  s len neg + width < cond [ s 48 cons neg width itsp_pad_loop ] else [ s ]
 end
 #int_to_str_pad ( n:Scalar width:Scalar -- s:Block )
-  n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 swap cons ]
+  n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 cons ]
 end
 { print_fixed prints an integer as a fixed-point number with `decimals`
   digits after the point: 12345 3 print_fixed is 12.345, -5 2 is -0.05,

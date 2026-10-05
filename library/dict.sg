@@ -13,12 +13,12 @@
 
 #_dict_alloc ( c:Scalar -- d:Dict )
   6 hnew -> [ h ]
-  0 h 0 hwrite
-  0 h 1 hwrite
-  c h 2 hwrite
-  c hnew h 3 hwrite
-  c hnew h 4 hwrite
-  c hnew -> [ st ] 0 :v st :p 0 :start c :count hfill st h 5 hwrite
+  h 0 0 hwrite
+  h 1 0 hwrite
+  h 2 c hwrite
+  h 3 c hnew hwrite
+  h 4 c hnew hwrite
+  c hnew -> [ st ] st :p 0 :start c :count 0 :v hfill h 5 st hwrite
   h Dict_of
 end
 
@@ -75,12 +75,12 @@ end
 { stores without growing }
 #_dict_put ( d:Dict k:Unknown v:Unknown -- )
   d k _dict_slot -> [ s found ]
-  v d _dict_vals s hwrite
+  d _dict_vals s v hwrite
   found unless [
-    k d _dict_keys s hwrite
-    d _dict_states s hread 0 = when [ d _dict_used 1 + d Dict_raw 1 hwrite ]
-    1 d _dict_states s hwrite
-    d dict_len 1 + d Dict_raw 0 hwrite
+    d _dict_keys s k hwrite
+    d _dict_states s hread 0 = when [ d Dict_raw 1 d _dict_used 1 + hwrite ]
+    d _dict_states s 1 hwrite
+    d Dict_raw 0 d dict_len 1 + hwrite
   ]
 end
 
@@ -120,10 +120,10 @@ end
 #dict_del ( d:Dict k:Unknown -- found:Scalar )
   d k _dict_slot -> [ s found ]
   found when [
-    2 d _dict_states s hwrite
-    0 d _dict_keys s hwrite
-    0 d _dict_vals s hwrite
-    d dict_len 1 - d Dict_raw 0 hwrite
+    d _dict_states s 2 hwrite
+    d _dict_keys s 0 hwrite
+    d _dict_vals s 0 hwrite
+    d Dict_raw 0 d dict_len 1 - hwrite
   ]
   found
 end
@@ -137,5 +137,5 @@ end
 
 { every key, in slot order (no particular order) }
 #dict_keys ( d:Dict -- b:Block )
-  nil d dict_cap [times| i | d i dict_slot -> [ k v live ] live cond [ k swap cons ] else [ ] ]
+  nil d dict_cap [times| i | d i dict_slot -> [ k v live ] live cond [ k cons ] else [ ] ]
 end

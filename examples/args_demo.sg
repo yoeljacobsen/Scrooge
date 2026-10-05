@@ -29,7 +29,7 @@ use "util"
 end
 
 #keep_step ( idx:Scalar acc:Block val:Block ctx:Scalar -- acc2:Block )
-  val is_flag cond [ acc ] else [ val acc cons ] ?
+  val is_flag cond [ acc ] else [ acc val cons ] ?
 end
 #operands ( args:Block -- files:Block )
   args [fold| idx acc val _ | idx acc val 0 :ctx keep_step from nil ] reverse
@@ -43,12 +43,12 @@ end
   cond [
     counting
     cond [ path str_print 58 print_char 32 print_char text len print_line 1 ]
-    else [ text f_stdout f_write_str ] ?
+    else [ f_stdout text f_write_str ] ?
   ] else [
     text drop
-    arg_prog f_stderr f_write_str drop
-    ": cannot read " f_stderr f_write_str drop
-    path f_stderr f_write_line drop
+    f_stderr arg_prog f_write_str drop
+    f_stderr ": cannot read " f_write_str drop
+    f_stderr path f_write_line drop
     0
   ] ?
 end
@@ -65,7 +65,7 @@ end
       { no operands: behave as a filter on standard input }
       cfound
       cond [ f_stdin f_read_all len print_line ]
-      else [ f_stdin f_read_all f_stdout f_write_str drop ] ?
+      else [ f_stdout f_stdin f_read_all f_write_str drop ] ?
     ] else [
       cfound files [fold| idx acc val ctx | idx acc val ctx emit_step from 1 ]
       cond [ ] else [ "args_demo: some files could not be read" abort ] ?

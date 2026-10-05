@@ -9,9 +9,9 @@
 { a new, empty Vec with room for cap values before it grows }
 #vec_new ( cap:Scalar -- v:Vec )
   3 hnew -> [ h ]
-  0 h 0 hwrite
-  cap 1 max h 1 hwrite
-  cap 1 max hnew h 2 hwrite
+  h 0 0 hwrite
+  h 1 cap 1 max hwrite
+  h 2 cap 1 max hnew hwrite
   h Vec_of
 end
 
@@ -29,15 +29,15 @@ end
     v vec_cap 2 * n max -> [ c ]
     c hnew -> [ q ]
     v vec_data :src 0 :soff q :dst 0 :doff v vec_len :count hmove
-    q v Vec_raw 2 hwrite
-    c v Vec_raw 1 hwrite
+    v Vec_raw 2 q hwrite
+    v Vec_raw 1 c hwrite
   ]
 end
 
 #vec_push ( v:Vec x:Unknown -- )
   v v vec_len 1 + vec_reserve
-  x v vec_data v vec_len hwrite
-  v vec_len 1 + v Vec_raw 0 hwrite
+  v vec_data v vec_len x hwrite
+  v Vec_raw 0 v vec_len 1 + hwrite
 end
 
 #vec_get ( v:Vec i:Scalar -- x:Unknown )
@@ -47,7 +47,7 @@ end
 
 #vec_set ( v:Vec i:Scalar x:Unknown -- )
   i 0 < i v vec_len < not or when [ "vec_set: the index is outside 0 .. vec_len - 1" abort ]
-  x v vec_data i hwrite
+  v vec_data i x hwrite
 end
 
 #vec_last ( v:Vec -- x:Unknown )
@@ -58,12 +58,12 @@ end
 #vec_pop ( v:Vec -- x:Unknown )
   v vec_len 0 = when [ "vec_pop: the Vec is empty" abort ]
   v vec_len 1 - -> [ n ]
-  n v Vec_raw 0 hwrite
+  v Vec_raw 0 n hwrite
   v vec_data n hread
 end
 
 { empties the Vec, keeping its capacity }
-#vec_clear ( v:Vec -- ) 0 v Vec_raw 0 hwrite end
+#vec_clear ( v:Vec -- ) v Vec_raw 0 0 hwrite end
 
 #vec_from_block ( b:Block -- v:Vec )
   b len vec_new -> [ v ]
@@ -72,7 +72,7 @@ end
 end
 
 #vec_to_block ( v:Vec -- b:Block )
-  nil v vec_len [times| i | v vec_data v vec_len 1 - i - hread swap cons ]
+  nil v vec_len [times| i | v vec_data v vec_len 1 - i - hread cons ]
 end
 
 { sorts the values ascending, as hsort orders them: numbers by value, }
@@ -97,8 +97,8 @@ end
   lo mid hi lo - [times| k |
     -> [ i j ]
     p off mid hi i j 'less _sort_left
-    cond [ p off i + hread t lo k + hwrite i 1 + j ]
-    else [ p off j + hread t lo k + hwrite i j 1 + ]
+    cond [ t lo k + p off i + hread hwrite i 1 + j ]
+    else [ t lo k + p off j + hread hwrite i j 1 + ]
   ]
   drop drop
 end

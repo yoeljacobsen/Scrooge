@@ -12,8 +12,8 @@
 #map_make ( buckets_size:Scalar -- m:IntMap )
   buckets_size 2 * hnew -> [ data_ptr ] [
     2 hnew -> [ hdr ] [
-      buckets_size hdr 0 hwrite
-      data_ptr hdr 1 hwrite
+      hdr 0 buckets_size hwrite
+      hdr 1 data_ptr hwrite
       hdr IntMap_of
     ]
   ]
@@ -59,7 +59,7 @@ end
 { an unrelated existing key is the closest analogue this structure has to }
 { "the table is full" -- the alternative (silently overwriting) would }
 { corrupt the other key's entry with no signal to the caller. }
-#map_set ( val:Unknown m:IntMap key:Scalar -- ok:Scalar )
+#map_set ( m:IntMap key:Scalar val:Unknown -- ok:Scalar )
   val
   m IntMap_raw 1 hread
   key
@@ -75,8 +75,8 @@ end
     existing_key key = existing_key 0 = or
   ]
   cond [
-    key data_ptr bucket_idx hwrite
-    val data_ptr bucket_idx 1 + hwrite
+    data_ptr bucket_idx key hwrite
+    data_ptr bucket_idx 1 + val hwrite
     1
   ] else [ 0 ] ?
 end

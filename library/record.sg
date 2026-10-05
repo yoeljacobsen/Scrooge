@@ -8,6 +8,6 @@ end
   hread
 end
 
-#rec_set ( val:Unknown ptr:Ptr field_offset:Scalar -- )
+#rec_set ( ptr:Ptr field_offset:Scalar val:Unknown -- )
   hwrite
 end

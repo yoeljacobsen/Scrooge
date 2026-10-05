@@ -1,6 +1,26 @@
-# Scrooge Programming Language (v1.79)
+# Scrooge Programming Language (v1.80)
 
-Repository status: **Scrooge v1.79**.
+Repository status: **Scrooge v1.80**.
+
+### What changed in v1.80
+
+One argument order for the whole language. **This breaks programs that store, add or write with the value first**; each call in the old order is a TypeError that says to check the order.
+
+- **The container comes first, then any index or range, and the value last**, in every word that stores into, adds to or writes to something:
+
+  | word | v1.79 | v1.80 |
+  |---|---|---|
+  | `hwrite` | `v p i hwrite` | `p i v hwrite` |
+  | `hfill` | `v p start count hfill` | `p start count v hfill` |
+  | `cons` | `x b cons` | `b x cons` |
+  | `fputc`, `fwrite` | `ch fh fputc` | `fh ch fputc` |
+  | `bytes_read`, `bytes_write` | `a start count fh` | `fh a start count` |
+  | `lst_set`, `lst_push`, `lst_try_push`, `map_set`, `arr_set`, `rec_set` | value first | `p i v`, `p v`, `m k v` |
+  | `f_write_str`, `f_write_line`, `f_write_file`, `f_append_file` | `str fh`, `str path` | `fh str`, `path str` |
+  | `vec_axpy`, `vec_scale` | `g` first | `g` last, as `floats_axpy` and `floats_scale` |
+
+  The compact arrays (`floats_set`), `vec`, `dict`, records and the file reads already worked this way, so no word takes the value first any more. The idiom `x swap cons` is now `x cons`.
+- `--lookup` and the spec show the new signatures; `--explain TypeError` shows a call in the old order and its fix.
 
 ### What changed in v1.79
 
@@ -421,7 +441,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_79.txt`](spec/scrooge_spec_v1_79.txt) (defines v1.79 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_80.txt`](spec/scrooge_spec_v1_80.txt) (defines v1.80 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

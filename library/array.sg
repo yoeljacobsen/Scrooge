@@ -8,8 +8,8 @@ end
   shape_block
   shape_block arr_size shape_block len + 1 + hnew
   -> [ shape_block base_ptr ] [
-    shape_block len base_ptr 0 hwrite
-    shape_block [fold| idx acc dim _ | dim base_ptr acc hwrite acc 1 + from 1 ] drop
+    base_ptr 0 shape_block len hwrite
+    shape_block [fold| idx acc dim _ | base_ptr acc dim hwrite acc 1 + from 1 ] drop
     base_ptr
   ]
 end
@@ -27,8 +27,8 @@ end
   ptr ptr coords_block arr_offset hread
 end
 
-#arr_set ( val:Unknown ptr:Ptr coords_block:Block -- )
-  val ptr ptr coords_block arr_offset hwrite
+#arr_set ( ptr:Ptr coords_block:Block val:Unknown -- )
+  ptr ptr coords_block arr_offset val hwrite
 end
 
 #nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )

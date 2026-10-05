@@ -37,7 +37,7 @@ end
 { ---- with no reversal pass.                                             ---- }
 #atl_step ( i:Scalar acc:Block -- i:Scalar acc:Block )
   i 1 -
-  i argv -> [ a ok ] [ ok cond [ a acc cons ] else [ a drop acc ] ? ]
+  i argv -> [ a ok ] [ ok cond [ acc a cons ] else [ a drop acc ] ? ]
 end
 #atl_loop ( i:Scalar acc:Block -- args:Block )
   i 1 <
