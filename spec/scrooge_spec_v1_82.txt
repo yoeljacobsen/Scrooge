@@ -1,4 +1,4 @@
-Scrooge v1.81 Language Specification
+Scrooge v1.82 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -94,7 +94,8 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
 - Ownership: a Block holds a reference to each Block inside it and releases them when it is freed, so nested Blocks (rows of values, pairs, a Block of strings) cost nothing once the outer Block is gone. A heap cell likewise owns what it holds (overwriting or `hrelease` releases it).
 - In-place swap: read BOTH cells before writing EITHER, or the first write overwrites the value the second needs.
 - Bulk cells: `hmove` ( src:Ptr soff:Scalar dst:Ptr doff:Scalar count:Scalar -- ) copies count cells from src to dst, overlapping ranges of one allocation included (as memmove); `hfill` ( p:Ptr start:Scalar count:Scalar v:Unknown -- ) stores v in every cell of the range. Both check their ranges against the allocations; a range outside one is a fatal error.
-- `hmark ( -- mark:Scalar )` / `hrelease ( mark:Scalar -- )`: bound heap growth. `hrelease` frees every heap cell allocated since the matching `hmark` and rewinds the allocator. Any `Ptr` obtained between the `hmark` and its `hrelease` is invalid afterward: using it (`hread`, `hwrite`, the bulk heap words) is a fatal error that says so, even after its slot has been reused by a newer allocation (each Ptr carries its allocation's generation). The checker cannot see this; the runtime does.
+- `hmark ( -- mark:Scalar )` / `hrelease ( mark:Scalar -- )`: bound heap growth. `hrelease` frees every heap cell allocated since the matching `hmark` and rewinds the allocator. Any `Ptr` obtained between the `hmark` and its `hrelease` is invalid afterward: using it (`hread`, `hwrite`, the bulk heap words) is a fatal error that says so, even after its slot has been reused by a newer allocation (each Ptr carries its allocation's generation). The message names where the allocation was made (the word and line, and the user word that called a library word such as `vec_new`) and which `hrelease` released it.
+- `region [ body ]` (v1.82) is `hmark`, the body, and the matching `hrelease`, as one statement: everything the body allocates is released when it ends. The body's net effect MUST be 0 (nothing made in it can be left). The checker rejects storing a value allocated inside a region into a container that existed before the region began (`RegionEscape`): an `hwrite` or `hfill` into an outer Ptr, an outer record's setter, `vec_push`/`vec_set`/`dict_set` on an outer collection, and the list, map, array and record lexicons' setters. A value counts as allocated in the region when it comes from an allocating word (`hnew`, `bytes_new`/`ints_new`/`floats_new`, a record's `_new`, `vec_new`, `dict_new`, ...) or from a word of the program that returns one. Escapes the checker cannot see are still caught at run time.
 - Typed-heap-wrapper idiom: `hread` is typed `Unknown`, so raw heap access is a type-erasure boundary. Confine that erasure to a handful of named wrapper words whose declared signature states the real result type, which the checker trusts at the call site instead of re-deriving it:
   ```scrooge
   #row_at ( tbl:Ptr idx:Scalar -- row:Block )
@@ -188,7 +189,7 @@ Static checker enforces:
 - `DuplicateWordError`: Local `#word` definition shadowing a builtin primitive, a `use`-imported lexicon word (the message names the lexicon), or a duplicate local word definition.
 
 ═══ 10. Hard Rules (violations are rejected) ═══
-- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt floor abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill exit to_int float_to_str type_of hnull when unless and_then or_else sort_cmp fwrite_from fflush to_str bytes_new bytes_len bytes_get bytes_set bytes_fill bytes_move ints_new ints_len ints_get ints_set ints_fill ints_move floats_new floats_len floats_get floats_set floats_fill floats_move bytes_read bytes_write bytes_to_block bytes_from_block ints_sort floats_sort floats_dot floats_axpy floats_add floats_mul floats_scale floats_sum floats_max floats_argmax floats_from_bytes ints_sum ints_max ints_argmax bytes_be32 bytes_le32 bytes_be16 bytes_le16 until while.
+- Reserved words — never use as parameter name or frame alias: use lexicon to from and or not cond else map fold pk roll select nil cons pair end dup drop swap rot over fill len seed rand exp log pow sqrt floor abs max min to_float bitand bitor bitxor bitshl bitshr bitnot hnew hread hwrite print_char print_int abort hmark hrelease fopen fclose fgetc fputc fread fwrite argc argv clock_ns block_slice bitcount bitctz bitclz hsort print_float getenv freadline fread_into fseek ftell trace hmove hfill exit to_int float_to_str type_of hnull when unless and_then or_else sort_cmp fwrite_from fflush to_str bytes_new bytes_len bytes_get bytes_set bytes_fill bytes_move ints_new ints_len ints_get ints_set ints_fill ints_move floats_new floats_len floats_get floats_set floats_fill floats_move bytes_read bytes_write bytes_to_block bytes_from_block ints_sort floats_sort floats_dot floats_axpy floats_add floats_mul floats_scale floats_sum floats_max floats_argmax floats_from_bytes ints_sum ints_max ints_argmax bytes_be32 bytes_le32 bytes_be16 bytes_le16 until while region.
   - Of these, `to`, `fill`, `roll`, and `pk` have NO current implementation in either backend — using any of them as a word is rejected as `UnknownWordError`, the same as any other undeclared word. They remain reserved so a future implementation is a small, isolated addition rather than a breaking change to existing programs.
 - Never shadow your own word names or imported lexicon words with a local definition or alias.
 - `cond` condition expression MUST NOT be enclosed in brackets `[ ... ]`.
@@ -270,12 +271,11 @@ end
 end
 ```
 
-Bound heap growth around a unit of work with `hmark`/`hrelease` (per §5):
+Bound heap growth around a unit of work with `region` (per §5):
 ```scrooge
 #process_query ( -- )
-  hmark -> [ mark ] [
+  region [
     10 hnew drop
-    mark hrelease
   ]
 end
 ```

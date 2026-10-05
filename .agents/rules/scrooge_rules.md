@@ -1,6 +1,6 @@
-# Scrooge v1.81 Workspace Rules & Agent Directives
+# Scrooge v1.82 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_81.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_82.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -20,7 +20,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.81 Language Reference
+## 2. Core Scrooge v1.82 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -39,7 +39,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 ### 2.3 Operator Registry Highlights
 * Stack Shufflers: `dup`, `drop`, `swap`, `rot`, `over`, the only five. `pk`, `roll` and `nip` do not exist (`pk`/`roll` are reserved for a possible future implementation). Prefer frames: shufflers erase types to `Unknown`.
 * Block Operations: `cons`, `pair`, `len`, `nil`, and the `_at`/`_get`/`_set` access words (spec Sec.4).
-* Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `ptr idx val hwrite`, `hmark`/`hrelease`; bulk `hmove`, `hfill`, `hsort`.
+* Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `ptr idx val hwrite`, `region [ body ]` (an `hmark`/`hrelease` pair; nothing made inside may be stored into a structure made before it); bulk `hmove`, `hfill`, `hsort`.
 * Records: `#record Name  field Type count init ...  end` (every field names its initial value: `0`, `nil`, `hnull`, an enum member or a constructor word) declares the type `Name` and generates `Name_new`, `Name_size`, typed `Name_field` and record-first `Name_field_set` (`s v`, or `s i v`); use it instead of hand-numbered heap offsets (spec Sec.5).
 * Argument labels: `x :name` names the parameter a value is for (`p :p 0 :i 5 :v hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's.
 * Edit with the compiler, not with text replacement: `--replace`, `--replace-all`, `--rename OLD NEW MAIN`, `--move NAME FROM TO`; each edit is checked and undone if it would make the program rejected.
