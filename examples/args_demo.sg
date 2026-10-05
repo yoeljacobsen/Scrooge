@@ -43,11 +43,11 @@ end
   cond [
     counting
     cond [ path str_print 58 print_char 32 print_char text len print_line 1 ]
-    else [ f_stdout text f_write_str ] ?
+    else [ f_stdout text fwrite text len = ] ?
   ] else [
     text drop
-    f_stderr arg_prog f_write_str drop
-    f_stderr ": cannot read " f_write_str drop
+    f_stderr arg_prog fwrite drop
+    f_stderr ": cannot read " fwrite drop
     f_stderr path f_write_line drop
     0
   ] ?
@@ -65,7 +65,7 @@ end
       { no operands: behave as a filter on standard input }
       cfound
       cond [ f_stdin f_read_all len print_line ]
-      else [ f_stdout f_stdin f_read_all f_write_str drop ] ?
+      else [ f_stdout f_stdin f_read_all fwrite drop ] ?
     ] else [
       cfound files [fold| idx acc val ctx | idx acc val ctx emit_step from 1 ]
       cond [ ] else [ "args_demo: some files could not be read" abort ] ?

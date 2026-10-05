@@ -7,13 +7,13 @@ use "strings"
 
 { the number of lines left in fh }
 #_count_loop ( fh:File n:Scalar -- total:Scalar )
-  fh f_read_line -> [ line got ]
+  fh freadline -> [ line got ]
   got cond [ fh n 1 + _count_loop ] else [ n ] ?
 end
 
 { parse the lines left in fh into p[i..]; the number of cells filled }
 #_fill_loop ( fh:File p:Ptr i:Scalar -- filled:Scalar )
-  fh f_read_line -> [ line got ]
+  fh freadline -> [ line got ]
   got not cond [ i ] else [
     line _parse -> [ v ok ]
     ok cond [ p i v hwrite fh p i 1 + _fill_loop ] else [ fh p i _fill_loop ] ?

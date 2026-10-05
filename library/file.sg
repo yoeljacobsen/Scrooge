@@ -63,11 +63,8 @@ end
 { ---- Sequential write. `fwrite` moves the whole Block in one C-level    ---- }
 { ---- pass, so this is O(len) rather than a word call per character;      ---- }
 { ---- ok=0 means fewer characters were written than the string holds.     ---- }
-#f_write_str ( fh:File str:Block -- ok:Scalar )
-  str len fh str fwrite =
-end
 #f_write_line ( fh:File str:Block -- ok:Scalar )
-  fh str f_write_str fh 10 fputc and
+  fh str fwrite str len = fh 10 fputc and
 end
 
 { ---- Bulk sequential read: pull chunks until an empty one signals end   ---- }
@@ -100,9 +97,6 @@ end
 { ---- which is how an empty last line is told apart from no line at all  ---- }
 { ---- -- the same found-flag convention str_to_int and find_sub use.     ---- }
 { ---- For bulk bytes into the heap, see the `fread_into` primitive.      ---- }
-#f_read_line ( fh:File -- line:Block got:Scalar )
-  freadline
-end
 
 { ---- Whole-file convenience: open, transfer, close. ok=0 means the open ---- }
 { ---- or the close failed; on a failed open the result is the empty       ---- }
@@ -115,12 +109,12 @@ end
 #f_write_file ( path:Block str:Block -- ok:Scalar )
   str path f_open_write
   -> [ str fh ok ] ok not
-  cond [ 0 ] else [ fh str f_write_str fh fclose and ] ?
+  cond [ 0 ] else [ fh str fwrite str len = fh fclose and ] ?
 end
 #f_append_file ( path:Block str:Block -- ok:Scalar )
   str path f_open_append
   -> [ str fh ok ] ok not
-  cond [ 0 ] else [ fh str f_write_str fh fclose and ] ?
+  cond [ 0 ] else [ fh str fwrite str len = fh fclose and ] ?
 end
 
 { ---- Home-directory expansion (GAPS_TASK_PLAN.md G4) ---- }

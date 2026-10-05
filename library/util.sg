@@ -4,12 +4,6 @@ end
 { `len` is O(1). This word used to count by folding over every element --
   a frame entered and left per element -- and was 94% of the instructions
   of a large benchmark workload. Kept as a word so callers need not change. }
-#length ( block:Block -- n:Scalar )
-  len
-end
-#nth ( block:Block idx:Scalar -- val:Unknown )
-  block_get
-end
 #sum ( block:Block -- total:Scalar )
   [fold| idx acc val _ | acc val + from 0 ]
 end
@@ -35,13 +29,7 @@ end
   b1 reverse [fold| idx acc val _ | acc val cons from b2 ]
 end
 
-#>= ( a:Scalar b:Scalar -- bool:Scalar )
-  < not
-end
 
-#<= ( a:Scalar b:Scalar -- bool:Scalar )
-  > not
-end
 
 { `=` already compares Blocks element by element (same lengths, then `=`
   on each element), which is what this word did with a fold and a frame per
