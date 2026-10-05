@@ -150,7 +150,7 @@ An arrow frame `-> [ vars ] [ body ]` binds variables popped from the stack for 
 ### AST Node Line-Number Tracking
 `scroogec_fast` attaches precise line-number tracking (`lineNum: int`) during tokenization:
 - **`Token` Structure**: Every token emitted by `tokenize` records its originating source line number (`Token(val: string, lineNum: int)`). Multi-line comments `{ ... }` and string literal expansions `"..."` track line increments accurately.
-- **`#record` Expansion**: the last step of `tokenize` (`expandRecords`) replaces each `#record Name ... end` declaration with the tokens of ordinary word definitions (`Name_size`, `Name_new`, and a getter and setter per field, spec Sec.5), each carrying its field's line number. The parser, checker and code generator never see a record. Malformed declarations are collected while tokenizing and reported by the checker as `ParseError`s.
+- **`#record` Expansion**: the last step of `tokenize` (`expandRecords`) replaces each `#record Name ... end` declaration with a distinct type `Name` (based on Ptr, with `Name_of`/`Name_raw`) and the tokens of ordinary word definitions (`Name_size`, `Name_new`, which stores each field's initial value, and a getter and a record-first setter per field, spec Sec.5), each carrying its field's line number. The parser, checker and code generator never see a record. Malformed declarations are collected while tokenizing and reported by the checker as `ParseError`s.
 - **AST Propagation**: AST construction (`parseNodes`, `extractMacros`) attaches `lineNum` directly to `Node` ref objects (`Node.lineNum`) and `Macro` ref objects (`Macro.lineNum`).
 
 ---

@@ -1,4 +1,4 @@
-Scrooge v1.78 Language Specification
+Scrooge v1.79 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -99,20 +99,21 @@ Access is a fixed per-type protocol (NOT one polymorphic operator). Each collect
   end
   ```
   This is an unchecked assertion, exactly like any other signature: if the heap cell does not actually hold a `Block`, downstream code type-checks against a lie. Prefer this over spreading bare `hread` calls across the program.
-- Records: `#record` names a heap layout and generates its typed wrappers, so offsets are never hand-assigned. Each field is `name Type count`, where Type is one of the §2 type tags and count is a positive integer:
+- Records: `#record` names a heap layout and generates its typed wrappers, so offsets are never hand-assigned. Each field is `name Type count init`: Type is one of the §2 type tags, a declared type (`#type`, `#enum`) or a record; count is a positive integer; init is the value every cell of the field starts with, one token: a number, a string, `nil`, `hnull`, an enum member or a word that takes nothing and leaves one value (`mkvec`). The initial value is required and is checked against the field's type:
   ```scrooge
   #record State
-    grid Scalar 81
-    rowm Scalar 9
-    lat  Ptr    1
+    grid Scalar 81 0
+    rowm Scalar 9  -1
+    kids Block  1  nil
+    next State  1  hnull
   end
   ```
-  generates ordinary words: `State_size ( -- n:Scalar )` (91), `State_new ( -- s:Ptr )` (`91 hnew`), and per field a getter and a setter, `State_grid ( s:Ptr i:Scalar -- v:Scalar )` and `State_grid_set ( v:Scalar s:Ptr i:Scalar -- )`. A count-1 field has no index: `State_lat ( s:Ptr -- v:Ptr )`, `State_lat_set ( v:Ptr s:Ptr -- )`. Every field also gets `State_grid_off ( -- n:Scalar )`, the cell where it starts (0 for grid, 81 for rowm, 90 for lat), for the words that take a raw offset: `0 :v s :p State_rowm_off :start 9 :count hfill` (clear rowm), `hmove`, `hsort`, `fread_into`. Fields are laid out in order (grid at cells 0-80, rowm at 81-89, lat at 90), so they cannot overlap. The accessors are `+ hread` / `+ hwrite` wrappers like the one above: the field type is the same unchecked assertion, and an index is not checked against the field's count (only against the whole allocation, as for any `hread`). Each record is its own allocation, since a `Ptr` cannot be offset. A word named `record` is still an ordinary definition: `#record (` starts a signature, `#record Name` a declaration.
+  A record is its own type, a Ptr at run time (like `#type State Ptr`). It generates ordinary words: `State_size ( -- n:Scalar )` (92), `State_new ( -- s:State )`, which allocates the cells and stores each field's initial value, and per field a getter and a setter. The setter takes the record first and the value last, as the library's words do: `State_grid ( s:State i:Scalar -- v:Scalar )` and `State_grid_set ( s:State i:Scalar v:Scalar -- )`. A count-1 field has no index: `State_kids ( s:State -- v:Block )`, `State_kids_set ( s:State v:Block -- )`. A field of a record type holds that record or `hnull`; compare it with `hnull =`. Every field also gets `State_grid_off ( -- n:Scalar )`, the cell where it starts (0 for grid, 81 for rowm, 90 for kids), for the words that take a raw offset; they take the Ptr, which `State_raw` gives: `s State_raw :p 0 :v State_rowm_off :start 9 :count hfill` (clear rowm), `hmove`, `hsort`, `fread_into`. `State_of ( x:Ptr -- s:State )` turns a Ptr back into a State; both cost nothing. A State passed where a Ptr or another record is expected is a TypeError. Fields are laid out in order (grid at cells 0-80, rowm at 81-89, kids at 90, next at 91), so they cannot overlap. An index is not checked against the field's count (only against the whole allocation, as for any `hread`). A word named `record` is still an ordinary definition: `#record (` starts a signature, `#record Name` a declaration.
 - Distinct types and enums: `#type Name Base end` declares a type that is a Base (Scalar, Ptr, Block or File) at run time but its own type to the checker; `#enum Name member ... end` declares one whose values are the named codes 0, 1, ... in order. Both are erased: no cost at run time. A type name starts with a capital letter. They are used as tags like any other, in signatures, record fields and word parameters:
   ```scrooge
   #enum Kw select from where union end
-  #record Tk kind Kw 1 val Scalar 1 end
-  #is_union ( t:Ptr -- f:Scalar ) t Tk_kind Kw_union = end
+  #record Tk kind Kw 1 Kw_select val Scalar 1 0 end
+  #is_union ( t:Tk -- f:Scalar ) t Tk_kind Kw_union = end
   ```
   `#type Name Base` generates `Name_of ( x:Base -- v:Name )` and `Name_raw ( v:Name -- x:Base )`. `#enum Name` generates those (with Base Scalar), one word per member, `Name_select ( -- v:Name )` (0 here), `Name_count ( -- n:Scalar )` (4) and `Name_name ( v:Name -- s:Block )` (`Kw_union Kw_name` is `"union"`). An enum's `Name_of` stops the program (`abort`) on a number that is not one of its codes. The checker treats a distinct value as different from every other type, except `Unknown`:
   - `=`, `!=`, `<`, `>`, `min` and `max` take two values of the same distinct type (`min`/`max` keep the type). A distinct value against another known type is a `TypeError`: `t Tk_val Kw_union =` compares a Scalar with a Kw.

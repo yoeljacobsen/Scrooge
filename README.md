@@ -1,6 +1,14 @@
-# Scrooge Programming Language (v1.78)
+# Scrooge Programming Language (v1.79)
 
-Repository status: **Scrooge v1.78**.
+Repository status: **Scrooge v1.79**.
+
+### What changed in v1.79
+
+Records are typed, and every field states its starting value. **This breaks programs that use `#record`**; each change below is a compile error that says what to write.
+
+- **Each field is `name Type count init`.** `Name_new` stores the initial value in every cell of the field, so nothing starts as an unexpected 0 (a Block field left at 0 crashed two benchmark runs). The value is one token, checked against the field's type: a number, a string, `nil`, `hnull`, an enum member, or a word that makes the value: `#record Node kind Shape 1 Shape_leaf kids Vec 1 mkvec next Node 1 hnull end`.
+- **A record is its own type.** `Node_new` leaves a `Node`, not a `Ptr`. Write `n:Node` in signatures. A Node passed where another record or a raw `Ptr` is expected is a TypeError. A field can hold the record's own type (`next Node 1 hnull`). `Node_raw` gives the Ptr for `hread`, `hmove` and the other raw heap words, and `Node_of` turns a Ptr back into a Node.
+- **Setters take the record first**, as the library's words do: `n Shape_branch Node_kind_set`, or `g i 5 Grid_cells_set` for a field with a count above 1. Before, the value came first.
 
 ### What changed in v1.78
 
@@ -413,7 +421,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_78.txt`](spec/scrooge_spec_v1_78.txt) (defines v1.78 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_79.txt`](spec/scrooge_spec_v1_79.txt) (defines v1.79 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
