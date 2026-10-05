@@ -1,6 +1,6 @@
-# Scrooge v1.82 Workspace Rules & Agent Directives
+# Scrooge v1.83 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_82.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_83.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -12,7 +12,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
    compiler/scroogec_fast -L library --check-only <file.sg>
    ```
    It reports every error at once, in source order, with line numbers (and columns for `cond` and `end` structure). Fix them all before rebuilding. A build is `compiler/scroogec_fast -L library -o <bin> <file.sg>`.
-3. **Immutability Model:** Block updates (`_set`) are copy-on-write: they return a new Block and leave the original valid. Pass updated state down the call chain. The heap (`hnew`/`hread`/`hwrite`) is the one mutable store.
+3. **Immutability Model:** Block updates (`block_set`) are copy-on-write: they return a new Block and leave the original valid. Pass updated state down the call chain. The heap (`hnew`/`hread`/`hwrite`) is the one mutable store.
 4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (85 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
 5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `ptr offset val hwrite`. Every word that stores into something takes it first and the value last (`b x cons`, `fh ch fputc`, `d k v dict_set`).
 6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler.
@@ -20,7 +20,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.82 Language Reference
+## 2. Core Scrooge v1.83 Language Reference
 
 ### 2.1 Core Data Types
 * **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
@@ -32,13 +32,13 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 ### 2.2 Words and Frames
 * Define a word: `#name ( a:Scalar b:Block -- r:Scalar ) body end`, in any order (a word may call one defined later). Call by bare name.
 * Entry point: `#main ( -- ) ... end`, then `main` at top level.
-* Name values with a frame: `-> [ a b ] [ body ]`. A frame's scope runs to the end of the enclosing block, so later code and later sibling frames still see `a` and `b`. The body bracket is therefore optional: `-> [ a b ] a b +` is the same code as `-> [ a b ] [ a b + ]`. The names bracket is not.
+* Name values with a frame: `-> [ a b ] body`. A frame's scope runs to the end of the enclosing block, so later code and later sibling frames still see `a` and `b`. The body is never bracketed; a `[ ... ]` right after the names is a data literal (`-> [ p ] [ 2 4 7 ]` pushes the Block [ 2 4 7 ]).
 * Cond branches, frame bodies and map/fold bodies nest freely. Moving an inner loop or conditional into a named word is good style, not a rule (spec Sec.6).
 * A string or data literal right after a frame's names is a value, never the frame's body: `-> [ s ] "Hi" str_print` works.
 
 ### 2.3 Operator Registry Highlights
 * Stack Shufflers: `dup`, `drop`, `swap`, `rot`, `over`, the only five. `pk`, `roll` and `nip` do not exist (`pk`/`roll` are reserved for a possible future implementation). Prefer frames: shufflers erase types to `Unknown`.
-* Block Operations: `cons`, `pair`, `len`, `nil`, and the `_at`/`_get`/`_set` access words (spec Sec.4).
+* Block Operations: `cons`, `pair`, `len`, `nil`, and `b i block_get` / `b i v block_set` (spec Sec.4; one spelling).
 * Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `ptr idx val hwrite`, `region [ body ]` (an `hmark`/`hrelease` pair; nothing made inside may be stored into a structure made before it); bulk `hmove`, `hfill`, `hsort`.
 * Records: `#record Name  field Type count init ...  end` (every field names its initial value: `0`, `nil`, `hnull`, an enum member or a constructor word) declares the type `Name` and generates `Name_new`, `Name_size`, typed `Name_field` and record-first `Name_field_set` (`s v`, or `s i v`); use it instead of hand-numbered heap offsets (spec Sec.5).
 * Argument labels: `x :name` names the parameter a value is for (`p :p 0 :i 5 :v hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's.

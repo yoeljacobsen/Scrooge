@@ -1,6 +1,16 @@
-# Scrooge Programming Language (v1.82)
+# Scrooge Programming Language (v1.83)
 
-Repository status: **Scrooge v1.82**.
+Repository status: **Scrooge v1.83**.
+
+### What changed in v1.83
+
+The last places where the language had two forms, or an exception to a rule, are gone (decisions D4, D8, D9 and D12, and the access spellings, all following the rule that one checked form is better than a choice). **This breaks programs**; each change is a compile error or a different result, listed here:
+
+- **A frame's body is never bracketed.** `-> [ x ] [ body ]` and `-> [ x ] body` meant the same, and the bracket made `-> [ x ] [ 1 2 3 ]` a trap. Now the body is always the rest of the block, and `-> [ x ] [ 1 2 3 ]` binds x and then pushes the Block [ 1 2 3 ]. Remove the bracket pair after a frame's names.
+- **A range is a start and a count everywhere:** `b start count block_slice`, `chars start count str_to_int`, `p start count v hloop_fill` and `hloop_add` (they took start and stop).
+- **Block access has one spelling:** `b i block_get` and `b i v block_set`. The eleven other spellings (`at`, `array_at`, `list_get`, `record_set`, ...) are a ParseError that names the one to use.
+- **`/` rounds down for integers**, as `\` always did, so `a = b*(a/b) + a\b` holds for every sign: `-7 2 /` is -4 (it was -3). Floats are unchanged.
+- **`to`, `fill`, `roll` and `pk` are ordinary names.** They were reserved for words that never existed.
 
 ### What changed in v1.82
 
@@ -458,7 +468,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_82.txt`](spec/scrooge_spec_v1_82.txt) (defines v1.82 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_83.txt`](spec/scrooge_spec_v1_83.txt) (defines v1.83 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
@@ -494,8 +504,8 @@ Run in the development repository: `python3 scratch/test_gates_a_j.py`.
 - **Gate B**: Positional signature rejection (`Ptr` with `at` REJECTED statically).
 - **Gate C**: Tagged signature rejection (`data:Ptr` with `at` REJECTED statically).
 - **Gate D**: Arity mismatch guard (Frame vs signature input mismatch REJECTED).
-- **Gate E**: Local provenance rejection (`hnew -> [ p ] [ p 0 at ]` REJECTED statically).
-- **Gate F**: Local block provenance acceptance (`nil -> [ b ] [ b 0 at ]` PASSES).
+- **Gate E**: Local provenance rejection (`hnew -> [ p ] p 0 at` REJECTED statically).
+- **Gate F**: Local block provenance acceptance (`nil -> [ b ] b 0 at` PASSES).
 - **Gate G1**: Call-site macro parameter order swap (Passing `Block` to tagged `Ptr` REJECTED statically).
 - **Gate G2**: Correct call-site macro parameter order (PASSES).
 - **Gate G3**: Library call-site type checking at parity with local (a library word called with swapped arguments must be rejected with the *same number* of `TypeError`s as an identically-shaped local word -- guards against `manifest.sm` losing its type tags again).

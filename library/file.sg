@@ -130,20 +130,19 @@ end
   unchanged. Self-contained like every lexicon, so it joins with its own
   loop rather than util's concat. }
 #feh_cat_loop ( a:Block b:Block i:Scalar -- ab:Block )
-  i 0 = cond [ b ] else [ a b a i 1 - at cons i 1 - feh_cat_loop ]
+  i 0 = cond [ b ] else [ a b a i 1 - block_get cons i 1 - feh_cat_loop ]
 end
 #feh_join_check ( path:Block -- path:Block )
-  "HOME" getenv -> [ home ok ] [
-    ok cond [ home path 1 path len block_slice home len feh_cat_loop ] else [ path ]
-  ]
+  "HOME" getenv -> [ home ok ]
+    ok cond [ home path 1 path len 1 - block_slice home len feh_cat_loop ] else [ path ]
 end
 #feh_tilde_check ( path:Block -- path:Block )
   path len 1 = cond [ path feh_join_check ] else [
-    path 1 at 47 = cond [ path feh_join_check ] else [ path ]
+    path 1 block_get 47 = cond [ path feh_join_check ] else [ path ]
   ]
 end
 #f_expand_home ( path:Block -- path:Block )
   path len 0 = cond [ path ] else [
-    path 0 at 126 = cond [ path feh_tilde_check ] else [ path ]
+    path 0 block_get 126 = cond [ path feh_tilde_check ] else [ path ]
   ]
 end

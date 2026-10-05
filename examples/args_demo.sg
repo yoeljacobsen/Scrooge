@@ -25,7 +25,7 @@ use "util"
   path is the empty string, which f_read_file will then fail to open. }
 #is_flag ( s:Block -- flag:Scalar )
   s len 0 >
-  cond [ s 0 at 45 = ] else [ 0 ] ?
+  cond [ s 0 block_get 45 = ] else [ 0 ] ?
 end
 
 #keep_step ( idx:Scalar acc:Block val:Block ctx:Scalar -- acc2:Block )
@@ -58,7 +58,7 @@ end
 end
 
 #main ( -- )
-  "-c" arg_find -> [ cpos cfound ] [
+  "-c" arg_find -> [ cpos cfound ]
     cpos drop
     arg_tail operands -> [ files ] files len 0 =
     cond [
@@ -70,6 +70,5 @@ end
       cfound files [fold| idx acc val ctx | idx acc val ctx emit_step from 1 ]
       cond [ ] else [ "args_demo: some files could not be read" abort ] ?
     ] ?
-  ]
 end
 main

@@ -10,13 +10,11 @@
 #type IntMap Ptr end
 
 #map_make ( buckets_size:Scalar -- m:IntMap )
-  buckets_size 2 * hnew -> [ data_ptr ] [
-    2 hnew -> [ hdr ] [
+  buckets_size 2 * hnew -> [ data_ptr ]
+    2 hnew -> [ hdr ]
       hdr 0 buckets_size hwrite
       hdr 1 data_ptr hwrite
       hdr IntMap_of
-    ]
-  ]
 end
 
 #map_hash ( key:Scalar buckets_size:Scalar -- bucket_idx:Scalar )
@@ -27,7 +25,7 @@ end
   m IntMap_raw 1 hread
   key
   key m IntMap_raw 0 hread map_hash
-  -> [ data_ptr key bucket_idx ] [
+  -> [ data_ptr key bucket_idx ]
     data_ptr bucket_idx hread key =
     cond [
       data_ptr bucket_idx 1 + hread
@@ -36,21 +34,19 @@ end
       0
       0
     ] ?
-  ]
 end
 
 #map_get ( m:IntMap key:Scalar -- val:Unknown )
   m IntMap_raw 1 hread
   key
   key m IntMap_raw 0 hread map_hash
-  -> [ data_ptr key bucket_idx ] [
+  -> [ data_ptr key bucket_idx ]
     data_ptr bucket_idx hread key =
     cond [
       data_ptr bucket_idx 1 + hread
     ] else [
       [ 75 101 121 32 110 111 116 32 102 111 117 110 100 ] abort
     ] ?
-  ]
 end
 
 { map_set returns ok=0 rather than silently overwriting when the bucket }
@@ -64,16 +60,14 @@ end
   m IntMap_raw 1 hread
   key
   key m IntMap_raw 0 hread map_hash
-  -> [ val data_ptr key bucket_idx ] [
+  -> [ val data_ptr key bucket_idx ]
     val
     data_ptr
     key
     bucket_idx
     data_ptr bucket_idx hread
-  ]
-  -> [ val data_ptr key bucket_idx existing_key ] [
+  -> [ val data_ptr key bucket_idx existing_key ]
     existing_key key = existing_key 0 = or
-  ]
   cond [
     data_ptr bucket_idx key hwrite
     data_ptr bucket_idx 1 + val hwrite

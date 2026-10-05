@@ -36,7 +36,7 @@ end
 #vec_argmax ( p:Ptr off:Scalar n:Scalar -- i:Scalar )
   n 1 < cond [ "vec_argmax: empty range" abort ] else [ ] ?
   0 p off hread 1 n [for| i |
-    -> [ bi bv ] [ p off i + hread -> [ v ] v bv > cond [ i v ] else [ bi bv ] ? ]
+    -> [ bi bv ] p off i + hread -> [ v ] v bv > cond [ i v ] else [ bi bv ] ?
   ] drop
 end
 

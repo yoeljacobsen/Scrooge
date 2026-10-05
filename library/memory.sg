@@ -15,8 +15,8 @@ end
   idx stop_idx <
   cond [ val p idx stop_idx hfill_step hfill_loop ] else [ ] ?
 end
-#hloop_fill ( p:Ptr start:Scalar stop:Scalar val:Scalar --  )
-  val p start :idx stop :stop_idx hfill_loop
+#hloop_fill ( p:Ptr start:Scalar count:Scalar val:Scalar --  )
+  val p start :idx start count + :stop_idx hfill_loop
 end
 #hadd_step ( val:Scalar p:Ptr idx:Scalar stop_idx:Scalar -- val:Scalar p:Ptr idx:Scalar stop_idx:Scalar )
   p idx p idx hread val + hwrite val p idx 1 + stop_idx
@@ -25,8 +25,8 @@ end
   idx stop_idx <
   cond [ val p idx stop_idx hadd_step hadd_loop ] else [ ] ?
 end
-#hloop_add ( p:Ptr start:Scalar stop:Scalar val:Scalar --  )
-  val p start :idx stop :stop_idx hadd_loop
+#hloop_add ( p:Ptr start:Scalar count:Scalar val:Scalar --  )
+  val p start :idx start count + :stop_idx hadd_loop
 end
 { ---- One word calling itself, so it runs as a loop. It was two words   ---- }
 { ---- calling each other, which nested a call per cell and stopped at   ---- }

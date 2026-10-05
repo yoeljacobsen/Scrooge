@@ -7,11 +7,10 @@ end
 #arr_make ( shape_block:Block -- ptr:Ptr )
   shape_block
   shape_block arr_size shape_block len + 1 + hnew
-  -> [ shape_block base_ptr ] [
+  -> [ shape_block base_ptr ]
     base_ptr 0 shape_block len hwrite
     shape_block [fold| idx acc dim _ | base_ptr acc dim hwrite acc 1 + from 1 ] drop
     base_ptr
-  ]
 end
 
 #arr_offset ( ptr:Ptr coords_block:Block -- flat_offset:Scalar )
@@ -33,6 +32,6 @@ end
 
 #nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )
   idx 0 < not idx arr len < and
-  cond [ arr idx at ] else [ default ] ?
+  cond [ arr idx block_get ] else [ default ] ?
 end
 

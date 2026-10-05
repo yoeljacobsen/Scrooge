@@ -56,13 +56,11 @@ end
   d 0 = cond [ acc ] else [ d 1 - acc 10 * pf_pow10_loop ]
 end
 #print_fixed ( v:Scalar decimals:Scalar --  )
-  -> [ v d ] [
-    v abs -> [ a ] [ d 1 pf_pow10_loop -> [ sc ] [ a sc \ -> [ fr ] [
+  -> [ v d ]
+    v abs -> [ a ] d 1 pf_pow10_loop -> [ sc ] a sc \ -> [ fr ]
           v 0 < cond [ 45 print_char ]
           a sc / print_int
           d 0 > cond [ 46 print_char fr d int_to_str_pad str_print ]
-        ] ] ]
-  ]
 end
 
 #print_line ( n:Scalar --  )
@@ -73,14 +71,13 @@ end
 { ---- sentinel). ok=0 for an empty range or any non-digit character in  ---- }
 { ---- [start,end) other than a single optional leading '-'.            ---- }
 #s2i_step ( chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar -- chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar )
-  chars idx array_at -> [ ch ] [
+  chars idx block_get -> [ ch ]
     ch is_digit
     cond [
       chars idx 1 + stop acc 10 * ch 48 - + 1
     ] else [
       chars stop stop acc 0
     ] ?
-  ]
 end
 #s2i_loop ( chars:Block idx:Scalar stop:Scalar acc:Scalar ok:Scalar -- acc:Scalar ok:Scalar )
   idx stop <
@@ -97,14 +94,13 @@ end
   word short on the literal token match). Confirmed by bisection: this
   word fails to compile with `end` bound here, and compiles cleanly with
   `stop`. }
-#str_to_int ( chars:Block start:Scalar end:Scalar -- n:Scalar ok:Scalar )
-  -> [ chars start stop ] [
+#str_to_int ( chars:Block start:Scalar count:Scalar -- n:Scalar ok:Scalar )
+  start count + -> [ stop ]
     chars
     start
     stop
-    start stop < cond [ chars start array_at 45 = ] else [ 0 ] ?
-  ]
-  -> [ chars start stop neg ] [
+    start stop < cond [ chars start block_get 45 = ] else [ 0 ] ?
+  -> [ chars start stop neg ]
     neg
     chars
     neg cond [ start 1 + ] else [ start ] ? :idx
@@ -112,11 +108,9 @@ end
     0 :acc
     0 :ok
     s2i_loop
-  ]
-  -> [ neg acc ok ] [
+  -> [ neg acc ok ]
     neg cond [ 0 acc - ] else [ acc ] ?
     ok
-  ]
 end
 
 { ---- Substring search: hay[i..i+len(needle)) == needle for the first    ---- }
@@ -124,7 +118,7 @@ end
 { ---- materialized); found=0, pos=0 if there is no such i.               ---- }
 #fs_cmp_step ( hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar -- hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar )
   hay needle i
-  hay i j + array_at needle j array_at =
+  hay i j + block_get needle j block_get =
   cond [ j 1 + nlen 1 ] else [ nlen nlen 0 ] ?
 end
 #fs_cmp_loop ( hay:Block needle:Block i:Scalar j:Scalar nlen:Scalar ok:Scalar -- match:Scalar )

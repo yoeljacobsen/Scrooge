@@ -139,10 +139,10 @@ A word whose entry frame binds exactly its declared inputs and whose body ends i
 while (frames_cnt > tco_frames_cnt) { leave_frame(); }
 ```
 
-Rewinding `frames_cnt`/`current_frame_idx`/`frame_storage_top` directly -- as the codegen originally did -- abandons every Block reference stored in an inner frame's slots without decref'ing it. Since the ordinary multi-step idiom (`-> [ a b ] [ ... ] -> [ a b c ] ...`) parses into a *nested* frame, that leaked one accumulator reference per iteration, so any such loop's accumulator was never freed: quadratic memory. See Bug 17.
+Rewinding `frames_cnt`/`current_frame_idx`/`frame_storage_top` directly -- as the codegen originally did -- abandons every Block reference stored in an inner frame's slots without decref'ing it. Since the ordinary multi-step idiom (`-> [ a b ] ... -> [ a b c ] ...`) parses into a *nested* frame, that leaked one accumulator reference per iteration, so any such loop's accumulator was never freed: quadratic memory. See Bug 17.
 
 ### Frame Scoping Rules
-An arrow frame `-> [ vars ] [ body ]` binds variables popped from the stack for the duration of its body block:
+An arrow frame `-> [ vars ] body` binds variables popped from the stack for the duration of its body block:
 - **Nested Scopes**: Variable bindings persist across trailing multi-block expressions and nested child scopes within the frame body.
 - **Sibling Inheritance**: Consecutive sibling frames within a macro inherit earlier unshadowed aliases.
 - **Trailing Conditionals**: Trailing `cond` expressions inherit active frame variable aliases.

@@ -8,7 +8,7 @@ end
   len
 end
 #nth ( block:Block idx:Scalar -- val:Unknown )
-  at
+  block_get
 end
 #sum ( block:Block -- total:Scalar )
   [fold| idx acc val _ | acc val + from 0 ]
@@ -55,22 +55,22 @@ end
 end
 
 #insert_sort_step ( idx:Scalar acc:Block val:Unknown ctx:Unknown -- acc:Block )
-  acc 0 at
+  acc 0 block_get
   cond [
-    acc 1 at val cons acc 0 at swap pair
+    acc 1 block_get val cons acc 0 block_get swap pair
   ] else [
     ctx val <
     cond [
-      acc 1 at ctx cons val cons 1 swap pair
+      acc 1 block_get ctx cons val cons 1 swap pair
     ] else [
-      acc 1 at val cons 0 swap pair
+      acc 1 block_get val cons 0 swap pair
     ] ?
   ] ?
 end
 #insert_sorted ( val:Unknown blk:Block -- result:Block )
   val blk [fold| idx acc elem x | idx acc elem :val x :ctx insert_sort_step from [ 0 nil ] ]
-  -> [ res_pair ] res_pair 0 at 0 =
-  cond [ res_pair 1 at val cons ] else [ res_pair 1 at ] ?
+  -> [ res_pair ] res_pair 0 block_get 0 =
+  cond [ res_pair 1 block_get val cons ] else [ res_pair 1 block_get ] ?
   reverse
 end
 { block_sort was an insertion sort that rebuilt its result on every insert:
@@ -87,16 +87,13 @@ end
   i 0 = cond [ acc ] else [ p i 1 - acc p i 1 - hread cons bsort_collect_loop ]
 end
 #block_sort ( blk:Block -- sorted:Block )
-  hmark -> [ m ] [
-    blk len -> [ n ] [
-      n hnew -> [ p ] [
+  hmark -> [ m ]
+    blk len -> [ n ]
+      n hnew -> [ p ]
         p blk [fold| idx acc val p2 | idx acc val p2 :p bsort_fill_step from 0 ] drop
         p 0 n hsort
         p n nil bsort_collect_loop
         m hrelease
-      ]
-    ]
-  ]
 end
 
 
@@ -119,18 +116,16 @@ end
   ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
 end
 #expect_eq ( got:Unknown want:Unknown msg:Block -- ok:Scalar )
-  got want = -> [ ok ] [
+  got want = -> [ ok ]
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step 10 print_char
     ] ? ok
-  ]
 end
 #expect_near ( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Scalar )
-  got want - abs tol > not -> [ ok ] [
+  got want - abs tol > not -> [ ok ]
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step " within " ex_say_step tol ex_num_step 10 print_char
     ] ? ok
-  ]
 end

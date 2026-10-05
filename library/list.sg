@@ -30,12 +30,11 @@
 #lst_make ( initial_capacity:Scalar -- ptr:Ptr )
   initial_capacity
   3 hnew
-  -> [ initial_capacity head_ptr ] [
+  -> [ initial_capacity head_ptr ]
     head_ptr 0 initial_capacity hwrite
     head_ptr 1 0 hwrite
     head_ptr 2 initial_capacity hnew hwrite
     head_ptr
-  ]
 end
 
 #lst_get ( ptr:Ptr idx:Scalar -- val:Unknown )
@@ -63,22 +62,19 @@ end
 #lst_grow ( ptr:Ptr --  )
   ptr
   ptr 0 hread
-  -> [ ptr old_cap ] [
+  -> [ ptr old_cap ]
     ptr
     old_cap
     old_cap lst_new_cap
-  ]
-  -> [ ptr old_cap new_cap ] [
+  -> [ ptr old_cap new_cap ]
     ptr
     old_cap
     new_cap
     new_cap hnew
-  ]
-  -> [ ptr old_cap new_cap new_data ] [
+  -> [ ptr old_cap new_cap new_data ]
     ptr 2 hread :src new_data :dst 0 :idx old_cap :stop lst_copy_loop
     ptr 0 new_cap hwrite
     ptr 2 new_data hwrite
-  ]
 end
 
 #lst_push ( ptr:Ptr val:Unknown --  )
