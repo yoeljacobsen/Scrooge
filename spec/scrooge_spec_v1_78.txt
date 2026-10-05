@@ -1,4 +1,4 @@
-Scrooge v1.77 Language Specification
+Scrooge v1.78 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.

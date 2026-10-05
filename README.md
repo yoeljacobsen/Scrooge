@@ -1,6 +1,17 @@
-# Scrooge Programming Language (v1.77)
+# Scrooge Programming Language (v1.78)
 
-Repository status: **Scrooge v1.77**.
+Repository status: **Scrooge v1.78**.
+
+### What changed in v1.78
+
+Faster builds. The language is unchanged.
+
+- **Builds of large programs take a third less time.** A 4,000-line SQL engine builds in 12.3 s instead of 19.5 s; the QMNIST programs' C compiles in about 4 s instead of 9-10. Programs run as fast as before or faster, measured by the new performance gate.
+- **How:**
+  - A word is compiled in place everywhere it runs repeatedly: in loops, in recursive words, and in the words they call.
+  - In straight-line code, only tiny words and words called from one place are compiled in place; other calls there are ordinary C calls.
+  - Unused stack wrappers are no longer compiled.
+- **`--profile`** keeps every word separate, and its table also lists a word that was running when the program was stopped.
 
 ### What changed in v1.77
 
@@ -402,7 +413,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_77.txt`](spec/scrooge_spec_v1_77.txt) (defines v1.77 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_78.txt`](spec/scrooge_spec_v1_78.txt) (defines v1.78 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
