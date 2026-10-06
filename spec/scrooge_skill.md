@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.84)
+# Skill: Writing Correct Scrooge (v1.85)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_84.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_85.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Scalar v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -303,29 +303,35 @@ compiler/scroogec_fast -L library --stack st_var src/stats.sg   # the stack at t
 
 ## 8b. Editing Scrooge Source
 
-The compiler edits source a whole word at a time, so you never need a script that searches for and replaces a snippet of text (which breaks on any difference in indentation). It finds definitions with the compiler's own rules, so `end` or `#name` inside a string or a `{ }` comment is never mistaken for code:
+The compiler edits source a whole word at a time, so you never need a script that searches for and replaces a snippet of text (which breaks on any difference in indentation). It finds definitions with the compiler's own rules, so `end` or `#name` inside a string or a `{ }` comment is never mistaken for code. Reading is `--words` and `--show`; every change is one command, `--edit` (since v1.85):
 
 ```bash
 compiler/scroogec_fast --words prog.sg                 # every definition: name, signature, lines
-compiler/scroogec_fast --show parse_row prog.sg        # print one definition
-compiler/scroogec_fast --replace parse_row prog.sg < new.sg        # replace it (new text on stdin)
-compiler/scroogec_fast --insert-before parse_row prog.sg < helper.sg  # add a helper above it
-compiler/scroogec_fast --insert-after parse_row prog.sg < next.sg
-compiler/scroogec_fast --delete parse_row prog.sg
+compiler/scroogec_fast --show parse_row prog.sg        # print one definition, with its comment
+compiler/scroogec_fast -L library --edit main.sg < changes.sg   # apply an edit script to the program
 compiler/scroogec_fast --fmt prog.sg                   # re-indent (two spaces per bracket level)
-compiler/scroogec_fast -L library --replace-all prog.sg < words.sg   # replace (or add) several words in one edit
-compiler/scroogec_fast -L library --rename parse_row read_row main.sg  # rename a word across the program and its modules
-compiler/scroogec_fast -L library --move parse_row main.sg rows.sg     # move a word into a module, with the use lines it needs
 ```
 
-- The new text (stdin) is one or more complete `#name ... end` definitions. It is checked before anything is written: balanced brackets, every definition ended, the parser accepts it, and no name it defines already exists (except the one being replaced). On any problem the file is left untouched and the reason is printed.
-- A word's comment is the run of comment lines directly above its `#name` line, with no blank line between. It belongs to the word: `--show` prints it, `--delete` removes it, and `--insert-before` puts new text above it. `--replace` replaces it too when the new text starts with its own comment, and keeps it otherwise.
-- `--insert-before` is the natural way to add a helper: it lands directly above the word that calls it.
-- To change a few lines inside a long word, `--show` it, edit the text, and `--replace` it.
-- `--fmt` changes only leading whitespace, never the code or the line count, and `--fmt --check` reports whether a file is already formatted. Formatted files make ordinary text edits reliable too.
-- **Every edit is checked.** The compiler writes the files, checks them, and if one that was accepted before the edit would now be rejected, it restores every file and prints the errors, so a bad edit never reaches the disk. With `--program main.sg` it checks the whole program instead of the edited file; `--no-check` skips the check. The message ends with the result: `checked: main.sg: ACCEPT`.
-- `--rename OLD NEW MAIN` renames the definition, every call and every `'OLD` reference in the program and all its modules, but not strings or comments. A private `_word` is renamed only in its own module. It refuses a NEW that is already defined or reserved, and an OLD that is also a local name somewhere (an input, a frame or a loop name).
-- `--move NAME FROM TO` moves a word (with its comment) to the module TO, adds FROM's `use` lines that TO lacks, and adds `use "TO"` to FROM when FROM still calls it. It refuses when the word calls words that stay in FROM: move those first.
+An edit script is a list of steps, applied in order to the program (MAIN and every module it loads):
+
+```
+{ checked: rows with fewer fields are skipped }
+#parse_row ( line:Block -- row:Row ok:Scalar ) ... end
+#row_width ( r:Row -- n:Scalar ) ... end
+rename parse_row read_row
+delete old_reader
+move read_row rows.sg
+into rows.sg
+#row_valid ( r:Row -- f:Scalar ) ... end
+```
+
+- A definition (`#name ... end`, with the comment above it if any) replaces the word of that name wherever it is, or is added at the end of MAIN, or of the file named by the last `into FILE`.
+- `delete NAME` removes a word and its comment. `rename OLD NEW` renames the definition, every call and every `'OLD` reference in the program and its modules, but not strings or comments; a private `_word` only in its own module. It refuses a NEW that is already defined or reserved, and an OLD that is also a local name somewhere. `move NAME FILE` moves a word to the module FILE next to MAIN, adds the `use` lines it needs there and `use "FILE"` where it is still called; it refuses while the word calls words that stay behind, so move those first (in the same script).
+- A step line starts at column 0; everything else is definition text, checked before anything is written (balanced brackets, every definition ended, the parser accepts it).
+- A word's comment is the run of comment lines directly above its `#name` line, with no blank line between: `--show` prints it, `delete` removes it, and a replacement replaces it when the new text brings its own, and keeps it otherwise.
+- **The whole script is one checked edit.** The compiler writes the files, checks MAIN, and if MAIN was accepted before and would now be rejected, it restores every file and prints the errors, so a bad edit never reaches the disk. `--no-check` skips the check. The message lists the steps and ends with `checked: main.sg: ACCEPT`.
+- To change a few lines inside a long word, `--show` it, edit the text, and put it in a script.
+- `--fmt` changes only leading whitespace, never the code or the line count, and `--fmt --check` reports whether a file is already formatted.
 
 ## 9. Debugging a Program That Runs Wrong
 
