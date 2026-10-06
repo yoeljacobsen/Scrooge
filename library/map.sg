@@ -9,7 +9,7 @@
 { ---- list or a plain Ptr is expected (or the reverse) is a TypeError. ---- }
 #type IntMap Ptr end
 
-#map_make ( buckets_size:Scalar -- m:IntMap )
+#map_make ( buckets_size:Int -- m:IntMap )
   buckets_size 2 * hnew -> [ data_ptr ]
     2 hnew -> [ hdr ]
       hdr 0 buckets_size hwrite
@@ -17,11 +17,11 @@
       hdr IntMap_of
 end
 
-#map_hash ( key:Scalar buckets_size:Scalar -- bucket_idx:Scalar )
+#map_hash ( key:Int buckets_size:Int -- bucket_idx:Int )
   \ 2 *
 end
 
-#map_find ( m:IntMap key:Scalar -- val:Unknown found:Scalar )
+#map_find ( m:IntMap key:Int -- val:Unknown found:Int )
   m IntMap_raw 1 hread
   key
   key m IntMap_raw 0 hread map_hash
@@ -36,7 +36,7 @@ end
     ] ?
 end
 
-#map_get ( m:IntMap key:Scalar -- val:Unknown )
+#map_get ( m:IntMap key:Int -- val:Unknown )
   m IntMap_raw 1 hread
   key
   key m IntMap_raw 0 hread map_hash
@@ -55,7 +55,7 @@ end
 { an unrelated existing key is the closest analogue this structure has to }
 { "the table is full" -- the alternative (silently overwriting) would }
 { corrupt the other key's entry with no signal to the caller. }
-#map_set ( m:IntMap key:Scalar val:Unknown -- ok:Scalar )
+#map_set ( m:IntMap key:Int val:Unknown -- ok:Int )
   val
   m IntMap_raw 1 hread
   key

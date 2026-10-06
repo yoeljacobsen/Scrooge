@@ -1,6 +1,6 @@
 { ---- N-Dimensional Heap Array Lexicon ---- }
 
-#arr_size ( shape_block:Block -- total_cells:Scalar )
+#arr_size ( shape_block:Block -- total_cells:Int )
   [fold| idx acc val _ | acc val * from 1 ]
 end
 
@@ -13,7 +13,7 @@ end
     base_ptr
 end
 
-#arr_offset ( ptr:Ptr coords_block:Block -- flat_offset:Scalar )
+#arr_offset ( ptr:Ptr coords_block:Block -- flat_offset:Int )
   0
   coords_block [fold| idx acc coord _ |
     ptr 1 idx + hread
@@ -30,7 +30,7 @@ end
   ptr ptr coords_block arr_offset val hwrite
 end
 
-#nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )
+#nth_or_default ( arr:Block idx:Int default:Unknown -- val:Unknown )
   idx 0 < not idx arr len < and
   cond [ arr idx block_get ] else [ default ] ?
 end

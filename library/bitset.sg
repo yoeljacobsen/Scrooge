@@ -3,32 +3,32 @@
 { ---- bit i is the (1 << i) place. No allocation, no Ptr -- everything    ---- }
 { ---- here is pure Scalar arithmetic.                                    ---- }
 
-#bs_add ( set:Scalar i:Scalar -- set:Scalar )
+#bs_add ( set:Int i:Int -- set:Int )
   set 1 i bitshl bitor
 end
 
-#bs_test ( set:Scalar i:Scalar -- present:Scalar )
+#bs_test ( set:Int i:Int -- present:Int )
   set 1 i bitshl bitand 0 !=
 end
 
-#bs_union ( a:Scalar b:Scalar -- c:Scalar )
+#bs_union ( a:Int b:Int -- c:Int )
   a b bitor
 end
 
-#bs_inter ( a:Scalar b:Scalar -- c:Scalar )
+#bs_inter ( a:Int b:Int -- c:Int )
   a b bitand
 end
 
-#bs_minus ( a:Scalar b:Scalar -- c:Scalar )
+#bs_minus ( a:Int b:Int -- c:Int )
   a b bitnot bitand
 end
 
 { bs_count and bs_first used to be 64-step loops of word calls; they are now
   the bitcount and bitctz primitives. Results unchanged: bs_first gives
   0 0 for an empty set. }
-#bs_count ( set:Scalar -- n:Scalar )
+#bs_count ( set:Int -- n:Int )
   bitcount
 end
-#bs_first ( set:Scalar -- i:Scalar found:Scalar )
+#bs_first ( set:Int -- i:Int found:Int )
   set 0 = cond [ 0 0 ] else [ set bitctz 1 ]
 end

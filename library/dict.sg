@@ -9,9 +9,9 @@
 { ---- (0 empty, 1 live, 2 deleted).                                      ---- }
 #type Dict Ptr end
 
-#_dict_pow2 ( p:Scalar n:Scalar -- q:Scalar ) p n < cond [ p 2 * n _dict_pow2 ] else [ p ] end
+#_dict_pow2 ( p:Int n:Int -- q:Int ) p n < cond [ p 2 * n _dict_pow2 ] else [ p ] end
 
-#_dict_alloc ( c:Scalar -- d:Dict )
+#_dict_alloc ( c:Int -- d:Dict )
   6 hnew -> [ h ]
   h 0 0 hwrite
   h 1 0 hwrite
@@ -23,33 +23,33 @@
 end
 
 { a new, empty Dict with room for about n keys before it grows }
-#dict_new ( n:Scalar -- d:Dict ) 8 n 2 * _dict_pow2 _dict_alloc end
+#dict_new ( n:Int -- d:Dict ) 8 n 2 * _dict_pow2 _dict_alloc end
 
-#dict_len ( d:Dict -- n:Scalar ) d Dict_raw 0 hread end
-#dict_cap ( d:Dict -- n:Scalar ) d Dict_raw 2 hread end
-#_dict_used ( d:Dict -- n:Scalar ) d Dict_raw 1 hread end
+#dict_len ( d:Dict -- n:Int ) d Dict_raw 0 hread end
+#dict_cap ( d:Dict -- n:Int ) d Dict_raw 2 hread end
+#_dict_used ( d:Dict -- n:Int ) d Dict_raw 1 hread end
 #_dict_keys ( d:Dict -- p:Ptr ) d Dict_raw 3 hread end
 #_dict_vals ( d:Dict -- p:Ptr ) d Dict_raw 4 hread end
 #_dict_states ( d:Dict -- p:Ptr ) d Dict_raw 5 hread end
 
 { an element of a Block key: an integer as itself, a nested Block (a }
 { string or row field of a #struct) by its own hash, a float by its text }
-#_dict_hash_elem ( c:Unknown -- x:Scalar )
+#_dict_hash_elem ( c:Unknown -- x:Int )
   c type_of -> [ t ]
   t 0 = cond [ c ] else [ t 2 = cond [ c _dict_hash_str ] else [ c to_str _dict_hash_str ] ]
 end
 
 { FNV-1a over a Block's elements: a string's characters, or a struct's fields }
-#_dict_hash_str ( k:Block -- h:Scalar )
+#_dict_hash_str ( k:Block -- h:Int )
   k [fold| i h c _ | h c _dict_hash_elem bitxor 16777619 * 0xffffffff bitand from 2166136261 ]
 end
 
 { an integer mixed so that near keys spread over the table }
-#_dict_hash_int ( k:Scalar -- h:Scalar )
+#_dict_hash_int ( k:Int -- h:Int )
   k 0x7fffffff bitand k 31 bitshr 0x7fffffff bitand bitxor 2654435761 * 0x7fffffffffff bitand
 end
 
-#dict_hash ( k:Unknown -- h:Scalar )
+#dict_hash ( k:Unknown -- h:Int )
   k type_of -> [ t ]
   t 2 = cond [ k _dict_hash_str ]
   else [ t 0 = cond [ k _dict_hash_int ] else [ "dict: a key must be an integer, a string or another Block (a #struct)" abort ] ]
@@ -58,7 +58,7 @@ end
 { along the probe path from slot i: the slot holding k (found 1), or else }
 { the first deleted slot passed (free, -1 if none) or the empty one that  }
 { ends the path (found 0) }
-#_dict_probe ( d:Dict k:Unknown i:Scalar free:Scalar -- s:Scalar found:Scalar )
+#_dict_probe ( d:Dict k:Unknown i:Int free:Int -- s:Int found:Int )
   d _dict_states i hread -> [ st ]
   st 0 = cond [ free 0 < cond [ i ] else [ free ] 0 ]
   else [
@@ -68,7 +68,7 @@ end
   ]
 end
 
-#_dict_slot ( d:Dict k:Unknown -- s:Scalar found:Scalar )
+#_dict_slot ( d:Dict k:Unknown -- s:Int found:Int )
   d k k dict_hash d dict_cap 1 - bitand :i -1 :free _dict_probe
 end
 
@@ -97,7 +97,7 @@ end
 #dict_set ( d:Dict k:Unknown v:Unknown -- ) d _dict_make_room d k v _dict_put end
 
 { the value of k and 1, or 0 0 when k is absent }
-#dict_find ( d:Dict k:Unknown -- v:Unknown found:Scalar )
+#dict_find ( d:Dict k:Unknown -- v:Unknown found:Int )
   d k _dict_slot -> [ s found ]
   found cond [ d _dict_vals s hread 1 ] else [ 0 0 ]
 end
@@ -111,13 +111,13 @@ end
   d k dict_find cond [ ] else [ drop default ]
 end
 
-#dict_has ( d:Dict k:Unknown -- f:Scalar ) d k _dict_slot swap drop end
+#dict_has ( d:Dict k:Unknown -- f:Int ) d k _dict_slot swap drop end
 
 { adds n to the number stored at k (0 when absent): counting }
-#dict_add ( d:Dict k:Unknown n:Scalar -- ) d k d k 0 dict_get_or n + dict_set end
+#dict_add ( d:Dict k:Unknown n:Int -- ) d k d k 0 dict_get_or n + dict_set end
 
 { removes k; 1 if it was there }
-#dict_del ( d:Dict k:Unknown -- found:Scalar )
+#dict_del ( d:Dict k:Unknown -- found:Int )
   d k _dict_slot -> [ s found ]
   found when [
     d _dict_states s 2 hwrite
@@ -131,7 +131,7 @@ end
 { slot i, 0 <= i < dict_cap: its key and value and 1 when it holds one, }
 { else 0 0 0. To visit every entry: }
 { `d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ ... ] ]` }
-#dict_slot ( d:Dict i:Scalar -- k:Unknown v:Unknown live:Scalar )
+#dict_slot ( d:Dict i:Int -- k:Unknown v:Unknown live:Int )
   d _dict_states i hread 1 = cond [ d _dict_keys i hread d _dict_vals i hread 1 ] else [ 0 0 0 ]
 end
 

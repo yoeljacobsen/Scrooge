@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.88)
+# Skill: Writing Correct Scrooge (v1.89)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,9 +9,9 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_88.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_89.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
-4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Scalar v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
+4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
 6. **Then experiment.** When a rule is unclear, write a 3-line program that tests exactly that question, check it (`--check-only`) and run it. A probe answers in seconds and is always right; reasoning about stack effects in your head often is not.
 
@@ -51,17 +51,17 @@ Build every program from small words, each doing one job, and combine them into 
 
 **The workflow, a word at a time:**
 1. Top down (section 0b): write the list of words with their signatures, from the program's outline down to the smallest steps. The top word should read like the outline: a short sequence of calls.
-2. Bottom up: write the lowest word, and next to it (in the same module, or in a test file that `use`s it) a test word, `#test_name ( -- ok:Scalar )`, that runs it on an input whose answer you worked out by hand.
-3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`: one `and` after each check but the first, so the test leaves one flag (`test_bits` in section 2d). A word that stops the program on bad input is tested with a test that begins `"msg" expect_stop`: `--test` runs it alone and passes it when the program stops with msg in its error output (`#test_bad ( -- ok:Scalar ) "not a number" expect_stop "x1" parse_or_die drop 0 end`). A runtime fault (an index out of range, a stale Ptr) exits with status 70, a program's own `abort` or `1 exit` with 1. Under `--test` the program runs with no arguments (`argc` is 1), so test a word that reads options by passing it the arguments as a Block, not through `argv`.
+2. Bottom up: write the lowest word, and next to it (in the same module, or in a test file that `use`s it) a test word, `#test_name ( -- ok:Int )`, that runs it on an input whose answer you worked out by hand.
+3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`: one `and` after each check but the first, so the test leaves one flag (`test_bits` in section 2d). A word that stops the program on bad input is tested with a test that begins `"msg" expect_stop`: `--test` runs it alone and passes it when the program stops with msg in its error output (`#test_bad ( -- ok:Int ) "not a number" expect_stop "x1" parse_or_die drop 0 end`). A runtime fault (an index out of range, a stale Ptr) exits with status 70, a program's own `abort` or `1 exit` with 1. Under `--test` the program runs with no arguments (`argc` is 1), so test a word that reads options by passing it the arguments as a Block, not through `argv`.
 4. Only when the word passes, write the word that uses it, and its test. Keep every test passing as you go.
 
 `examples/colstats/` is a complete program written this way: `examples/colstats/stats.sg` (statistics words with their tests), `examples/colstats/readnums.sg` (reading a file of numbers) and `examples/colstats/colstats.sg` (the top, a sequence of calls).
 
-**A word's inputs are names already.** Use them directly: `#dist2 ( x:Scalar y:Scalar -- d:Scalar ) x sq y sq + end` binds `x` and `y` as if it began with `-> [ x y ]` (spec section 2, Implicit entry frame). Write `-> [ ... ]` yourself only for values computed inside the body, and give inputs names that are not words (an input named like a word that the body calls is an error, `ParamNamedLikeWord`; so is a frame alias named like one of your words, `AliasShadowsWord`).
+**A word's inputs are names already.** Use them directly: `#dist2 ( x:Int y:Int -- d:Int ) x sq y sq + end` binds `x` and `y` as if it began with `-> [ x y ]` (spec section 2, Implicit entry frame). Write `-> [ ... ]` yourself only for values computed inside the body, and give inputs names that are not words (an input named like a word that the body calls is an error, `ParamNamedLikeWord`; so is a frame alias named like one of your words, `AliasShadowsWord`).
 
 **Frames are flat.** A frame's body is the rest of the block, never bracketed (spec section 2): `-> [ a b ] a b + -> [ s ] s s *` binds `a b`, then `s`, without nesting either. A `[ ... ]` right after the names is a value: `3 hnew -> [ p ] [ 2 4 7 ]` binds p and pushes the Block [ 2 4 7 ].
 
-**Share a skeleton, not a copy.** When two words differ only in one step (two training loops, a minimum and a maximum), write the shared part once with a word parameter and pass the step: `#_reduce ( p:Ptr n:Scalar pick:Word(Scalar,Scalar--Scalar) -- x:Scalar ) p 0 hread n [times| i | p i hread pick ] end`, then `#st_min ( p:Ptr n:Scalar -- x:Scalar ) 'min _reduce end` (spec section 2, Word parameters). Each use compiles as its own word, so a word parameter costs nothing; the effect of the word passed is checked at the call.
+**Share a skeleton, not a copy.** When two words differ only in one step (two training loops, a minimum and a maximum), write the shared part once with a word parameter and pass the step: `#_reduce ( p:Ptr n:Int pick:Word(Scalar,Scalar--Scalar) -- x:Scalar ) p 0 hread n [times| i | p i hread pick ] end`, then `#st_min ( p:Ptr n:Int -- x:Int ) 'min _reduce end` (spec section 2, Word parameters). Each use compiles as its own word, so a word parameter costs nothing; the effect of the word passed is checked at the call.
 
 **Private helpers.** In a module, a word whose name starts with `_` (`#_sq_dev`) is visible only in that file, so helpers do not crowd the program's namespace and two modules can each have their own `_step`.
 
@@ -75,7 +75,7 @@ Build every program from small words, each doing one job, and combine them into 
 
 ## 2. Name Values with Frames; Avoid Stack Gymnastics
 
-Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). A word's inputs are names already: write them in the body (`#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`) and the word binds them itself, so do not begin a body with `-> [ s n ]`. Name an intermediate result with a frame where it is made: `p n st_mean -> [ m ]`, then use `m` to the end of the block. Names keep their static types; shufflers produce `Unknown`. A frame binds at most 64 names; for more state, use a `#record`.
+Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). A word's inputs are names already: write them in the body (`#avg ( s:Int n:Int -- m:Float ) s to_float n to_float / end`) and the word binds them itself, so do not begin a body with `-> [ s n ]`. Name an intermediate result with a frame where it is made: `p n st_mean -> [ m ]`, then use `m` to the end of the block. Names keep their static types; shufflers produce `Unknown`. A frame binds at most 64 names; for more state, use a `#record`.
 
 - **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A trailing `?` is optional.
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
@@ -87,7 +87,7 @@ Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only f
 
 ---
 
-**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `p :p 0 :i 5 :v hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name); a parameter whose type no other parameter has (the one Ptr, Bytes or Dict among Scalars) needs neither, since a swap there is a TypeError. So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Scalar acc:Scalar -- i:Scalar acc:Scalar )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`) draws the warning ArgumentOrder.
+**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `p :p 0 :i 5 :v hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name); a parameter whose type no other parameter has (the one Ptr, Bytes, Dict or Float among Ints) needs neither, since a swap there is a TypeError. So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Int acc:Int -- i:Int acc:Int )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`) draws the warning ArgumentOrder.
 
 ## 2b. How Stack Effects Add Up
 
@@ -98,10 +98,10 @@ The checker counts, for every word, how far each token moves the stack, and reje
 - **`and`/`or` evaluate both sides.** To guard a test that would fail on bad input, use `and_then`: `b len 0 > and_then [ b 0 block_get x = ]` evaluates the access only for a non-empty Block and is 0 otherwise; `a or_else [ b ]` is 1 when a is true and evaluates b only otherwise. Their body leaves exactly one value.
 - **`when` / `unless` are statements**: `x 0 < when [ "negative" str_print ]` runs the body when the flag is true (`unless`: when it is false) and leaves nothing; the body's net effect is 0.
 - **A fold's `from`** can be any expression leaving one value: `from 0`, `from nil`, or a name in scope (`from acc`).
-- **A call has its signature's effect**, a word's call to itself included: in `#count ( n:Scalar -- )`, the body `-> [ n ] n 0 = cond [ ] else [ n 1 - count ]` is -1 for the frame, then 0 for the cond (its else-branch pushes `n 1 -`, +1, and the call `count` takes it, -1), total -1 as the signature says.
+- **A call has its signature's effect**, a word's call to itself included: in `#count ( n:Int -- )`, the body `-> [ n ] n 0 = cond [ ] else [ n 1 - count ]` is -1 for the frame, then 0 for the cond (its else-branch pushes `n 1 -`, +1, and the call `count` takes it, -1), total -1 as the signature says.
 - **Record accessors:** a field with a count above 1 takes an index, `v s i Name_field_set` and `s i Name_field`; a count-1 field does not, `v s Name_field_set` and `s Name_field`.
 - When a word is rejected with `ArityMismatch`, the message lists the stack depth at the end of each line of the body, relative to entry: the first line whose depth is not what you intended is where the stray value is.
-- **Errors are reported at the call.** When the stack runs out, the message names the call, the inputs it takes and what it found: ``The stack runs out at `pa` (line 6), which takes 3 values ( label:Block v:Scalar n:Scalar ) and finds 2 ( v:Scalar n:Scalar ): the missing one is the deepest, ( label:Block )``. Push the missing value before the others. A TypeError at a call shows what the callee takes beside what the stack holds (deepest first); "check the order of the arguments" means the right values are there in the wrong order: `5 p 0 hwrite` for `p 0 5 hwrite`. One rule fixes most of these: every word that stores into something (a heap cell, a Block, a collection, a file) takes it first and the value last.
+- **Errors are reported at the call.** When the stack runs out, the message names the call, the inputs it takes and what it found: ``The stack runs out at `pa` (line 6), which takes 3 values ( label:Block v:Int n:Int ) and finds 2 ( v:Int n:Int ): the missing one is the deepest, ( label:Block )``. Push the missing value before the others. A TypeError at a call shows what the callee takes beside what the stack holds (deepest first); "check the order of the arguments" means the right values are there in the wrong order: `5 p 0 hwrite` for `p 0 5 hwrite`. One rule fixes most of these: every word that stores into something (a heap cell, a Block, a collection, a file) takes it first and the value last.
 
 ---
 
@@ -129,25 +129,25 @@ A program with state (a decoder, a parser, a simulation) keeps it in one `#recor
 use "util"
 #record Rd
   buf Bytes 1 rd_buf
-  pos Scalar 1 0
-  bits Scalar 1 0
-  nbits Scalar 1 0
+  pos Int 1 0
+  bits Int 1 0
+  nbits Int 1 0
 end
 #rd_buf ( -- a:Bytes ) 4 bytes_new end
-#rd_byte ( r:Rd -- b:Scalar )
+#rd_byte ( r:Rd -- b:Int )
   r Rd_buf r Rd_pos bytes_get
   r r Rd_pos 1 + Rd_pos_set
 end
-#rd_bit ( r:Rd -- b:Scalar )
+#rd_bit ( r:Rd -- b:Int )
   r Rd_nbits 0 = when [ r r rd_byte Rd_bits_set r 8 Rd_nbits_set ]
   r Rd_bits 1 bitand
   r r Rd_bits 1 bitshr Rd_bits_set
   r r Rd_nbits 1 - Rd_nbits_set
 end
-#rd_bits ( r:Rd n:Scalar -- v:Scalar )
+#rd_bits ( r:Rd n:Int -- v:Int )
   0 n [times| i | r rd_bit i bitshl bitor ]
 end
-#test_bits ( -- ok:Scalar )
+#test_bits ( -- ok:Int )
   Rd_new -> [ r ]
   r Rd_buf 0 181 bytes_set
   r 3 rd_bits 5 "low 3 bits of 181" expect_eq
@@ -165,15 +165,15 @@ end
 
 - **Sequence (Arrays / Lists / Blocks)**: Integer index $\rightarrow$ `b i block_get` (one spelling since v1.83).
 - **Map**: key $\rightarrow$ `map_get` / `dict_get`.
-- **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `block_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Scalars.
+- **Heap Pointer (from `hnew`)**: `hread` / `hwrite`. Never use `block_get` on heap pointers. Pointer arithmetic (`ptr 1 +`) is forbidden; compute integer offsets as Ints.
 - **Numeric inner loops are kernels**: `a :a 0 :ao b :b 0 :bo n :n floats_dot`, `y :y 0 :yo x :x 0 :xo n :n g :g floats_axpy` (y += g*x), `floats_add`, `floats_mul`, `floats_scale`, `floats_sum`, `floats_max`, `floats_argmax`, `floats_from_bytes` (pixels to floats), `ints_sum`/`ints_max`/`ints_argmax`, and `bytes_be32`/`bytes_le32`/`bytes_be16`/`bytes_le16` for headers. They are written in C and run several times faster than the same loop in Scrooge (a QMNIST trainer went from 7,900 to 22,000 images/s). The `numeric` lexicon's `vec_*` words do the same on Ptr cells, slower.
 - **Large numeric or byte data goes in compact arrays**: `n floats_new`, `n ints_new` and `n bytes_new` store 8, 8 and 1 bytes per element, where a Ptr's cells take 16 each, and the words check every index: `a i floats_get`, `a i x floats_set`, `a 0 :start n :count 0.0 :x floats_fill`, `src :src 0 :soff dst :dst 0 :doff n :count floats_move`, `a 0 n ints_sort`. Stream a file through `bytes_read ( fh a start count -- got )`. A record field may hold one (`grid Floats 1`).
 - **Bulk heap work**: `hmove ( src soff dst doff count -- )` copies cells (overlap-safe), `hfill ( p start count v -- )` sets a range, `hsort` sorts one (numbers, or Blocks such as strings and rows, lexicographically; a cell holding a Ptr anywhere inside it, `hnull` included, stops the program, so a NULL marker in rows to be sorted must be a number or a Block). Use them instead of a per-cell loop.
 - **An absent link**: `hnull` is a Ptr that refers to nothing (a tree's missing child, an empty list head). Test it with `p hnull =`; reading or writing through it is a fatal error.
 - **Memory**: a Block owns the Blocks inside it and frees them with itself, and a heap cell owns what it holds, so nested data costs nothing once released. Bracket per-item work with `region [ ... ]` (an `hmark`/`hrelease` pair) so a long run does not keep every allocation alive. The checker rejects storing something made inside the region into a structure made before it (`RegionEscape`); copy results out as numbers or Blocks, or allocate the structure before the region. A Ptr used after its region is a fatal error that names where it was made and released.
-- **Codes get their own type**: a token kind, an opcode or a state is an `#enum`, not a number: `#enum Kw select from where union end` gives `Kw_select` .. `Kw_union` (0 .. 3), `Kw_count`, `Kw_name ( k:Kw -- s:Block )` for messages, and `Kw_of`/`Kw_raw` to convert from and to the number (an enum's `Kw_of` stops on a number that is not a code). Declare record fields and parameters as `Kw`, and the checker rejects comparing a code with a plain number (`t Tk_val Kw_union =`), arithmetic on a code, and a number passed where a code is expected; the SQL runs' worst bug (keyword 118 matching the literal 118) is then a compile error. `#type Name Base end` makes any Scalar or Ptr its own type the same way (`#type Row Scalar end`, `Row_of`, `Row_raw`). Both cost nothing at run time. Library handles have types too: `map_make` gives an `IntMap`, so a word that takes a map declares `m:IntMap`, not `m:Ptr`.
-- **Rows, keys and small results are `#struct` values**: `#struct Row name Block kind Shape age Scalar end` gives `Row_make` (label it: `"al" :name Shape_circle :kind 25 :age Row_make`), `r Row_age`, and `r 26 Row_with_age`, a new Row. Structs compare with `=` and sort field by field, so they serve as Dict keys, Vec elements and sort keys, and they never change under you. Use a `#record` only for state that changes in place.
-- **Heap state with named fields**: declare it with `#record Name  field Type count init ...  end` (spec Sec.5) instead of hand-numbering offsets. Every field names its initial value (`0`, `nil`, `hnull`, `"root"`, an enum member, or a word such as `mkvec`), and `Name_new` stores it. A record is its own type (`b:Board` in signatures, a Ptr at run time). It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` that takes the record first and the value last (`s i v`, or `s v` for a count-1 field) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset and the Ptr (`b Board_raw`): `#record Board cells Scalar 81 0 solved Scalar 1 0 end` then `Board_new -> [ b ] b 0 5 Board_cells_set b 1 Board_solved_set b 0 Board_cells print_int`.
+- **Codes get their own type**: a token kind, an opcode or a state is an `#enum`, not a number: `#enum Kw select from where union end` gives `Kw_select` .. `Kw_union` (0 .. 3), `Kw_count`, `Kw_name ( k:Kw -- s:Block )` for messages, and `Kw_of`/`Kw_raw` to convert from and to the number (an enum's `Kw_of` stops on a number that is not a code). Declare record fields and parameters as `Kw`, and the checker rejects comparing a code with a plain number (`t Tk_val Kw_union =`), arithmetic on a code, and a number passed where a code is expected; the SQL runs' worst bug (keyword 118 matching the literal 118) is then a compile error. `#type Name Base end` makes any Int, Float or Ptr its own type the same way (`#type Row Int end`, `Row_of`, `Row_raw`). Both cost nothing at run time. Library handles have types too: `map_make` gives an `IntMap`, so a word that takes a map declares `m:IntMap`, not `m:Ptr`.
+- **Rows, keys and small results are `#struct` values**: `#struct Row name Block kind Shape age Int end` gives `Row_make` (label it: `"al" :name Shape_circle :kind 25 :age Row_make`), `r Row_age`, and `r 26 Row_with_age`, a new Row. Structs compare with `=` and sort field by field, so they serve as Dict keys, Vec elements and sort keys, and they never change under you. Use a `#record` only for state that changes in place.
+- **Heap state with named fields**: declare it with `#record Name  field Type count init ...  end` (spec Sec.5) instead of hand-numbering offsets. Every field names its initial value (`0`, `nil`, `hnull`, `"root"`, an enum member, or a word such as `mkvec`), and `Name_new` stores it. A record is its own type (`b:Board` in signatures, a Ptr at run time). It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` that takes the record first and the value last (`s i v`, or `s v` for a count-1 field) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset and the Ptr (`b Board_raw`): `#record Board cells Int 81 0 solved Int 1 0 end` then `Board_new -> [ b ] b 0 5 Board_cells_set b 1 Board_solved_set b 0 Board_cells print_int`.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 - **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.
 
@@ -200,14 +200,15 @@ end
 
 ## 5. Numeric Conversions & Arithmetic
 
-- **Floating-Point Literals**: Use bare decimal floats (`0.0`, `3.14`, `-0.5`) or scientific notation (`314e-2`).
+- **Two kinds of number (v1.89)**: `Int` (`3`, `-7`, `0xff`, `'a'`) and `Float` (`3.0`, `-0.5`, `314e-2`); a literal with a point or an exponent is a Float. Tag every number in a signature with its kind: indexes, counts, sizes, codes and flags are `Int`, measurements are `Float`. `Scalar` means either kind, for the rare word that takes both (`print_float`, a generic helper); a Scalar cannot be passed where an Int or a Float is asked for.
+- **One kind per operation**: `+ - * / min max` and the comparisons take two numbers of one kind. An Int with a Float is a TypeError that says what to write: `x 2 *` for a Float x is `x 2.0 *`, `x 0 >` is `x 0.0 >`, and an Int n used with a Float is `n to_float`. `7 2 /` is the Int 3 and `7.0 2.0 /` the Float 3.5, so the kind of a division is always visible. `\`, the bit words and every index, count and loop bound take Ints.
+- **Values of unknown kind**: a heap cell (`hread`) or a Block element (`block_get`) can hold either kind, so the checker lets it through anywhere and the program checks it when it runs; give such values their kind as soon as you can (store numbers in a Floats or Ints array, or declare the word that reads them).
 - **Float to integer**: `x to_int` truncates toward zero (`-3.9 to_int` is -3); `x floor` rounds down (`-3.9 floor` is -4), and "x 0.5 + floor" rounds to nearest. **Number to text**: `x 3 float_to_str` is the Block `"3.142"` for 3.14159 (exactly what `3 print_float` prints); `n int_to_str` (strings) for an integer. **Which kind of value**: `v type_of` is 0 for an integer, 1 a float, 2 a Block, 3 a Ptr.
-- **Real functions and random numbers**: `exp`, `log` (natural), `sqrt` and `pow` ("2 10 pow" is 1024.0) return floats. `rand` gives a float in [0, 1), and `seed` ( s -- ) fixes the sequence; without a seed call every run gives the same numbers, so seed explicitly and record the seed when results must be reproducible. "rand n * to_int" is an integer in 0..n-1.
-- **Explicit Float Casting (`to_float`)**:
-  Cast integer scalars to float before division (`/`) when float division is required:
+- **Real functions and random numbers**: `exp`, `log` (natural), `sqrt` and `pow` ("2 10 pow" is 1024.0) return floats. `rand` gives a float in [0, 1), and `seed` ( s -- ) fixes the sequence; without a seed call every run gives the same numbers, so seed explicitly and record the seed when results must be reproducible. "rand n to_float * to_int" is an integer in 0..n-1.
+- **Converting (`to_float`, `to_int`, `floor`)**: a mean of Ints is a Float, so convert both before dividing:
   ```scrooge
-  #avg_calc ( sum:Scalar count:Scalar -- avg:Scalar )
-    sum to_float count to_float /
+  #avg_calc ( total:Int count:Int -- avg:Float )
+    total to_float count to_float /
   end
   ```
 
@@ -219,21 +220,21 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
 
 - **Collections first (`vec.sg`, `dict.sg`)**: reach for these before writing a heap layout of your own. Both handles are types of their own (`v:Vec`, `d:Dict`), and every word takes the container first.
   - `Vec`, a growable vector: `8 vec_new -> [ v ]`, `v x vec_push`, `v i vec_get`, `v i x vec_set`, `v vec_len`, `v vec_pop`, `v vec_last`, `v vec_to_block`, `b vec_from_block`. An index outside the Vec stops the program, naming the word.
-  - Sorting in your own order: write the order as a small word and pass it. `#by_age ( a:Ptr b:Ptr -- f:Scalar ) a Person_age b Person_age < end` then `v 'by_age vec_sort_by`, or `p 0 n 'by_age sort_by` for heap cells. The sort is stable, so to sort by two keys, sort by the second key first, then by the first. `v vec_sort` sorts in hsort's order (numbers, then strings and rows element by element).
+  - Sorting in your own order: write the order as a small word and pass it. `#by_age ( a:Ptr b:Ptr -- f:Int ) a Person_age b Person_age < end` then `v 'by_age vec_sort_by`, or `p 0 n 'by_age sort_by` for heap cells. The sort is stable, so to sort by two keys, sort by the second key first, then by the first. `v vec_sort` sorts in hsort's order (numbers, then strings and rows element by element).
   - `Dict`, a hash map from integer or string keys: `100 dict_new -> [ d ]`, `d k v dict_set`, `d k dict_get` (stops when absent), `d k dict_find -> [ v found ]`, `d k default dict_get_or`, `d k dict_has`, `d k dict_del`, `d k 1 dict_add` (counting), `d dict_keys`, or every slot with `d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ ... ] ]`.
 
 - **Numeric kernels (`numeric.sg`)**: a vector is a Ptr, a start cell and a length, so one allocation holds a whole matrix (row r of a c-column matrix starts at `r c *`). `vec_dot ( a ao b bo n -- s )`, `vec_axpy ( y yo x xo n g -- )` (y += g*x, like `floats_axpy`), `vec_add`, `vec_scale`, `vec_sum`, `vec_max`, `vec_argmax`, and `vec_be32` / `vec_le32 ( p off -- n )` for a 32-bit integer in four byte cells after `fread_into` (binary headers).
 - **Process figures (`procinfo.sg`)**: `proc_peak_kb ( -- kb )` is the peak resident memory (VmHWM) to report; `proc_rss_kb`, and `proc_status_kb ( key -- kb ok )` for any /proc/self/status field.
 
 - **Signed Integer Formatting (`strings.sg`)**:
-  `int_to_str ( n:Scalar -- str:Block )` converts positive and negative integers to digit character blocks (e.g., `-42` $\rightarrow$ `"-42"` prepended with ASCII `-` / 45).
+  `int_to_str ( n:Int -- str:Block )` converts positive and negative integers to digit character blocks (e.g., `-42` $\rightarrow$ `"-42"` prepended with ASCII `-` / 45).
 
 - **Block Equality & Sorting (`util.sg`)**:
-  - `#block_eq ( b1:Block b2:Block -- equal:Scalar )`: Checks length equality first, then folds element-by-element equality (returns `1` if equal, `0` otherwise).
+  - `#block_eq ( b1:Block b2:Block -- equal:Int )`: Checks length equality first, then folds element-by-element equality (returns `1` if equal, `0` otherwise).
   - `#block_sort ( blk:Block -- sorted:Block )`: Stable ascending sort, O(n log n) (it uses `hsort`). It sorts numbers, and Blocks lexicographically: a Block of strings sorts in byte order, a Block of rows column by column. For a descending order, `reverse` the result.
 
 - **Safe Indexing (`array.sg`)**:
-  - `#nth_or_default ( arr:Block idx:Scalar default:Unknown -- val:Unknown )`: Returns element at `idx` if within bounds (`0 <= idx < arr len`), otherwise returns `default`.
+  - `#nth_or_default ( arr:Block idx:Int default:Unknown -- val:Unknown )`: Returns element at `idx` if within bounds (`0 <= idx < arr len`), otherwise returns `default`.
 
 ---
 
@@ -245,18 +246,18 @@ Import library lexicons at the top of the file via `use "<lexicon>"`.
 
 A file is read and written as a Block of character codes -- the same representation `strings.sg` uses -- through an opaque `File` handle. Handles 0/1/2 are pre-opened as stdin/stdout/stderr, so the same words serve the standard streams (`f_stdin`, `f_stdout`, `f_stderr`).
 
-**Reach for the whole-file words first.** They open, transfer and close in one step, and report every failure through an `ok` Scalar:
+**Reach for the whole-file words first.** They open, transfer and close in one step, and report every failure through an `ok` Int flag:
 ```scrooge
 use "file"
-#save_report ( text:Block -- ok:Scalar )
+#save_report ( text:Block -- ok:Int )
   "report.txt" text f_write_file
 end
 ```
-- `f_read_file ( path:Block -- str:Block ok:Scalar )` / `f_write_file ( path:Block str:Block -- ok:Scalar )` / `f_append_file ( path:Block str:Block -- ok:Scalar )`.
+- `f_read_file ( path:Block -- str:Block ok:Int )` / `f_write_file ( path:Block str:Block -- ok:Int )` / `f_append_file ( path:Block str:Block -- ok:Int )`.
 
 **Open explicitly when one handle serves several operations.** Use the named mode helpers, never a bare mode integer:
-- `f_open_read` / `f_open_write` / `f_open_append` `( path:Block -- fh:File ok:Scalar )`, then `fclose ( fh:File -- ok:Scalar )`.
-- `f_read_all ( fh:File -- str:Block )`, `f_write_line ( fh:File str:Block -- ok:Scalar )`. A line is `fh freadline` (a Block) or `fh a freadline_into` (into a Bytes, no Block per line); a string is written with `fh s fwrite`.
+- `f_open_read` / `f_open_write` / `f_open_append` `( path:Block -- fh:File ok:Int )`, then `fclose ( fh:File -- ok:Int )`.
+- `f_read_all ( fh:File -- str:Block )`, `f_write_line ( fh:File str:Block -- ok:Int )`. A line is `fh freadline` (a Block) or `fh a freadline_into` (into a Bytes, no Block per line); a string is written with `fh s fwrite`.
 
 **Check the flag, always.** Nothing in this lexicon aborts on a missing file, a full handle table or a short write -- it returns `ok=0`, `got=0`, or a written count below `str len`. A `cond` on that flag is not optional politeness; skipping it means using a handle that was never opened.
 
@@ -281,8 +282,8 @@ end
 **Parse flags with `arg_flag`, `arg_value_or` and `arg_int_or`.** They cover the usual `-v`, `-f path` and `-n 1000` shapes without a hand-written loop; a missing, trailing or non-numeric value gives the default:
 ```scrooge
 use "args"
-#limit ( -- n:Scalar ) "-n" 1000000 arg_int_or end
-#verbose ( -- f:Scalar ) "-v" arg_flag end
+#limit ( -- n:Int ) "-n" 1000000 arg_int_or end
+#verbose ( -- f:Int ) "-v" arg_flag end
 #input_path ( -- p:Block ) "-f" "data.csv" arg_value_or end
 ```
 
@@ -349,7 +350,7 @@ The compiler edits source a whole word at a time, so you never need a script tha
 compiler/scroogec_fast --words src/token.sg            # every definition: name, signature, lines
 compiler/scroogec_fast --show tok_kind src/token.sg    # print one definition, with its comment
 compiler/scroogec_fast -L library --edit src/token.sg <<'EOF'
-#tok_kind ( c:Scalar -- k:TokKind ) c is_digit cond [ TokKind_num ] else [ TokKind_word ] ? end
+#tok_kind ( c:Int -- k:TokKind ) c is_digit cond [ TokKind_num ] else [ TokKind_word ] ? end
 EOF
 compiler/scroogec_fast --fmt src/token.sg              # re-indent (two spaces per bracket level)
 ```
@@ -358,13 +359,13 @@ The edit is checked: if FILE (with the modules it loads) compiled before and wou
 
 ```
 { checked: rows with fewer fields are skipped }
-#parse_row ( line:Block -- row:Row ok:Scalar ) ... end
-#row_width ( r:Row -- n:Scalar ) ... end
+#parse_row ( line:Block -- row:Row ok:Int ) ... end
+#row_width ( r:Row -- n:Int ) ... end
 rename parse_row read_row
 delete old_reader
 move read_row rows.sg
 into rows.sg
-#row_valid ( r:Row -- f:Scalar ) ... end
+#row_valid ( r:Row -- f:Int ) ... end
 ```
 
 - A definition (`#name ... end`, with the comment above it if any) replaces the word of that name wherever it is, or is added at the end of FILE, or of the file named by the last `into FILE`.

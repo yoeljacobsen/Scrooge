@@ -1,6 +1,17 @@
-# Scrooge Programming Language (v1.88)
+# Scrooge Programming Language (v1.89)
 
-Repository status: **Scrooge v1.88**.
+Repository status: **Scrooge v1.89**.
+
+### What changed in v1.89
+
+**Typed numbers** (decision D3). This release breaks every program that tags its numbers `Scalar`; retag them.
+
+- **Two kinds of number: `Int` and `Float`.** `3` is an Int and `3.0` a Float (a point or an exponent makes a Float). Tag each number in a signature with its kind: indexes, counts, sizes, codes and flags are Ints, measurements are Floats. `Scalar` remains as "either kind", for a word that takes both (`print_float`, `abs`); an Int or a Float fits a Scalar parameter, but a Scalar does not fit an Int or a Float one.
+- **One kind per operation, checked when the program is compiled.** `+ - * / min max` and the comparisons take two numbers of one kind; an Int with a Float is a TypeError that says what to write (`x 2.0 *` for a Float x, or `to_float`). `7 2 /` is the Int 3 and `7.0 2.0 /` the Float 3.5. The remainder `\`, the bit words, every index, count and loop bound, and the flags of `and`, `or`, `not` and test words are Ints. A Float in any of those places, a Float left as a result declared Int, and an Int passed for a Float are TypeErrors; before, a float index or a float in `\` stopped the program at run time, and an int where a float was meant divided as an int without a word.
+- **The library, manifest and primitives say which kind**: `floats_get` gives a Float, `bytes_get` and `len` an Int, `sqrt`, `exp`, `log`, `pow` and `rand` a Float, `to_int` and `floor` an Int. A heap cell (`hread`) or a Block element keeps no kind the checker can see, so it fits either and is checked when the program runs.
+- **Top-level code is type-checked** like a word's body; it was not before.
+- **`--stack`** shows Int and Float, and a value a loop changes as Unknown.
+- **Docs:** the spec (section 1, Numbers), skill guide section 5, cheat sheet and examples are retagged. The benchmark calibration program is retagged and compiles to the same C as before.
 
 ### What changed in v1.88
 
@@ -517,7 +528,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_88.txt`](spec/scrooge_spec_v1_88.txt) (defines v1.88 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_89.txt`](spec/scrooge_spec_v1_89.txt) (defines v1.89 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

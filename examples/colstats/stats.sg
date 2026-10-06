@@ -5,50 +5,50 @@
 use "numeric"
 use "util"
 
-#st_mean ( p:Ptr n:Scalar -- m:Scalar ) p 0 n vec_sum to_float n / end
+#st_mean ( p:Ptr n:Int -- m:Float ) p 0 n vec_sum to_float n to_float / end
 
 { the squared deviation of x from m }
-#_sq_dev ( x:Scalar m:Scalar -- d:Scalar ) x m - -> [ d ] d d * end
+#_sq_dev ( x:Float m:Float -- d:Float ) x m - -> [ d ] d d * end
 
 { population variance: the mean squared deviation from the mean }
-#st_var ( p:Ptr n:Scalar -- v:Scalar )
+#st_var ( p:Ptr n:Int -- v:Float )
   p n st_mean -> [ m ]
-  0.0 n [times| i | p i hread m _sq_dev + ] n /
+  0.0 n [times| i | p i hread m _sq_dev + ] n to_float /
 end
 
-#st_sd ( p:Ptr n:Scalar -- s:Scalar ) st_var sqrt end
+#st_sd ( p:Ptr n:Int -- s:Float ) st_var sqrt end
 { one loop, two uses: `pick` is a word parameter, so st_min and st_max }
 { share the loop instead of copying it (each compiles to its own word) }
-#_reduce ( p:Ptr n:Scalar pick:Word(Scalar,Scalar--Scalar) -- x:Scalar )
+#_reduce ( p:Ptr n:Int pick:Word(Scalar,Scalar--Scalar) -- x:Scalar )
   p 0 hread n [times| i | p i hread pick ]
 end
-#st_min ( p:Ptr n:Scalar -- x:Scalar ) 'min _reduce end
-#st_max ( p:Ptr n:Scalar -- x:Scalar ) 'max _reduce end
+#st_min ( p:Ptr n:Int -- x:Scalar ) 'min _reduce end
+#st_max ( p:Ptr n:Int -- x:Scalar ) 'max _reduce end
 
 { a sorted copy, so the median leaves the caller's cells as they were }
-#_sorted_copy ( p:Ptr n:Scalar -- q:Ptr ) n hnew -> [ q ] p :src 0 :soff q :dst 0 :doff n :count hmove q 0 n hsort q end
+#_sorted_copy ( p:Ptr n:Int -- q:Ptr ) n hnew -> [ q ] p :src 0 :soff q :dst 0 :doff n :count hmove q 0 n hsort q end
 
 { the middle of n sorted values: the middle one, or the mean of the two middle ones }
-#_middle ( q:Ptr n:Scalar -- m:Scalar )
+#_middle ( q:Ptr n:Int -- m:Scalar )
   n 2 / -> [ h ]
   n 2 \ 1 = cond [ q h hread ] else [ q h 1 - hread q h hread + 2.0 / ] ?
 end
 
-#st_median ( p:Ptr n:Scalar -- m:Scalar ) p n _sorted_copy n _middle end
+#st_median ( p:Ptr n:Int -- m:Scalar ) p n _sorted_copy n _middle end
 
 { ---- tests ---- }
 { 2 4 4 4 5 5 7 9: mean 5, variance 4, sd 2, median 4.5, min 2, max 9 }
-#_sample ( -- p:Ptr n:Scalar )
+#_sample ( -- p:Ptr n:Int )
   [ 2 4 4 4 5 5 7 9 ] 8 hnew -> [ vals p ]
   vals [fold| i acc v _ | p i v hwrite acc from 0 ] drop p 8
 end
-#test_sq_dev ( -- ok:Scalar ) 7 5 _sq_dev 4 "7 5 _sq_dev" expect_eq end
-#test_mean ( -- ok:Scalar ) _sample st_mean :got 5.0 :want 0.000001 :tol "mean" :msg expect_near end
-#test_var ( -- ok:Scalar ) _sample st_var :got 4.0 :want 0.000001 :tol "variance" :msg expect_near end
-#test_sd ( -- ok:Scalar ) _sample st_sd :got 2.0 :want 0.000001 :tol "sd" :msg expect_near end
-#test_min_max ( -- ok:Scalar ) _sample st_min 2 "min" expect_eq _sample st_max 9 "max" expect_eq and end
-#test_median_even ( -- ok:Scalar ) _sample st_median :got 4.5 :want 0.000001 :tol "median of 8 values" :msg expect_near end
-#test_median_odd ( -- ok:Scalar )
+#test_sq_dev ( -- ok:Int ) 7.0 5.0 _sq_dev 4.0 "7 5 _sq_dev" expect_eq end
+#test_mean ( -- ok:Int ) _sample st_mean :got 5.0 :want 0.000001 :tol "mean" :msg expect_near end
+#test_var ( -- ok:Int ) _sample st_var :got 4.0 :want 0.000001 :tol "variance" :msg expect_near end
+#test_sd ( -- ok:Int ) _sample st_sd :got 2.0 :want 0.000001 :tol "sd" :msg expect_near end
+#test_min_max ( -- ok:Int ) _sample st_min 2 "min" expect_eq _sample st_max 9 "max" expect_eq and end
+#test_median_even ( -- ok:Int ) _sample st_median :got 4.5 :want 0.000001 :tol "median of 8 values" :msg expect_near end
+#test_median_odd ( -- ok:Int )
   3 hnew -> [ p ] p 0 9 hwrite p 1 1 hwrite p 2 5 hwrite
   p 3 st_median 5 "median of 9 1 5" expect_eq p 0 hread 9 "the input is left unsorted" expect_eq and
 end

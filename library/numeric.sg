@@ -7,33 +7,33 @@
 { ---- the result must be a float.                                         ---- }
 
 { ---- a[ao..ao+n) . b[bo..bo+n) ---- }
-#vec_dot ( a:Ptr ao:Scalar b:Ptr bo:Scalar n:Scalar -- s:Scalar )
+#vec_dot ( a:Ptr ao:Int b:Ptr bo:Int n:Int -- s:Float )
   0.0 n [times| i | a ao i + hread b bo i + hread * + ]
 end
 
 { ---- y[yo+i] += g * x[xo+i] for i < n ---- }
-#vec_axpy ( y:Ptr yo:Scalar x:Ptr xo:Scalar n:Scalar g:Scalar -- )
+#vec_axpy ( y:Ptr yo:Int x:Ptr xo:Int n:Int g:Scalar -- )
   g to_float -> [ gf ]
   n [times| i | y yo i + y yo i + hread gf x xo i + hread * + hwrite ]
 end
 
 { ---- y[yo+i] += x[xo+i] for i < n ---- }
-#vec_add ( x:Ptr xo:Scalar y:Ptr yo:Scalar n:Scalar -- )
+#vec_add ( x:Ptr xo:Int y:Ptr yo:Int n:Int -- )
   n [times| i | y yo i + y yo i + hread x xo i + hread + hwrite ]
 end
 
 { ---- p[off+i] *= g for i < n ---- }
-#vec_scale ( p:Ptr off:Scalar n:Scalar g:Scalar -- )
+#vec_scale ( p:Ptr off:Int n:Int g:Scalar -- )
   n [times| i | p off i + p off i + hread g * hwrite ]
 end
 
 { ---- the sum of p[off..off+n) (0 when n is 0) ---- }
-#vec_sum ( p:Ptr off:Scalar n:Scalar -- s:Scalar )
+#vec_sum ( p:Ptr off:Int n:Int -- s:Unknown )
   0 n [times| i | p off i + hread + ]
 end
 
 { ---- the index (0..n-1) of the first largest of p[off..off+n); n must be at least 1 ---- }
-#vec_argmax ( p:Ptr off:Scalar n:Scalar -- i:Scalar )
+#vec_argmax ( p:Ptr off:Int n:Int -- i:Int )
   n 1 < cond [ "vec_argmax: empty range" abort ] else [ ] ?
   0 p off hread 1 n [for| i |
     -> [ bi bv ] p off i + hread -> [ v ] v bv > cond [ i v ] else [ bi bv ] ?
@@ -41,20 +41,20 @@ end
 end
 
 { ---- the largest of p[off..off+n); n must be at least 1 ---- }
-#vec_max ( p:Ptr off:Scalar n:Scalar -- m:Scalar )
+#vec_max ( p:Ptr off:Int n:Int -- m:Int )
   p off p off n vec_argmax + hread
 end
 
 { ---- the 32-bit big-endian signed integer in the four byte cells p[off..off+4) ---- }
 { ---- (as fread_into leaves a file's bytes: IDX, PNG, network formats)        ---- }
-#vec_be32 ( p:Ptr off:Scalar -- n:Scalar )
+#vec_be32 ( p:Ptr off:Int -- n:Int )
   p off hread 24 bitshl p off 1 + hread 16 bitshl bitor
   p off 2 + hread 8 bitshl bitor p off 3 + hread bitor
   -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ] ?
 end
 
 { ---- the 32-bit little-endian signed integer in p[off..off+4) ---- }
-#vec_le32 ( p:Ptr off:Scalar -- n:Scalar )
+#vec_le32 ( p:Ptr off:Int -- n:Int )
   p off 3 + hread 24 bitshl p off 2 + hread 16 bitshl bitor
   p off 1 + hread 8 bitshl bitor p off hread bitor
   -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ] ?

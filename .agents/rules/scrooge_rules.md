@@ -1,6 +1,6 @@
-# Scrooge v1.88 Workspace Rules & Agent Directives
+# Scrooge v1.89 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_88.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_89.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -16,21 +16,21 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (85 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
 5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `ptr offset val hwrite`. Every word that stores into something takes it first and the value last (`b x cons`, `fh ch fputc`, `d k v dict_set`).
 6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler.
-7. **Small Words, Tested One by One:** Build programs from small words (under about 30 tokens, one job each) combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Scalar ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
+7. **Small Words, Tested One by One:** Build programs from small words (under about 30 tokens, one job each) combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Int ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
 
 ---
 
-## 2. Core Scrooge v1.88 Language Reference
+## 2. Core Scrooge v1.89 Language Reference
 
 ### 2.1 Core Data Types
-* **Scalar:** 64-bit signed integer or IEEE double (`42`, `3.14`, `-0.5`, `314e-2`). Mixed math promotes to float.
+* **Int and Float:** a 64-bit signed integer (`42`, `0xff`) and an IEEE double (`3.14`, `-0.5`, `314e-2`); Scalar is either kind. An operator takes two numbers of one kind (`x 2.0 *` for a Float x): an Int with a Float is a TypeError, so convert with `to_float`, `to_int` or `floor`. Indexes, counts, loop bounds and flags are Ints.
 * **Block:** Ordered, fixed-shape array or record in square brackets, every token whitespace-separated: `[ 1 2 3 ]`, never `[1 2 3]`.
 * **Strings:** `"Hi"` becomes the Block `[ 72 105 ]` at tokenization.
 * **Ptr, File:** Opaque handles from `hnew` and `fopen`.
-* **Type tags:** `Scalar Block Ptr Record Map File Unknown`, exactly these spellings.
+* **Type tags:** `Int Float Scalar Block Ptr Record Map File Unknown Bytes Ints Floats`, exactly these spellings.
 
 ### 2.2 Words and Frames
-* Define a word: `#name ( a:Scalar b:Block -- r:Scalar ) body end`, in any order (a word may call one defined later). Call by bare name.
+* Define a word: `#name ( a:Int b:Block -- r:Int ) body end`, in any order (a word may call one defined later). Call by bare name.
 * Entry point: `#main ( -- ) ... end`, then `main` at top level.
 * Name values with a frame: `-> [ a b ] body`. A frame's scope runs to the end of the enclosing block, so later code and later sibling frames still see `a` and `b`. The body is never bracketed; a `[ ... ]` right after the names is a data literal (`-> [ p ] [ 2 4 7 ]` pushes the Block [ 2 4 7 ]).
 * Cond branches, frame bodies and map/fold bodies nest freely. Moving an inner loop or conditional into a named word is good style, not a rule (spec Sec.6).
@@ -46,11 +46,11 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Look things up instead of guessing: `compiler/scroogec_fast -L library --lookup NAME [FILE]`, `--apropos TEXT`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line).
 * Compact arrays (primitives): `Bytes`, `Ints`, `Floats` (1, 8, 8 bytes per element): `n floats_new`, `a i floats_get`, `a i x floats_set`, `K_len`, `K_fill`, `K_move`, `bytes_read`/`bytes_write`, `ints_sort`. Prefer them to hnew cells for numeric or byte data.
 * Collections: `use "vec"` (a growable `Vec`: vec_new, vec_push, vec_get, vec_set, vec_len, vec_pop; `v 'less vec_sort_by` and `p off n 'less sort_by` sort stably in the order of a word you pass) and `use "dict"` (a `Dict` from integer or string keys: dict_new, dict_set, dict_get, dict_find, dict_get_or, dict_has, dict_del, dict_add). Container first. `x to_str` gives any value as text.
-* Values: `#struct Pt x Scalar y Scalar end` (Pt_make, Pt_x, Pt_with_x), immutable, compared and sorted field by field; `#record` is for mutable heap state.
-* Codes: `#enum Kw select from where end` (members `Kw_select` .. `Kw_where`, `Kw_count`, `Kw_name`, `Kw_of`/`Kw_raw`) and `#type Row Scalar end` (`Row_of`/`Row_raw`) declare types of their own; a code compared with a plain number, or used in arithmetic, is a TypeError (spec Sec.5).
+* Values: `#struct Pt x Int y Int end` (Pt_make, Pt_x, Pt_with_x), immutable, compared and sorted field by field; `#record` is for mutable heap state.
+* Codes: `#enum Kw select from where end` (members `Kw_select` .. `Kw_where`, `Kw_count`, `Kw_name`, `Kw_of`/`Kw_raw`) and `#type Row Int end` (`Row_of`/`Row_raw`) declare types of their own; a code compared with a plain number, or used in arithmetic, is a TypeError (spec Sec.5).
 * Logic: `not` is LOGICAL (`6 not` is `0`); `bitnot` is bitwise (`6 bitnot` is `-7`). `and`/`or` are eager: guard risky work with `cond`, not with `and`/`or`.
 * Comparison: `=`, `!=`, `>`, `<`, `>=`, `<=` are primitives.
-* Clock: `clock_ns ( -- ns:Scalar )`, monotonic nanoseconds; subtract two readings.
+* Clock: `clock_ns ( -- ns:Int )`, monotonic nanoseconds; subtract two readings.
 * Bits: `bitcount`, `bitctz`, `bitclz` (popcount, trailing and leading zeros; `0` gives 64).
 * Sorting: `ptr start count hsort` sorts heap cells in place; `block_sort` (util) sorts a Block in O(n log n).
 * Environment: `name getenv -> [ value ok ]` (read-only); `f_expand_home` (file) expands `~/`. Flags: `arg_flag`, `arg_value_or`, `arg_int_or` (args).

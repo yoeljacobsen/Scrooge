@@ -1,10 +1,10 @@
-# Scrooge on one screen (v1.88)
+# Scrooge on one screen (v1.89)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_88.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_89.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
-**Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Scalar (an integer or a float), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
+**Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Int n:Int -- m:Float ) s to_float n to_float / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
-**Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. A name is never also a word: an alias or input spelled like one of your words is an error (AliasShadowsWord, ParamNamedLikeWord). `x :name` labels a value with the parameter it is for, checked at the call: `p :p 0 :i 5 :v hwrite`. A call with 4 or more inputs must have every argument labelled or passed by a matching name, except one whose type no other parameter has (the one Ptr or Floats among Scalars).
+**Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. A name is never also a word: an alias or input spelled like one of your words is an error (AliasShadowsWord, ParamNamedLikeWord). `x :name` labels a value with the parameter it is for, checked at the call: `p :p 0 :i 5 :v hwrite`. A call with 4 or more inputs must have every argument labelled or passed by a matching name, except one whose type no other parameter has (the one Ptr or Float among Ints).
 
 | Construct | Stack effect | Notes |
 |---|---|---|
@@ -19,11 +19,11 @@ Postfix: every word takes its inputs from the stack and leaves its outputs there
 
 Other loops are words that call themselves in tail position.
 
-**Numbers.** `+ - * /` (integer `/` and the remainder `\` both round down: `-7 2 /` is -4, `-7 2 \` is 1), `< > >= <= = !=`, `and or not` (0 is false), `to_float`, `to_int`, `min max abs`.
+**Numbers.** `3` is an Int and `3.0` a Float. `+ - * / min max` and `< > >= <= = !=` take two numbers of one kind: `x 2.0 *` and `x 0.0 >` for a Float x, and an Int with a Float is a TypeError; convert with `to_float`, `to_int` or `floor`. Indexes, counts, loop bounds, flags (`and or not`, 0 is false), `\` and the bit words are Ints. Int `/` and `\` round down: `-7 2 /` is -4, `-7 2 \` is 1; `7.0 2.0 /` is 3.5.
 
-**Heap.** `n hnew` gives n cells, each the integer 0; `p i hread`; `p i v hwrite`. `region [ body ]` frees everything the body allocated when it ends; storing it into something older is a RegionEscape error. Every word that stores into something takes it first and the value last: `p i v hwrite`, `b x cons`, `fh ch fputc`, `d k v dict_set`. A range is a start and a count everywhere (`hmove`, `hfill`, `bytes_to_block`, `block_slice`). For numbers or bytes in bulk use a compact array: `n floats_new` (also `ints_`, `bytes_`), `a i floats_get`, `a i x floats_set`. Inner loops: `floats_dot`, `floats_axpy`, `floats_sum`, `floats_argmax` and the rest (in C). `#record Pt x Scalar 1 0 y Scalar 1 0 end` (each field: name, type, count, initial value: a number, `nil` for a Block, `hnull`, an enum member, or a word that makes a Floats, Vec or Dict) gives the type `Pt`, `Pt_new`, `p Pt_x`, `p v Pt_x_set` (record first).
+**Heap.** `n hnew` gives n cells, each the integer 0; `p i hread`; `p i v hwrite`. `region [ body ]` frees everything the body allocated when it ends; storing it into something older is a RegionEscape error. Every word that stores into something takes it first and the value last: `p i v hwrite`, `b x cons`, `fh ch fputc`, `d k v dict_set`. A range is a start and a count everywhere (`hmove`, `hfill`, `bytes_to_block`, `block_slice`). For numbers or bytes in bulk use a compact array: `n floats_new` (also `ints_`, `bytes_`), `a i floats_get`, `a i x floats_set`. Inner loops: `floats_dot`, `floats_axpy`, `floats_sum`, `floats_argmax` and the rest (in C). `#record Pt x Float 1 0.0 y Float 1 0.0 end` (each field: name, type, count, initial value: a number, `nil` for a Block, `hnull`, an enum member, or a word that makes a Floats, Vec or Dict) gives the type `Pt`, `Pt_new`, `p Pt_x`, `p v Pt_x_set` (record first).
 
-**Types of your own.** `#enum Tok num ident op end` gives `Tok_num` .. `Tok_op` (members are always prefixed), `Tok_name`, `Tok_count`, `Tok_of` and `Tok_raw` (so no member may be named `name`, `count`, `of` or `raw`); a Tok compared with a plain number is a TypeError. `#type Row Scalar end` gives `Row_of` and `Row_raw`. `#struct Pt x Scalar y Scalar end` is an immutable value: `1 :x 2 :y Pt_make`, `p Pt_x`, `p 5 Pt_with_x` (a new Pt); `=` and sorting go field by field.
+**Types of your own.** `#enum Tok num ident op end` gives `Tok_num` .. `Tok_op` (members are always prefixed), `Tok_name`, `Tok_count`, `Tok_of` and `Tok_raw` (so no member may be named `name`, `count`, `of` or `raw`); a Tok compared with a plain number is a TypeError. `#type Row Int end` gives `Row_of` and `Row_raw`. `#struct Pt x Int y Int end` is an immutable value: `1 :x 2 :y Pt_make`, `p Pt_x`, `p 5 Pt_with_x` (a new Pt); `=` and sorting go field by field.
 
 **Library** (`use "name"` at the top of each file that calls it):
 - `vec` (`Vec`): `vec_new vec_push vec_get vec_set vec_len vec_pop vec_sort vec_sort_by sort_by`.
@@ -31,7 +31,7 @@ Other loops are words that call themselves in tail position.
 - `strings` (`str_print int_to_str str_to_int find_sub str_split str_pad_left`, and the builder `n strbuf_new`, `b s strbuf_add`, `b strbuf_to_str`); `file` (`f_read_file f_write_file`); `args`; `util` (`assert expect expect_eq`); `numeric`. Lines: `fh freadline`, or `fh a freadline_into` into a Bytes.
 - `x to_str` gives any value as text; `x trace` prints it to stderr with its line.
 
-**Tests.** A file's `#test_name ( -- ok:Scalar )` words run with `--test FILE`; `expect_eq ( got want label -- ok )` says what differed, and several checks end in one flag: `a 1 "a" expect_eq b 2 "b" expect_eq and`. A test whose code must stop the program begins `"msg" expect_stop` and passes when it stops with msg on stderr. A runtime fault exits with status 70; `abort` and `1 exit` with 1.
+**Tests.** A file's `#test_name ( -- ok:Int )` words run with `--test FILE`; `expect_eq ( got want label -- ok )` says what differed, and several checks end in one flag: `a 1 "a" expect_eq b 2 "b" expect_eq and`. A test whose code must stop the program begins `"msg" expect_stop` and passes when it stops with msg on stderr. A runtime fault exits with status 70; `abort` and `1 exit` with 1.
 
 **Tools.**
 - `scroogec_fast -L library --lookup NAME [FILE]` (a signature), `--apropos TERMS`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line), `--words FILE`.
@@ -51,9 +51,9 @@ Other loops are words that call themselves in tail position.
 use "vec"
 use "strings"
 #enum Shape circle square end
-#record Item shape Shape 1 Shape_circle width Scalar 1 0 end
-#item ( s:Shape n:Scalar -- p:Item ) Item_new -> [ p ] p s Item_shape_set p n Item_width_set p end
-#by_width ( a:Item b:Item -- f:Scalar ) a Item_width b Item_width < end
+#record Item shape Shape 1 Shape_circle width Int 1 0 end
+#item ( s:Shape n:Int -- p:Item ) Item_new -> [ p ] p s Item_shape_set p n Item_width_set p end
+#by_width ( a:Item b:Item -- f:Int ) a Item_width b Item_width < end
 #show_item ( p:Item -- ) p Item_shape Shape_name str_print 32 print_char p Item_width print_int 10 print_char end
 #main ( -- )
   4 vec_new -> [ v ]

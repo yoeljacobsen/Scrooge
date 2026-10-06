@@ -4,25 +4,25 @@ end
 { `len` is O(1). This word used to count by folding over every element --
   a frame entered and left per element -- and was 94% of the instructions
   of a large benchmark workload. Kept as a word so callers need not change. }
-#sum ( block:Block -- total:Scalar )
+#sum ( block:Block -- total:Unknown )
   [fold| idx acc val _ | acc val + from 0 ]
 end
-#contains ( block:Block target:Scalar -- flag:Scalar )
+#contains ( block:Block target:Scalar -- flag:Int )
   target block [fold| idx acc val ctx | acc val ctx = or from 0 ]
 end
-#feq_step ( idx:Scalar acc:Block val:Scalar ctx:Scalar -- acc:Block )
+#feq_step ( idx:Int acc:Block val:Scalar ctx:Scalar -- acc:Block )
   val ctx =
   cond [ acc val cons ] else [ acc ] ?
 end
-#filter_eq ( block:Block target:Scalar -- filtered:Block )
+#filter_eq ( block:Block target:Int -- filtered:Block )
   target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
   reverse
 end
-#idx_step ( idx:Scalar acc:Scalar val:Scalar ctx:Scalar -- acc:Scalar )
+#idx_step ( idx:Int acc:Int val:Scalar ctx:Scalar -- acc:Int )
   acc -1 = val ctx = and
   cond [ idx ] else [ acc ] ?
 end
-#index_of ( block:Block target:Scalar -- idx:Scalar )
+#index_of ( block:Block target:Scalar -- idx:Int )
   target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ]
 end
 #concat ( b1:Block b2:Block -- joined:Block )
@@ -38,11 +38,11 @@ end
   and the old word's `len` stopped a program that passed a non-Block
   ("Fatal: len operand must be a block/list"); `=` alone would compare it
   and carry on. They keep that behaviour, in the same order, for O(1). }
-#block_eq ( b1:Block b2:Block -- equal:Scalar )
+#block_eq ( b1:Block b2:Block -- equal:Int )
   b1 len drop b2 len drop b1 b2 =
 end
 
-#insert_sort_step ( idx:Scalar acc:Block val:Unknown ctx:Unknown -- acc:Block )
+#insert_sort_step ( idx:Int acc:Block val:Unknown ctx:Unknown -- acc:Block )
   acc 0 block_get
   cond [
     acc 1 block_get val cons acc 0 block_get swap pair
@@ -68,10 +68,10 @@ end
   (element by element, shorter first on a tie), so a Block of strings sorts
   in byte order and a Block of rows column by column; numbers sort before
   Blocks. A Ptr element is a fatal error. }
-#bsort_fill_step ( idx:Scalar acc:Scalar val:Unknown p:Ptr -- acc:Scalar )
+#bsort_fill_step ( idx:Int acc:Int val:Unknown p:Ptr -- acc:Int )
   p idx val hwrite acc
 end
-#bsort_collect_loop ( p:Ptr i:Scalar acc:Block -- sorted:Block )
+#bsort_collect_loop ( p:Ptr i:Int acc:Block -- sorted:Block )
   i 0 = cond [ acc ] else [ p i 1 - acc p i 1 - hread cons bsort_collect_loop ]
 end
 #block_sort ( blk:Block -- sorted:Block )
@@ -88,7 +88,7 @@ end
 { ---- assert: stop with a message when an invariant fails. `abort` ---- }
 { ---- prints msg to stderr and exits nonzero; a true flag costs one ---- }
 { ---- test. For looking at a value while debugging, see `trace`.   ---- }
-#assert ( ok:Scalar msg:Block --  )
+#assert ( ok:Int msg:Block --  )
   ok cond [ ] else [ msg abort ]
 end
 { ---- Test helpers, for #test_ words run by `scroogec_fast --test`: each     ---- }
@@ -100,7 +100,7 @@ end
     x type_of 1 = cond [ x 6 print_float ] else [ "(not a number)" ex_say_step ] ?
   ] ?
 end
-#expect ( ok:Scalar msg:Block -- ok:Scalar )
+#expect ( ok:Int msg:Block -- ok:Int )
   ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
 end
 { ---- expect_stop: the first thing in a #test_ word whose code must stop ---- }
@@ -112,14 +112,14 @@ end
 #expect_stop ( msg:Block --  )
   ex_err_step "expect_stop: " fwrite drop ex_err_step msg fwrite drop ex_err_step 10 fputc drop
 end
-#expect_eq ( got:Unknown want:Unknown msg:Block -- ok:Scalar )
+#expect_eq ( got:Unknown want:Unknown msg:Block -- ok:Int )
   got want = -> [ ok ]
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step 10 print_char
     ] ? ok
 end
-#expect_near ( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Scalar )
+#expect_near ( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Int )
   got want - abs tol > not -> [ ok ]
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step

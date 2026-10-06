@@ -26,7 +26,7 @@ end
 { ---- Total accessor: the argument at a C index, or `default` when there  ---- }
 { ---- is none. This is the word to reach for -- it removes the flag from  ---- }
 { ---- the call site, in the spirit of array.sg's nth_or_default.          ---- }
-#arg_or ( i:Scalar default:Block -- arg:Block )
+#arg_or ( i:Int default:Block -- arg:Block )
   default i argv
   -> [ default a ok ] ok
   cond [ a ] else [ a drop default ] ?
@@ -35,11 +35,11 @@ end
 { ---- Private: build the argument list from the tail backwards, so each   ---- }
 { ---- cons lands in front and the result comes out in command-line order  ---- }
 { ---- with no reversal pass.                                             ---- }
-#atl_step ( i:Scalar acc:Block -- i:Scalar acc:Block )
+#atl_step ( i:Int acc:Block -- i:Int acc:Block )
   i 1 -
   i argv -> [ a ok ] ok cond [ acc a cons ] else [ a drop acc ] ?
 end
-#atl_loop ( i:Scalar acc:Block -- args:Block )
+#atl_loop ( i:Int acc:Block -- args:Block )
   i 1 <
   cond [ acc ] else [ i acc atl_step atl_loop ] ?
 end
@@ -61,24 +61,24 @@ end
 { ---- Private: Block equality, on character codes. Duplicated from        ---- }
 { ---- util.sg's block_eq rather than imported, because every lexicon in   ---- }
 { ---- library/ is self-contained (none of them `use` another).            ---- }
-#ae_step ( a:Block b:Block idx:Scalar acc:Scalar -- a:Block b:Block idx:Scalar acc:Scalar )
+#ae_step ( a:Block b:Block idx:Int acc:Int -- a:Block b:Block idx:Int acc:Int )
   a b idx 1 + a idx block_get b idx block_get = acc and
 end
-#ae_loop ( a:Block b:Block idx:Scalar acc:Scalar -- equal:Scalar )
+#ae_loop ( a:Block b:Block idx:Int acc:Int -- equal:Int )
   idx a len < acc and
   cond [ a b idx acc ae_step ae_loop ] else [ acc ] ?
 end
-#ae_eq_check ( a:Block b:Block -- equal:Scalar )
+#ae_eq_check ( a:Block b:Block -- equal:Int )
   a len b len =
   cond [ a b 0 :idx 1 :acc ae_loop ] else [ 0 ] ?
 end
 
 { ---- Private: does the argument at this index equal `name`? A missing    ---- }
 { ---- index is simply not a match.                                       ---- }
-#af_match_check ( name:Block idx:Scalar -- flag:Scalar )
+#af_match_check ( name:Block idx:Int -- flag:Int )
   idx argv -> [ a ok ] ok cond [ a name ae_eq_check ] else [ a drop 0 ] ?
 end
-#af_loop ( name:Block idx:Scalar -- i:Scalar found:Scalar )
+#af_loop ( name:Block idx:Int -- i:Int found:Int )
   idx argc =
   cond [ 0 0 ] else [
     name idx af_match_check
@@ -93,7 +93,7 @@ end
 { ---- index and so is never a real answer.                               ---- }
 { ---- This is the flag-scanning primitive: `"-v" arg_find` answers        ---- }
 { ---- "was -v passed, and where".                                        ---- }
-#arg_find ( name:Block -- i:Scalar found:Scalar )
+#arg_find ( name:Block -- i:Int found:Int )
   name 1 af_loop
 end
 
@@ -104,10 +104,10 @@ end
 { ---- absent or not an integer (an optional '-', then digits only). So   ---- }
 { ---- `-n 1000` is `"-n" 0 arg_int_or`, and `-f path` is                  ---- }
 { ---- `"-f" "default.csv" arg_value_or`.                                  ---- }
-#arg_flag ( name:Block -- found:Scalar )
+#arg_flag ( name:Block -- found:Int )
   name arg_find -> [ i found ] found
 end
-#av_pick_check ( i:Scalar found:Scalar default:Block -- value:Block )
+#av_pick_check ( i:Int found:Int default:Block -- value:Block )
   found cond [ i 1 + default arg_or ] else [ default ]
 end
 #arg_value_or ( name:Block default:Block -- value:Block )
@@ -116,39 +116,39 @@ end
 { ---- Private: strict integer parse, self-contained like the rest of     ---- }
 { ---- this lexicon (strings.sg has str_to_int, but lexicons do not use   ---- }
 { ---- one another).                                                      ---- }
-#ai_digits_loop ( s:Block k:Scalar acc:Scalar -- n:Scalar ok:Scalar )
+#ai_digits_loop ( s:Block k:Int acc:Int -- n:Int ok:Int )
   k s len = cond [ acc 1 ] else [
     s k block_get -> [ c ] c 48 < c 57 > or cond [ 0 0 ] else [ s k 1 + acc 10 * c 48 - + ai_digits_loop ]
   ]
 end
-#ai_parse_check ( s:Block -- n:Scalar ok:Scalar )
+#ai_parse_check ( s:Block -- n:Int ok:Int )
   s len 0 = cond [ 0 0 ] else [
     s 0 block_get 45 = cond [
       s len 1 = cond [ 0 0 ] else [ s 1 0 ai_digits_loop -> [ n ok ] 0 n - ok ]
     ] else [ s 0 0 ai_digits_loop ]
   ]
 end
-#arg_int_or ( name:Block default:Scalar -- n:Scalar )
+#arg_int_or ( name:Block default:Int -- n:Int )
   name nil arg_value_or ai_parse_check -> [ n ok ] ok cond [ n ] else [ default ]
 end
 { ---- Private: strict decimal parse, [-]digits[.digits] with at least   ---- }
 { ---- one digit (no exponent). The digits are kept as an integer and     ---- }
 { ---- divided once at the end, so "0.07" is the double nearest 0.07.     ---- }
-#af_char_step ( m:Scalar k:Scalar dot:Scalar bad:Scalar nd:Scalar c:Scalar -- m:Scalar k:Scalar dot:Scalar bad:Scalar nd:Scalar )
+#af_char_step ( m:Int k:Int dot:Int bad:Int nd:Int c:Int -- m:Int k:Int dot:Int bad:Int nd:Int )
   c 47 > c 58 < and cond [ m 10 * c 48 - + k dot + dot bad nd 1 + ] else [
     c 46 = cond [ m k 1 dot bad or nd ] else [ m k dot 1 nd ] ?
   ] ?
 end
-#af_value_check ( m:Scalar k:Scalar dot:Scalar bad:Scalar nd:Scalar neg:Scalar -- x:Scalar ok:Scalar )
+#af_value_check ( m:Int k:Int dot:Int bad:Int nd:Int neg:Int -- x:Float ok:Int )
   m to_float 10.0 k pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
 end
-#af_parse_check ( s:Block -- x:Scalar ok:Scalar )
+#af_parse_check ( s:Block -- x:Float ok:Int )
   s len 0 = cond [ 0.0 0 ] else [
     s 0 block_get 45 = -> [ neg ] 0 :m 0 :k 0 :dot 0 :bad 0 :nd neg s len [for| i | s i block_get :c af_char_step ] neg af_value_check
   ] ?
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }
 { ---- absent or its value is not a plain decimal                          ---- }
-#arg_float_or ( name:Block default:Scalar -- x:Scalar )
+#arg_float_or ( name:Block default:Float -- x:Float )
   name nil arg_value_or af_parse_check -> [ x ok ] ok cond [ x ] else [ default ] ?
 end

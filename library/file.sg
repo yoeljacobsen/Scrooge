@@ -9,13 +9,13 @@
 
 { ---- Open modes: fopen's second argument, named so no caller has to     ---- }
 { ---- remember which integer means what.                                 ---- }
-#f_read (  -- mode:Scalar )
+#f_read (  -- mode:Int )
   0
 end
-#f_write (  -- mode:Scalar )
+#f_write (  -- mode:Int )
   1
 end
-#f_append (  -- mode:Scalar )
+#f_append (  -- mode:Int )
   2
 end
 
@@ -37,13 +37,13 @@ end
 { ---- Open helpers, one per mode. ok=0 means the open failed (no such    ---- }
 { ---- file, no permission, or the 61 openable slots are all in use) and   ---- }
 { ---- the returned handle must not be used.                              ---- }
-#f_open_read ( path:Block -- fh:File ok:Scalar )
+#f_open_read ( path:Block -- fh:File ok:Int )
   path f_read fopen
 end
-#f_open_write ( path:Block -- fh:File ok:Scalar )
+#f_open_write ( path:Block -- fh:File ok:Int )
   path f_write fopen
 end
-#f_open_append ( path:Block -- fh:File ok:Scalar )
+#f_open_append ( path:Block -- fh:File ok:Int )
   path f_append fopen
 end
 
@@ -63,7 +63,7 @@ end
 { ---- Sequential write. `fwrite` moves the whole Block in one C-level    ---- }
 { ---- pass, so this is O(len) rather than a word call per character;      ---- }
 { ---- ok=0 means fewer characters were written than the string holds.     ---- }
-#f_write_line ( fh:File str:Block -- ok:Scalar )
+#f_write_line ( fh:File str:Block -- ok:Int )
   fh str fwrite str len = fh 10 fputc and
 end
 
@@ -76,13 +76,13 @@ end
 { ---- file -- the same reason lst_grow doubles instead of adding a        ---- }
 { ---- constant. The cap keeps fread's up-front byte buffer bounded no     ---- }
 { ---- matter how large the input turns out to be.                        ---- }
-#f_chunk (  -- n:Scalar )
+#f_chunk (  -- n:Int )
   65536
 end
-#f_next_chunk ( n:Scalar -- n:Scalar )
+#f_next_chunk ( n:Int -- n:Int )
   n 2 * 4194304 min
 end
-#f_read_all_loop ( fh:File acc:Block n:Scalar -- str:Block )
+#f_read_all_loop ( fh:File acc:Block n:Int -- str:Block )
   fh acc n fh n fread
   -> [ fh acc n chunk ] chunk len 0 =
   cond [ acc ] else [ fh acc chunk f_cat_loop n f_next_chunk f_read_all_loop ] ?
@@ -101,17 +101,17 @@ end
 { ---- Whole-file convenience: open, transfer, close. ok=0 means the open ---- }
 { ---- or the close failed; on a failed open the result is the empty       ---- }
 { ---- Block, never a partial file passed off as complete.                 ---- }
-#f_read_file ( path:Block -- str:Block ok:Scalar )
+#f_read_file ( path:Block -- str:Block ok:Int )
   path f_open_read
   -> [ fh ok ] ok not
   cond [ nil 0 ] else [ fh f_read_all fh fclose ] ?
 end
-#f_write_file ( path:Block str:Block -- ok:Scalar )
+#f_write_file ( path:Block str:Block -- ok:Int )
   str path f_open_write
   -> [ str fh ok ] ok not
   cond [ 0 ] else [ fh str fwrite str len = fh fclose and ] ?
 end
-#f_append_file ( path:Block str:Block -- ok:Scalar )
+#f_append_file ( path:Block str:Block -- ok:Int )
   str path f_open_append
   -> [ str fh ok ] ok not
   cond [ 0 ] else [ fh str fwrite str len = fh fclose and ] ?
@@ -123,7 +123,7 @@ end
   Any other path, "~user/..." included, or an unset HOME, comes back
   unchanged. Self-contained like every lexicon, so it joins with its own
   loop rather than util's concat. }
-#feh_cat_loop ( a:Block b:Block i:Scalar -- ab:Block )
+#feh_cat_loop ( a:Block b:Block i:Int -- ab:Block )
   i 0 = cond [ b ] else [ a b a i 1 - block_get cons i 1 - feh_cat_loop ]
 end
 #feh_join_check ( path:Block -- path:Block )

@@ -7,7 +7,7 @@
 #type Vec Ptr end
 
 { a new, empty Vec with room for cap values before it grows }
-#vec_new ( cap:Scalar -- v:Vec )
+#vec_new ( cap:Int -- v:Vec )
   3 hnew -> [ h ]
   h 0 0 hwrite
   h 1 cap 1 max hwrite
@@ -15,8 +15,8 @@
   h Vec_of
 end
 
-#vec_len ( v:Vec -- n:Scalar ) v Vec_raw 0 hread end
-#vec_cap ( v:Vec -- n:Scalar ) v Vec_raw 1 hread end
+#vec_len ( v:Vec -- n:Int ) v Vec_raw 0 hread end
+#vec_cap ( v:Vec -- n:Int ) v Vec_raw 1 hread end
 
 { the cells holding the values, at 0 .. vec_len - 1, for the heap words  }
 { (hsort, hmove, the numeric lexicon); a push may move them, so get it   }
@@ -24,7 +24,7 @@ end
 #vec_data ( v:Vec -- p:Ptr ) v Vec_raw 2 hread end
 
 { room for at least n values }
-#vec_reserve ( v:Vec n:Scalar -- )
+#vec_reserve ( v:Vec n:Int -- )
   v vec_cap n < when [
     v vec_cap 2 * n max -> [ c ]
     c hnew -> [ q ]
@@ -40,12 +40,12 @@ end
   v Vec_raw 0 v vec_len 1 + hwrite
 end
 
-#vec_get ( v:Vec i:Scalar -- x:Unknown )
+#vec_get ( v:Vec i:Int -- x:Unknown )
   i 0 < i v vec_len < not or when [ "vec_get: the index is outside 0 .. vec_len - 1" abort ]
   v vec_data i hread
 end
 
-#vec_set ( v:Vec i:Scalar x:Unknown -- )
+#vec_set ( v:Vec i:Int x:Unknown -- )
   i 0 < i v vec_len < not or when [ "vec_set: the index is outside 0 .. vec_len - 1" abort ]
   v vec_data i x hwrite
 end
@@ -82,18 +82,18 @@ end
 { ---- sort_by: sorts the n cells of p from off, stably, in the order a    ---- }
 { ---- word you pass gives: `less ( a b -- f )` is nonzero when a must come ---- }
 { ---- before b. `p 0 n 'by_age sort_by`, with                             ---- }
-{ ---- `#by_age ( a:Ptr b:Ptr -- f:Scalar ) a Person_age b Person_age < end` ---- }
+{ ---- `#by_age ( a:Ptr b:Ptr -- f:Int ) a Person_age b Person_age < end` ---- }
 { ---- A bottom-up merge sort: n log n calls of less, n cells of scratch.  ---- }
 
 { whether the next value comes from the left run p[off+i ..): it has one,  }
 { and the right run is used up or its head is not less than the left's, so }
 { equal values keep their order }
-#_sort_left ( p:Ptr off:Scalar mid:Scalar hi:Scalar i:Scalar j:Scalar less:Word(Unknown,Unknown--Scalar) -- f:Scalar )
+#_sort_left ( p:Ptr off:Int mid:Int hi:Int i:Int j:Int less:Word(Unknown,Unknown--Int) -- f:Int )
   i mid < and_then [ j hi < not or_else [ p off j + hread p off i + hread less not ] ]
 end
 
 { merges p[off+lo .. off+mid) and p[off+mid .. off+hi) into t[lo .. hi) }
-#_sort_merge ( p:Ptr off:Scalar t:Ptr lo:Scalar mid:Scalar hi:Scalar less:Word(Unknown,Unknown--Scalar) -- )
+#_sort_merge ( p:Ptr off:Int t:Ptr lo:Int mid:Int hi:Int less:Word(Unknown,Unknown--Int) -- )
   lo mid hi lo - [times| k |
     -> [ i j ]
     p off mid hi i j 'less _sort_left
@@ -104,7 +104,7 @@ end
 end
 
 { one pass: merges each pair of runs of length w into t, then copies back }
-#_sort_pass ( p:Ptr off:Scalar n:Scalar t:Ptr w:Scalar less:Word(Unknown,Unknown--Scalar) -- )
+#_sort_pass ( p:Ptr off:Int n:Int t:Ptr w:Int less:Word(Unknown,Unknown--Int) -- )
   n 2 w * + 1 - 2 w * / [times| r |
     2 w * r * -> [ lo ]
     p off t lo lo w + n min :mid lo 2 w * + n min :hi 'less _sort_merge
@@ -112,7 +112,7 @@ end
   t :src 0 :soff p :dst off :doff n :count hmove
 end
 
-#sort_by ( p:Ptr off:Scalar n:Scalar less:Word(Unknown,Unknown--Scalar) -- )
+#sort_by ( p:Ptr off:Int n:Int less:Word(Unknown,Unknown--Int) -- )
   hmark -> [ mk ]
   n 1 max hnew -> [ t ]
   1 64 [times| k | -> [ w ] w n < cond [ p off n t w 'less _sort_pass w 2 * ] else [ w ] ]
@@ -121,6 +121,6 @@ end
 end
 
 { sorts a Vec with sort_by's order: `v 'by_age vec_sort_by` }
-#vec_sort_by ( v:Vec less:Word(Unknown,Unknown--Scalar) -- )
+#vec_sort_by ( v:Vec less:Word(Unknown,Unknown--Int) -- )
   v vec_data 0 v vec_len 'less sort_by
 end
