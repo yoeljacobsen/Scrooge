@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.87)
+# Skill: Writing Correct Scrooge (v1.88)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_87.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_88.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Scalar v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -52,12 +52,12 @@ Build every program from small words, each doing one job, and combine them into 
 **The workflow, a word at a time:**
 1. Top down (section 0b): write the list of words with their signatures, from the program's outline down to the smallest steps. The top word should read like the outline: a short sequence of calls.
 2. Bottom up: write the lowest word, and next to it (in the same module, or in a test file that `use`s it) a test word, `#test_name ( -- ok:Scalar )`, that runs it on an input whose answer you worked out by hand.
-3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`. Under `--test` the program runs with no arguments (`argc` is 1), so test a word that reads options by passing it the arguments as a Block, not through `argv`.
+3. Run the tests: `compiler/scroogec_fast -L library --test src/stats.sg` builds the file with its top-level code replaced by a run of every `#test_` word and prints `PASS`/`FAIL` for each (exit status 1 if any failed). `expect ( ok msg -- ok )`, `expect_eq ( got want msg -- ok )` and `expect_near ( got want tol msg -- ok )` from the util lexicon print what went wrong and return the flag, so several combine with `and`: one `and` after each check but the first, so the test leaves one flag (`test_bits` in section 2d). A word that stops the program on bad input is tested with a test that begins `"msg" expect_stop`: `--test` runs it alone and passes it when the program stops with msg in its error output (`#test_bad ( -- ok:Scalar ) "not a number" expect_stop "x1" parse_or_die drop 0 end`). A runtime fault (an index out of range, a stale Ptr) exits with status 70, a program's own `abort` or `1 exit` with 1. Under `--test` the program runs with no arguments (`argc` is 1), so test a word that reads options by passing it the arguments as a Block, not through `argv`.
 4. Only when the word passes, write the word that uses it, and its test. Keep every test passing as you go.
 
 `examples/colstats/` is a complete program written this way: `examples/colstats/stats.sg` (statistics words with their tests), `examples/colstats/readnums.sg` (reading a file of numbers) and `examples/colstats/colstats.sg` (the top, a sequence of calls).
 
-**A word's inputs are names already.** Use them directly: `#dist2 ( x:Scalar y:Scalar -- d:Scalar ) x sq y sq + end` binds `x` and `y` as if it began with `-> [ x y ]` (spec section 2, Implicit entry frame). Write `-> [ ... ]` yourself only for values computed inside the body, and give inputs names that are not words (an input named like a word stays a call to the word, with a `ParamNamedLikeWord` warning).
+**A word's inputs are names already.** Use them directly: `#dist2 ( x:Scalar y:Scalar -- d:Scalar ) x sq y sq + end` binds `x` and `y` as if it began with `-> [ x y ]` (spec section 2, Implicit entry frame). Write `-> [ ... ]` yourself only for values computed inside the body, and give inputs names that are not words (an input named like a word that the body calls is an error, `ParamNamedLikeWord`; so is a frame alias named like one of your words, `AliasShadowsWord`).
 
 **Frames are flat.** A frame's body is the rest of the block, never bracketed (spec section 2): `-> [ a b ] a b + -> [ s ] s s *` binds `a b`, then `s`, without nesting either. A `[ ... ]` right after the names is a value: `3 hnew -> [ p ] [ 2 4 7 ]` binds p and pushes the Block [ 2 4 7 ].
 
@@ -115,11 +115,51 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 9 [times| r | 9 [times| c | r 9 * c + ... ] ]   { nested: the inner body sees r }
 ```
 
-- `n [times| i | body ]` runs i = 0..n-1; `lo hi [for| i | body ]` runs i = lo..hi-1.
+- `n [times| i | body ]` runs i = 0..n-1 and takes one bound; `lo hi [for| i | body ]` runs i = lo..hi-1 and takes two. A value left below them is not a bound but a carried value: `0 5 [times| ...` with a `[for|` in mind carries the 0.
 - The body's net effect is 0. To accumulate, leave the accumulator BELOW the loop and have the body replace it (`acc i +`); several accumulators work the same way (`0 1 20 [times| i | swap over + ]`).
 - A frame cannot update a name: `0 -> [ s ] 5 [times| i | s i + -> [ s ] ] s` leaves s at 0, because the inner `-> [ s ]` is a new name for one iteration (the compiler warns: `AliasRebindsOuter`). Thread the value on the stack instead: `0 5 [times| i | i + ] -> [ s ]`.
 - It is faster than the equivalent tail-recursive word (a plain C loop; carried values stay in registers) and has no depth limit.
 - **Stopping early**: `until [ c ]` or `while [ c ]` as the first thing in the body ends the loop before a trip (`0 100 [times| i | until [ dup 20 > ] i + ]`), and `n [find| i | c ]` leaves the first index whose c is true, or -1 (`v vec_len [find| i | v i vec_get k = ]`). Write these instead of a helper word whose only job is to stop a loop.
+
+## 2d. A State Record Threaded Through Small Words
+
+A program with state (a decoder, a parser, a simulation) keeps it in one `#record`, made once, and passes it to every word: one value on the stack instead of many. Each word takes the record first, reads the fields it needs, and sets the fields it changes. A bit reader:
+
+```scrooge
+use "util"
+#record Rd
+  buf Bytes 1 rd_buf
+  pos Scalar 1 0
+  bits Scalar 1 0
+  nbits Scalar 1 0
+end
+#rd_buf ( -- a:Bytes ) 4 bytes_new end
+#rd_byte ( r:Rd -- b:Scalar )
+  r Rd_buf r Rd_pos bytes_get
+  r r Rd_pos 1 + Rd_pos_set
+end
+#rd_bit ( r:Rd -- b:Scalar )
+  r Rd_nbits 0 = when [ r r rd_byte Rd_bits_set r 8 Rd_nbits_set ]
+  r Rd_bits 1 bitand
+  r r Rd_bits 1 bitshr Rd_bits_set
+  r r Rd_nbits 1 - Rd_nbits_set
+end
+#rd_bits ( r:Rd n:Scalar -- v:Scalar )
+  0 n [times| i | r rd_bit i bitshl bitor ]
+end
+#test_bits ( -- ok:Scalar )
+  Rd_new -> [ r ]
+  r Rd_buf 0 181 bytes_set
+  r 3 rd_bits 5 "low 3 bits of 181" expect_eq
+  r 5 rd_bits 22 "high 5 bits" expect_eq and
+  r Rd_pos 1 "one byte read" expect_eq and
+end
+```
+
+- A field word takes the record its field belongs to: `r Rd_pos`, never a record that contains it. Reading a field of a nested record is two calls, `z Z_t T_base`, and a mention of `z` with no call to take it is left on the stack (the ArityMismatch lists it with its line).
+- A word that changes the record leaves nothing for it (`rd_bit` gives only the bit): the caller still has `r`.
+- A field with a Bytes, Ints, Floats, Vec or Dict takes a word that makes it (`rd_buf`), run once by `Rd_new`; nothing is allocated per call after that, so memory stays bounded.
+- Before calling a word of another module, read its signature (`--words MODULE`, or `--show NAME MAIN`): a wrong guess costs a rejected build.
 
 ## 3. Choose the Right Access Operation by Structure
 
@@ -274,7 +314,7 @@ A program of more than a few hundred lines belongs in several files. Each module
 6. **Correct Access Operator**: `block_get` for a Block, `hread` for a heap Ptr, a record's getters for a record, `fgetc`/`fread` for a file.
 7. **Stack effects add up** (section 2b): every `cond` branch has the same net effect, a second frame pops new values, and a count-1 record setter takes no index.
 8. **Arithmetic edge cases**: integer `/` rounds down and `\` is the matching remainder (the sign of the divisor), so `a = b*(a/b) + a\b` for every sign (`-7 2 /` is -4); integer overflow wraps; `<`/`>` compare numbers only; `a b sort_cmp` is -1, 0 or 1 for two strings (byte order) or rows. A `Ptr` used after the `hrelease` of its region stops the program with a message saying so.
-9. **Do not name an alias after one of your words**: `-> [ tbl_name ]` hides `#tbl_name` until the end of the block (the checker warns). Likewise `%` is not modulo (use `\`), and `&&`/`||` do not exist.
+9. **Do not name an alias after one of your words**: `-> [ tbl_name ]` would hide `#tbl_name` until the end of the block, so it is an error (`AliasShadowsWord`). Likewise `%` is not modulo (use `\`), and `&&`/`||` do not exist.
 10. **Frame Scope Runs to the End of the Block**: in `-> [ x ] A B`, `B` still sees `x`. A cond branch does not extend that way: an `else` written after a branch's `]` cannot reach a cond inside it.
 
 ---

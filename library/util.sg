@@ -103,6 +103,15 @@ end
 #expect ( ok:Scalar msg:Block -- ok:Scalar )
   ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
 end
+{ ---- expect_stop: the first thing in a #test_ word whose code must stop ---- }
+{ ---- the program; --test runs it alone and passes it when the program   ---- }
+{ ---- stops with msg in its error output (v1.88).                        ---- }
+#ex_err_step (  -- fh:File )
+  2
+end
+#expect_stop ( msg:Block --  )
+  ex_err_step "expect_stop: " fwrite drop ex_err_step msg fwrite drop ex_err_step 10 fputc drop
+end
 #expect_eq ( got:Unknown want:Unknown msg:Block -- ok:Scalar )
   got want = -> [ ok ]
     ok cond [ ] else [

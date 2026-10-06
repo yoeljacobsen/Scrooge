@@ -1,6 +1,17 @@
-# Scrooge Programming Language (v1.87)
+# Scrooge Programming Language (v1.88)
 
-Repository status: **Scrooge v1.87**.
+Repository status: **Scrooge v1.88**.
+
+### What changed in v1.88
+
+From the gzip run on the pi harness. **One breaking change**: a name with two meanings is now an error.
+
+- **`AliasShadowsWord` and `ParamNamedLikeWord` are errors**, no longer warnings: a frame alias spelled like one of the program's words, or an input named like a word that the body calls, gave one name two meanings, and the warning came only after ACCEPT (one run's `-v` printed nothing because an input named `out` called its `#out` word). Rename the alias or the input.
+- **A runtime fault exits with status 70** (EX_SOFTWARE): an index out of range, a stale Ptr, a stack underflow, a float where an integer is needed. A program's own stop, `abort` or `1 exit`, keeps status 1, so a script or a test can tell bad input from a bug.
+- **Stop tests**: a `#test_` word that begins `"msg" expect_stop` (util) runs alone under `--test` and passes when the program stops with msg in its error output, so a word that rejects bad input and exits is tested with the others.
+- **An ArityMismatch with values left over lists them with the line that pushed each**: "At the end the stack holds ( z:Z from line 9, Scalar from line 10 ) and the signature gives ( b:Scalar ): 1 of these is left over".
+- **`-o` makes the directory** it writes into, instead of failing in the linker after ACCEPT.
+- **Documentation:** the skill guide has a worked example of a state record threaded through small words (section 2d), says to read another module's signatures with `--words` before calling into it, and states that `[times|` takes one bound and `[for|` two and how test checks combine with `and`.
 
 ### What changed in v1.87
 
@@ -506,7 +517,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_87.txt`](spec/scrooge_spec_v1_87.txt) (defines v1.87 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_88.txt`](spec/scrooge_spec_v1_88.txt) (defines v1.88 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

@@ -1,10 +1,10 @@
-# Scrooge on one screen (v1.87)
+# Scrooge on one screen (v1.88)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_87.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_88.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Scalar (an integer or a float), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
-**Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. `x :name` labels a value with the parameter it is for, checked at the call: `p :p 0 :i 5 :v hwrite`. A call with 4 or more inputs must have every argument labelled or passed by a matching name, except one whose type no other parameter has (the one Ptr or Floats among Scalars).
+**Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. A name is never also a word: an alias or input spelled like one of your words is an error (AliasShadowsWord, ParamNamedLikeWord). `x :name` labels a value with the parameter it is for, checked at the call: `p :p 0 :i 5 :v hwrite`. A call with 4 or more inputs must have every argument labelled or passed by a matching name, except one whose type no other parameter has (the one Ptr or Floats among Scalars).
 
 | Construct | Stack effect | Notes |
 |---|---|---|
@@ -31,15 +31,15 @@ Other loops are words that call themselves in tail position.
 - `strings` (`str_print int_to_str str_to_int find_sub str_split str_pad_left`, and the builder `n strbuf_new`, `b s strbuf_add`, `b strbuf_to_str`); `file` (`f_read_file f_write_file`); `args`; `util` (`assert expect expect_eq`); `numeric`. Lines: `fh freadline`, or `fh a freadline_into` into a Bytes.
 - `x to_str` gives any value as text; `x trace` prints it to stderr with its line.
 
-**Tests.** A file's `#test_name ( -- ok:Scalar )` words run with `--test FILE`; `expect_eq ( got want label -- ok )` says what differed.
+**Tests.** A file's `#test_name ( -- ok:Scalar )` words run with `--test FILE`; `expect_eq ( got want label -- ok )` says what differed, and several checks end in one flag: `a 1 "a" expect_eq b 2 "b" expect_eq and`. A test whose code must stop the program begins `"msg" expect_stop` and passes when it stops with msg on stderr. A runtime fault exits with status 70; `abort` and `1 exit` with 1.
 
 **Tools.**
 - `scroogec_fast -L library --lookup NAME [FILE]` (a signature), `--apropos TERMS`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line), `--words FILE`.
-- Read with `--words FILE` and `--show NAME FILE`; change a word with `--edit FILE` and its new definition on stdin (FILE: the module you are working on), checked and undone if it breaks FILE; one edit may also `delete NAME`, `rename OLD NEW`, `move NAME MODULE`. `--test --deep MAIN` runs every module's tests.
+- Before calling into another module, read its signatures with `--words MODULE`. Read with `--words FILE` and `--show NAME FILE`; change a word with `--edit FILE` and its new definition on stdin (FILE: the module you are working on), checked and undone if it breaks FILE; one edit may also `delete NAME`, `rename OLD NEW`, `move NAME MODULE`. `--test --deep MAIN` runs every module's tests.
 - `--check-only FILE` checks; `-o prog FILE` builds; `--unchecked-calls FILE` lists calls with unlabelled arguments; `--labels-required N` (default 4, 0 for never).
 
 **Mistakes that cost the most.**
-1. A name mentioned once too often, or not at all (ArityMismatch: read the per-line depths, or run `--stack`).
+1. A name mentioned once too often, or not at all (ArityMismatch: read the per-line depths and the values left with their lines, or run `--stack`). A value left before `[times|` (one bound) or `[for|` (two) is carried through the loop, not a bound.
 2. Arguments in the wrong order. The container (cell, Block, collection, file) comes first and the value last, in every word. Look the word up, and label them.
 3. A code compared with a number: give codes an `#enum`.
 4. Large words: keep each word under 30 tokens, with a test.

@@ -21,7 +21,7 @@ scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack
 
 - `<file.sg>` *(Required)*: Path to the Scrooge source file to check, verify, or compile.
 - `-L <dir>`, `--lib <dir>`, `--library-dir <dir>`: Specifies a custom directory path for resolving standard library lexicons (e.g., `strings.sg`, `util.sg`, `manifest.sm`).
-- `-o <outBinary>`, `--output <outBinary>`: Specifies the output native executable binary name (default: `<basename>` derived from `<file.sg>`).
+- `-o <outBinary>`, `--output <outBinary>`: Specifies the output native executable binary name (default: `<basename>` derived from `<file.sg>`). A directory in the path that does not exist is made (since v1.88).
 - `--dump-c [path]`, `--dump-c:[path]`: Performs static verification, generates and dumps intermediate C source code to `path` (or `<basename>.c`), and exits immediately.
 - `--dump-bytecode [path]`, `--dump-bytecode:[path]`, `--dump-scc [path]`: Performs static verification, generates and dumps intermediate binary bytecode (`.scc`) to `path` (or `<basename>.scc`), and exits immediately.
 - `--check-only`: Only performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
