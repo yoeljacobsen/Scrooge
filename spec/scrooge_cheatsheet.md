@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.86)
+# Scrooge on one screen (v1.87)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_86.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_87.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Scalar (an integer or a float), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Scalar n:Scalar -- m:Scalar ) s to_float n / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -45,6 +45,7 @@ Other loops are words that call themselves in tail position.
 4. Large words: keep each word under 30 tokens, with a test.
 5. Writing a list, a hash map or a sort yourself: use `vec`, `dict` and `sort_by`.
 6. Progress that never appears: stdout is block-buffered when redirected to a file. Print progress to `f_stderr`, or follow it with `f_stdout fflush drop`.
+7. Memory that only grows: heap cells, records, Vec and Dict are not collected. Put `region [ ... ]` around each unit of work (a query, a file, a batch); everything it allocated is freed at its end.
 
 ```scrooge
 use "vec"

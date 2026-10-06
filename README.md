@@ -1,6 +1,16 @@
-# Scrooge Programming Language (v1.86)
+# Scrooge Programming Language (v1.87)
 
-Repository status: **Scrooge v1.86**.
+Repository status: **Scrooge v1.87**.
+
+### What changed in v1.87
+
+Fixes and one small breaking change from the benchmark round on v1.85.
+
+- **`bytes_be32` and `bytes_le32` are unsigned**: `ff ff ff ff` reads as 4294967295, not -1, so a value goes into a bit buffer or a length without masking. For a signed 32-bit field, subtract 4294967296 when the value is at least 2147483648.
+- **The specification no longer says `/` truncates.** Integer `/` has rounded down since v1.83 (`-7 2 /` is -4), as the cheat sheet and `--lookup` said; one sentence of the spec still described the old rule.
+- **`--test` names a test that ends the program** (with `exit`, `abort` or a fatal error) and lists the tests that did not run; before, the run stopped with no FAIL line.
+- **`--show NAME MAIN`** also finds a word in the modules MAIN loads, and says which file it came from.
+- **The cheat sheet's costly mistakes** now include memory that only grows, with `region [ ]` as the fix.
 
 ### What changed in v1.86
 
@@ -496,7 +506,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_86.txt`](spec/scrooge_spec_v1_86.txt) (defines v1.86 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_87.txt`](spec/scrooge_spec_v1_87.txt) (defines v1.87 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
