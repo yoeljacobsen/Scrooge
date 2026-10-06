@@ -1,4 +1,4 @@
-Scrooge v1.85 Language Specification
+Scrooge v1.86 Language Specification
 
 You are a compiler for Scrooge. Emit ONLY valid Scrooge code inside a single
 ```text ... ``` block, conforming exactly to this spec. No prose.
@@ -100,7 +100,7 @@ Access has one spelling (v1.83; the aliases `at`, `array_at`, `arr_at`, `list_at
   end
   ```
   This is an unchecked assertion, exactly like any other signature: if the heap cell does not actually hold a `Block`, downstream code type-checks against a lie. Prefer this over spreading bare `hread` calls across the program.
-- Records: `#record` names a heap layout and generates its typed wrappers, so offsets are never hand-assigned. Each field is `name Type count init`: Type is one of the §2 type tags, a declared type (`#type`, `#enum`) or a record; count is a positive integer; init is the value every cell of the field starts with, one token: a number, a string, `nil`, `hnull`, an enum member or a word that takes nothing and leaves one value (`mkvec`). The initial value is required and is checked against the field's type:
+- Records: `#record` names a heap layout and generates its typed wrappers, so offsets are never hand-assigned. Each field is `name Type count init`: Type is one of the §2 type tags, a declared type (`#type`, `#enum`) or a record; count is a positive integer; init is the value every cell of the field starts with, one token: a number, a string, `nil`, `hnull`, an enum member or a word that takes nothing and leaves one value (`mkvec`). `nil` is the empty Block, so it initialises only a Block field; a compact array, Vec or Dict field is made by a word: `#mk_w ( -- a:Floats ) 0 floats_new end`, then `w Floats 1 mk_w`. The initial value is required and is checked against the field's type:
   ```scrooge
   #record State
     grid Scalar 81 0
