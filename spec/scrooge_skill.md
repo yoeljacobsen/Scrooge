@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.91)
+# Skill: Writing Correct Scrooge (v1.92)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_91.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_92.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -21,9 +21,15 @@ Learn from the documents and your experiments, not from the compiler's internals
 
 ## 0b. How to Build a Program
 
+**A whole program built this way:** `examples/wavstat/` (a WAV file reader: four modules, a state record, a buffer read as a stream, an error line of its own, tests and stop tests in every module) and `examples/wavstat/DESIGN.md`. Read it before designing yours; copy its shape.
+
 **Design top down.** Before writing code, write the program's structure as a short outline: the main loop, the data it keeps (as `#record` layouts, section 3), and the few words each part needs, with their signatures. A signature is a promise the checker enforces, so choosing them first is most of the design.
 
+**Name the library words of each layer in the design.** For every layer, write down which library words it will use, found in section 0d, with `--apropos` and `--lookup`: reading a file in blocks, bits, numbers from bytes, a list, a table, sorting, text, arguments and the stop on bad input all exist. A layer with no library word next to it is one you are about to write yourself: look again first.
+
 **Implement bottom up, in small increments.** Build the lowest layer first (parsing a number, one record accessor, one helper), and make it pass `--check-only` and its `#test_` words (`--test`, section 1) before building on it. Then the next layer, tested the same way. Never write several hundred lines and compile them for the first time together: the first error hides the design problem behind it.
+
+**Run the whole program early.** As soon as the lowest layers pass their tests, write `main` and make the program run end to end on the simplest input (a header only, an uncompressed case, one record), printing what it has; then add the remaining cases one at a time, each with its test. A program that first runs at the end has every integration error at once.
 
 - Test each layer with `#test_` words and `--test` (section 1), and keep them passing as you go.
 - Split a large program into user modules (section 6d): one file per layer, each with its own test program.
@@ -36,6 +42,30 @@ Learn from the documents and your experiments, not from the compiler's internals
 
 1. **Do not reinvent library words**: check `library/manifest.sm` before writing a helper. Import lexicons with `use "<lexicon>"` (e.g., `use "util"`).
 2. **Your own modules**: `use "name"` loads the file "name.sg" from your program's directory when no library lexicon has that name (section 6d).
+
+---
+
+## 0d. Which Words for Which Job
+
+Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the rest.
+
+| job | words (lexicon to `use`) |
+|---|---|
+| read a whole small file | `path f_read_file` (file) |
+| read a large or binary file as a stream | `path f_open_read`, then `fh :fh a :a 0 :start n :count bytes_read` into one Bytes made once (`n bytes_new`), until it gives 0; `fclose` |
+| read text a line at a time | `fh freadline`, or `fh a freadline_into` into a Bytes |
+| numbers from bytes | `a i bytes_le16`, `bytes_le32`, `bytes_be32` (unsigned) |
+| bits of a stream, least significant first (DEFLATE, gzip, PNG) | `fh 65536 br_from_file` or `a start n br_from_bytes`, `br n br_get`, `br n br_peek`, `br n br_drop`, `br br_align`, `br br_over` (bitread) |
+| write bytes or text | `bytes_write`, `f_write_file`, `fwrite`; build text with `strbuf_new`, `strbuf_add`, `strbuf_add_int`, `strbuf_write` (strings) |
+| a growable list, sorting | `vec_new`, `vec_push`, `vec_get`, `vec_sort_by` with a word `'less`, `sort_by` (vec) |
+| a table by key (Int or string) | `dict_new`, `dict_set`, `dict_get_or`, `dict_has` (dict) |
+| numbers in bulk | `ints_new`, `floats_new`, `bytes_new`; `floats_dot`, `floats_axpy`, `floats_from_bytes` (in C) |
+| text | `int_to_str`, `str_to_int`, `float_to_str`, `str_split`, `find_sub`, `str_print` (strings) |
+| command-line arguments | `1 "" arg_or` (the first), `"-v" arg_flag`, `"-n" 10 arg_int_or`, `"-o" "out" arg_value_or` (args) |
+| state shared by many words | one `#record`, made once, passed first to every word (section 2d) |
+| stop on bad input with your own message | a `die` word: `f_stderr` and `fwrite` the line, then `1 exit` (`abort` prints `ABORT: ` first); test it with a stop test (`"msg" expect_stop`, util) |
+| time and memory | `clock_ns`, `proc_peak_kb` (procinfo) |
+| memory per unit of work | `region [ ... ]` frees what the body allocated |
 
 ---
 
@@ -372,7 +402,7 @@ into rows.sg
 #row_valid ( r:Row -- f:Int ) ... end
 ```
 
-- A definition (`#name ... end`, with the comment above it if any) replaces the word of that name wherever it is, or is added at the end of FILE, or of the file named by the last `into FILE`.
+- A definition (`#name ... end`, with the comment above it if any) replaces the word of that name wherever it is, or is added at the end of FILE, or of the file named by the last `into FILE`. A private word (`_name`) is replaced only in that file: another module's `_name` is a different word, so put `into ITS_FILE` first to change it.
 - `delete NAME` removes a word and its comment. `rename OLD NEW` renames the definition, every call and every `'OLD` reference in the program and its modules, but not strings or comments; a private `_word` only in its own module. It refuses a NEW that is already defined or reserved, and an OLD that is also a local name somewhere. `move NAME MODULE` moves a word to the module next to FILE, adds the `use` lines it needs there and `use "FILE"` where it is still called; it refuses while the word calls words that stay behind, so move those first (in the same script).
 - A step line starts at column 0; everything else is definition text, checked before anything is written (balanced brackets, every definition ended, the parser accepts it).
 - A word's comment is the run of comment lines directly above its `#name` line, with no blank line between: `--show` prints it, `delete` removes it, and a replacement replaces it when the new text brings its own, and keeps it otherwise.

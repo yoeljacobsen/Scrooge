@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.91)
+# Scrooge on one screen (v1.92)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_91.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_92.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Int n:Int -- m:Float ) s to_float n to_float / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -29,7 +29,7 @@ Other loops are words that call themselves in tail position.
 - `vec` (`Vec`): `vec_new vec_push vec_get vec_set vec_len vec_pop vec_sort vec_sort_by sort_by`.
 - `dict` (`Dict`, integer or string keys): `dict_new dict_set dict_get dict_find dict_get_or dict_has dict_del dict_add`.
 - `strings` (`str_print int_to_str str_to_int find_sub str_split str_pad_left`, and the builder `n strbuf_new`, `b s strbuf_add`, `b strbuf_to_str`); `file` (`f_read_file f_write_file`); `args`; `util` (`assert expect expect_eq`); `numeric`; `bitread` (bits of a file or Bytes, LSB first: `fh 65536 br_from_file`, `br n br_get`, `br br_align`, `br dst off n br_bytes`). Lines: `fh freadline`, or `fh a freadline_into` into a Bytes.
-- `x to_str` gives any value as text; `x trace` prints it to stderr with its line.
+- `x to_str` gives any value as text; `x trace` prints it to stderr with its line. Which words for which job (a file as a stream, bits, a list, a table, arguments, stopping with a message): skill guide section 0d. A whole program in modules with tests: `examples/wavstat/`.
 
 **Tests.** A file's `#test_name ( -- ok:Int )` words run with `--test FILE`; `expect_eq ( got want label -- ok )` says what differed, and several checks end in one flag: `a 1 "a" expect_eq b 2 "b" expect_eq and`. A test whose code must stop the program begins `"msg" expect_stop` and passes when it stops with msg on stderr. A runtime fault exits with status 70; `abort` and `1 exit` with 1.
 
@@ -46,6 +46,7 @@ Other loops are words that call themselves in tail position.
 5. Writing a list, a hash map or a sort yourself: use `vec`, `dict` and `sort_by`.
 6. Progress that never appears: stdout is block-buffered when redirected to a file. Print progress to `f_stderr`, or follow it with `f_stdout fflush drop`.
 7. Memory that only grows: heap cells, compact arrays, records, Vec and Dict are not collected. Allocate working arrays once (record fields) and pass them in, or put `region [ ... ]` around each unit of work (a block, a query, a file); everything it allocated is freed at its end. The compiler warns `AllocInLoop` when a loop allocates.
+8. A field word takes its record: `st St_pos` leaves only the field, so `st St_pos n step` with `step ( st pos n )` is one value short. Push the record once for each word that takes it: `st st St_pos n step`.
 
 ```scrooge
 use "vec"

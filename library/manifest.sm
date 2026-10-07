@@ -249,7 +249,7 @@ prim name "bitclz" sig "( a:Int -- n:Int )" desc "Leading zero bits of the 64-bi
 prim name "print_char" sig "( ch:Int -- )" desc "Write one character code to stdout."
 prim name "print_int" sig "( n:Int -- )" desc "Write an integer to stdout (a float is fatal: to_int or floor it, or use print_float)."
 prim name "print_float" sig "( x:Scalar decimals:Int -- )" desc "Write a number with the given number of decimals (0-17), formatted as printf %.*f."
-prim name "abort" sig "( msg:Block -- )" desc "Print msg to stderr and exit nonzero. Never returns; an aborting cond branch is exempt from branch matching."
+prim name "abort" sig "( msg:Block -- )" desc "Print `ABORT: ` and msg to stderr and exit with status 1. Never returns; an aborting cond branch is exempt from branch matching."
 prim name "fopen" sig "( path:Block mode:Int -- fh:File ok:Int )" desc "Open a file (spec Sec.12)."
 prim name "fclose" sig "( fh:File -- ok:Int )" desc "Close a file."
 prim name "fgetc" sig "( fh:File -- ch:Int ok:Int )" desc "Read one character; ok=0 at end of file."

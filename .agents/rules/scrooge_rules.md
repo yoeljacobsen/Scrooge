@@ -1,6 +1,6 @@
-# Scrooge v1.91 Workspace Rules & Agent Directives
+# Scrooge v1.92 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_91.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_92.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -15,12 +15,13 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 3. **Immutability Model:** Block updates (`block_set`) are copy-on-write: they return a new Block and leave the original valid. Pass updated state down the call chain. The heap (`hnew`/`hread`/`hwrite`) is the one mutable store.
 4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (85 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
 5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `ptr offset val hwrite`. Every word that stores into something takes it first and the value last (`b x cons`, `fh ch fputc`, `d k v dict_set`).
-6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler.
+6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler. Skill guide section 0d says which words do which job (a file as a stream, bits, lists, tables, arguments, stopping with a message); name them for each layer in your design before writing code.
 7. **Small Words, Tested One by One:** Build programs from small words (under about 30 tokens, one job each) combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Int ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
+8. **Build Like the Worked Example:** `examples/wavstat/` (with `examples/wavstat/DESIGN.md`) is a whole program built the way the skill guide says: one module per layer, a state record, tests and stop tests in every module, the program running end to end early. Copy its shape.
 
 ---
 
-## 2. Core Scrooge v1.91 Language Reference
+## 2. Core Scrooge v1.92 Language Reference
 
 ### 2.1 Core Data Types
 * **Int and Float:** a 64-bit signed integer (`42`, `0xff`) and an IEEE double (`3.14`, `-0.5`, `314e-2`); Scalar is either kind. An operator takes two numbers of one kind (`x 2.0 *` for a Float x): an Int with a Float is a TypeError, so convert with `to_float`, `to_int` or `floor`. Indexes, counts, loop bounds and flags are Ints.

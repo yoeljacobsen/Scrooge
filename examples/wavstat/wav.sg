@@ -1,0 +1,139 @@
+{ ---- wav: a PCM WAV file read as a stream. wav_open checks the RIFF   ---- }
+{ ---- header, reads the `fmt ` chunk and stops at the start of the      ---- }
+{ ---- `data` chunk, skipping any other chunk; wav_read then gives the   ---- }
+{ ---- samples a buffer at a time. One record holds the state, and its   ---- }
+{ ---- buffer is made once, so memory does not grow with the file.       ---- }
+use "file"
+use "util"
+use "err"
+
+{ the four-byte chunk ids, as bytes_le32 reads them }
+#ID_RIFF ( -- n:Int ) 0x46464952 end
+#ID_WAVE ( -- n:Int ) 0x45564157 end
+#ID_FMT ( -- n:Int ) 0x20746D66 end
+#ID_DATA ( -- n:Int ) 0x61746164 end
+
+#wav_buf ( -- a:Bytes ) 4096 bytes_new end
+
+#record Wav
+  path Block 1 nil
+  fh File 1 f_stdin
+  buf Bytes 1 wav_buf
+  chans Int 1 0
+  rate Int 1 0
+  bits Int 1 0
+  left Int 1 0
+end
+
+#_fail ( w:Wav reason:Block -- ) w Wav_path reason die end
+
+{ n bytes (at most the buffer) into the buffer, or stop: the file is cut short }
+#_read ( w:Wav n:Int -- )
+  w Wav_fh :fh w Wav_buf :a 0 :start n :count bytes_read -> [ got ]
+  got n < when [ w "the file ends too early" _fail ]
+end
+
+{ the Int at offset off of the buffer }
+#_u32 ( w:Wav off:Int -- n:Int ) w Wav_buf off bytes_le32 end
+#_u16 ( w:Wav off:Int -- n:Int ) w Wav_buf off bytes_le16 end
+
+{ skip n bytes, a buffer at a time }
+#_skip ( w:Wav n:Int -- )
+  n 0 > when [ n 4096 min -> [ k ] w k _read w n k - _skip ]
+end
+
+#_check_riff ( w:Wav -- )
+  w 12 _read
+  w 0 _u32 ID_RIFF = w 8 _u32 ID_WAVE = and not when [ w "not a RIFF WAVE file" _fail ]
+end
+
+{ a chunk's body: size bytes and a pad byte when size is odd }
+#_skip_body ( w:Wav size:Int -- ) w size size 1 bitand + _skip end
+
+{ skip chunks up to the one with this id; its size }
+#_find ( w:Wav id:Int -- size:Int )
+  w 8 _read
+  w 4 _u32 -> [ size ]
+  w 0 _u32 id = cond [ size ] else [ w size _skip_body w id _find ] ?
+end
+
+#_check_pcm ( w:Wav -- ) w 0 _u16 1 = not when [ w "not PCM (format tag is not 1)" _fail ] end
+#_check_bits ( w:Wav -- ) w Wav_bits 16 = not when [ w "only 16-bit samples are read" _fail ] end
+#_check_chans ( w:Wav -- ) w Wav_chans 0 = when [ w "no channels" _fail ] end
+
+{ the fields of the 16 bytes of a `fmt ` chunk in the buffer }
+#_fmt_fields ( w:Wav -- )
+  w _check_pcm
+  w w 2 _u16 Wav_chans_set
+  w w 4 _u32 Wav_rate_set
+  w w 14 _u16 Wav_bits_set
+  w _check_bits w _check_chans
+end
+
+#_read_fmt ( w:Wav -- )
+  w ID_FMT _find -> [ size ]
+  size 16 < when [ w "the fmt chunk is too short" _fail ]
+  w 16 _read w _fmt_fields
+  w size 16 - _skip_body
+end
+
+#_open ( path:Block -- fh:File )
+  path f_open_read -> [ fh ok ]
+  ok not when [ path "cannot open the file" die ]
+  fh
+end
+
+{ the open file, at the first sample }
+#wav_open ( path:Block -- w:Wav )
+  Wav_new -> [ w ]
+  w path Wav_path_set
+  w path _open Wav_fh_set
+  w _check_riff w _read_fmt
+  w w ID_DATA _find Wav_left_set
+  w
+end
+
+{ the bytes of the next samples, into the buffer: how many (0 at the end); }
+{ always whole frames }
+#wav_read ( w:Wav -- n:Int )
+  w Wav_chans 2 * -> [ frame ]
+  w Wav_left 4096 frame / frame * min -> [ n ]
+  w n _read
+  w w Wav_left n - Wav_left_set
+  n
+end
+
+{ sample k (0-based) of the buffer, a signed 16-bit value }
+#wav_sample ( w:Wav k:Int -- s:Int )
+  w k 2 * _u16 -> [ u ]
+  u 32768 < cond [ u ] else [ u 65536 - ] ?
+end
+
+#wav_close ( w:Wav -- ) w Wav_fh fclose drop end
+
+#test_open ( -- ok:Int )
+  "examples/wavstat/tone.wav" wav_open -> [ w ]
+  w Wav_chans 2 "channels" expect_eq
+  w Wav_rate 8000 "rate" expect_eq and
+  w Wav_left 3200 "data bytes" expect_eq and
+  w wav_close
+end
+
+#test_read ( -- ok:Int )
+  "examples/wavstat/tone.wav" wav_open -> [ w ]
+  w wav_read 3200 "one buffer holds it all" expect_eq
+  w 1 wav_sample 8192 "first right sample" expect_eq and
+  w wav_read 0 "then the end" expect_eq and
+  w wav_close
+end
+
+#test_not_wav ( -- ok:Int )
+  "not a RIFF WAVE file" expect_stop "examples/wavstat/notwav.wav" wav_open drop 1
+end
+
+#test_cut ( -- ok:Int )
+  "the file ends too early" expect_stop
+  "examples/wavstat/cut.wav" wav_open wav_read drop 1
+end
+
+#test_missing ( -- ok:Int ) "cannot open the file" expect_stop "examples/wavstat/none.wav" wav_open drop 1 end

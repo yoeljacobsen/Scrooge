@@ -1,0 +1,15 @@
+{ ---- err: the one way wavstat stops on bad input: the line          ---- }
+{ ---- `wavstat: PATH: reason` on stderr and exit status 1 (abort would  ---- }
+{ ---- print its own `ABORT: ` prefix, so the program writes the line).  ---- }
+use "file"
+use "util"
+
+#_say ( s:Block -- ) f_stderr s fwrite drop end
+
+{ never returns, so a cond branch ending in it needs no matching value }
+#die ( path:Block reason:Block -- )
+  "wavstat: " _say path _say ": " _say reason _say "\n" _say
+  1 exit
+end
+
+#test_die ( -- ok:Int ) "wavstat: in.wav: no data chunk" expect_stop "in.wav" "no data chunk" die 1 end
