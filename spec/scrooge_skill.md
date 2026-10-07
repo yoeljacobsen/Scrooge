@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.89)
+# Skill: Writing Correct Scrooge (v1.90)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_89.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_90.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -117,7 +117,7 @@ s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
 
 - `n [times| i | body ]` runs i = 0..n-1 and takes one bound; `lo hi [for| i | body ]` runs i = lo..hi-1 and takes two. A value left below them is not a bound but a carried value: `0 5 [times| ...` with a `[for|` in mind carries the 0.
 - The body's net effect is 0. To accumulate, leave the accumulator BELOW the loop and have the body replace it (`acc i +`); several accumulators work the same way (`0 1 20 [times| i | swap over + ]`).
-- A frame cannot update a name: `0 -> [ s ] 5 [times| i | s i + -> [ s ] ] s` leaves s at 0, because the inner `-> [ s ]` is a new name for one iteration (the compiler warns: `AliasRebindsOuter`). Thread the value on the stack instead: `0 5 [times| i | i + ] -> [ s ]`.
+- A frame cannot update a name: `0 -> [ s ] 5 [times| i | s i + -> [ s ] ] s` leaves s at 0, because the inner `-> [ s ]` is a new name for one iteration (the compiler rejects it: `AliasRebindsOuter`). Thread the value on the stack instead: `0 5 [times| i | i + ] -> [ s ]`.
 - It is faster than the equivalent tail-recursive word (a plain C loop; carried values stay in registers) and has no depth limit.
 - **Stopping early**: `until [ c ]` or `while [ c ]` as the first thing in the body ends the loop before a trip (`0 100 [times| i | until [ dup 20 > ] i + ]`), and `n [find| i | c ]` leaves the first index whose c is true, or -1 (`v vec_len [find| i | v i vec_get k = ]`). Write these instead of a helper word whose only job is to stop a loop.
 
@@ -217,6 +217,8 @@ end
 ## 6. Standard Library Highlights
 
 Import library lexicons at the top of the file via `use "<lexicon>"`.
+
+- **Binary formats bit by bit (`bitread.sg`)**: a reader of a file or a Bytes, least significant bit first, the order of DEFLATE, gzip, zlib and PNG. `fh 65536 br_from_file -> [ br ]` (or `a start count br_from_bytes`); `br n br_get` reads n bits (0 to 32) as an Int, the first bit read the lowest; `br n br_peek` and `br n br_drop` for table decoding; `br br_align` skips to a byte boundary; `br dst off count br_bytes` copies whole bytes (a stored block, a trailer) and gives how many it got; `v n br_rev` reverses n bits (a Huffman code is packed from its top bit). Reading past the end gives 0 bits and sets `br br_over`, so check it once after a header or a block and report a truncated input yourself; `br br_at_end` says no bit is left and `br br_pos` how many bytes were consumed. Write a bit reader of your own only for another bit order.
 
 - **Collections first (`vec.sg`, `dict.sg`)**: reach for these before writing a heap layout of your own. Both handles are types of their own (`v:Vec`, `d:Dict`), and every word takes the container first.
   - `Vec`, a growable vector: `8 vec_new -> [ v ]`, `v x vec_push`, `v i vec_get`, `v i x vec_set`, `v vec_len`, `v vec_pop`, `v vec_last`, `v vec_to_block`, `b vec_from_block`. An index outside the Vec stops the program, naming the word.
@@ -336,7 +338,7 @@ compiler/scroogec_fast -L library --stack st_var src/stats.sg   # the stack at t
 ```
 
 - The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.
-- Warnings go to stderr after `ACCEPT`: `MutualRecursion` (words calling each other in tail position where one takes no inputs, so the cycle cannot run as a loop and stops at 65,536 trips; words that pass their state as inputs run as a loop), `AliasShadowsWord`, `AliasRebindsOuter`, and `LargeWord` (a word to split, section 1). Take them seriously.
+- Warnings go to stderr after `ACCEPT`: `MutualRecursion` (words calling each other in tail position where one takes no inputs, so the cycle cannot run as a loop and stops at 65,536 trips; words that pass their state as inputs run as a loop), and `LargeWord` (a word to split, section 1). Take them seriously.
 - `exit ( code -- )` ends a program with a status of your choosing.
 - For a final speed measurement of a program that already runs correctly, `--no-ptr-check` leaves out the stale-Ptr check (about 7% in heap-read-heavy code). Develop and test with the check on.
 

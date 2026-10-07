@@ -1,6 +1,25 @@
-# Scrooge Programming Language (v1.89)
+# Scrooge Programming Language (v1.90)
 
-Repository status: **Scrooge v1.89**.
+Repository status: **Scrooge v1.90**.
+
+## Start here: learning Scrooge and writing a program in it
+
+1. **The cheat sheet** ([`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md)): the language on one screen, with the mistakes that cost the most.
+2. **The specification** ([`spec/scrooge_spec_v1_90.txt`](spec/scrooge_spec_v1_90.txt)), once, end to end: it is short and normative.
+3. **The skill guide** ([`spec/scrooge_skill.md`](spec/scrooge_skill.md)): how to work. Sections 0 and 0b: how to learn the language and how to build a program (design top down, then build and test bottom up, one layer at a time, each in its own module); section 1: small words, each with `#test_` words; section 8b: changing words with `--edit`.
+4. **The library**: [`library/manifest.sm`](library/manifest.sm) lists every word with its signature; `scroogec_fast -L library --lookup NAME`, `--apropos TERMS`, `--explain ErrorClass` and `--stack WORD FILE` answer most questions without leaving the terminal.
+5. **Small probe programs** for whatever is still unclear.
+
+### What changed in v1.90
+
+From the first gzip runs on v1.89 (crush-3, agy-1).
+
+- **Character literals**: `'a'` is the Int 97, and `'\n'` `'\t'` `'\r'` `'\0'` `'\\'` `'\''` the codes of those characters. `'"'`, `'{'` and `'}'` are written 34, 123 and 125. A word reference `'name` has no closing quote, so the two never meet. (The v1.89 documents listed `'a'` as an Int literal before it was one.)
+- **`AliasRebindsOuter` is an error**: a frame inside a loop or map/fold body that binds a name already bound outside it makes a new name for one iteration, and the outer value never changes. One run's loop accumulator stayed at its first value with only a warning. Keep the value on the stack below the loop.
+- **The `bitread` lexicon**: a bit reader over a file or a Bytes, least significant bit first (DEFLATE, gzip, zlib, PNG): `br_from_file`, `br_from_bytes`, `br_get`, `br_peek`, `br_drop`, `br_align`, `br_bytes`, `br_over`, `br_at_end`, `br_pos`, `br_rev`. Every gzip run so far wrote one by hand, and several of their bugs were in it.
+- **`--edit` adds a new word after the file's last definition**, so top-level code such as `main` stays at the end; it was appended after it.
+- **`--check-only` and `--words` take several files**, each under a `== FILE` line, failing if any is rejected; `--check-only src/*.sg` used to check only the last file, silently.
+- **Documentation**: the README starts with where to start; the cheat sheet names `print_float`/`float_to_str`, `--profile` and the record read-modify-write idiom; the tool reference no longer lists the edit commands removed in v1.85.
 
 ### What changed in v1.89
 
@@ -528,7 +547,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_89.txt`](spec/scrooge_spec_v1_89.txt) (defines v1.89 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_90.txt`](spec/scrooge_spec_v1_90.txt) (defines v1.90 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 

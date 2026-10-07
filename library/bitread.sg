@@ -1,0 +1,132 @@
+{ ---- bitread: a bit reader over a file or a Bytes, least significant    ---- }
+{ ---- bit first (the order of DEFLATE, gzip, zlib and PNG). A BitIn is   ---- }
+{ ---- its own type. br_get reads n bits (0 .. 32) as an Int, the first   ---- }
+{ ---- bit read the lowest; reading past the end gives 0 bits and sets    ---- }
+{ ---- br_over, so a decoder checks once (after a block, a header) and    ---- }
+{ ---- reports a truncated input itself. A Huffman code, which DEFLATE    ---- }
+{ ---- packs from its top bit, is read bit by bit or reversed with br_rev. ---- }
+{ ---- Header cells: 0 the buffer (Bytes), 1 the next byte in it, 2 the   ---- }
+{ ---- end of its valid bytes, 3 the bits read ahead, 4 how many, 5 1     ---- }
+{ ---- while a file may still give bytes, 6 the over flag, 7 the bytes    ---- }
+{ ---- taken from the source, 8 the file.                                 ---- }
+#type BitIn Ptr end
+
+{ a reader of the count bytes of a from start (no copy) }
+#br_from_bytes ( a:Bytes start:Int count:Int -- br:BitIn )
+  9 hnew -> [ h ]
+  h 0 a hwrite
+  h 1 start hwrite
+  h 2 start count + hwrite
+  h BitIn_of
+end
+
+{ a reader of the file fh, read size bytes at a time as bits are needed }
+#br_from_file ( fh:File size:Int -- br:BitIn )
+  size 1 max bytes_new 0 0 br_from_bytes -> [ br ]
+  br BitIn_raw -> [ h ]
+  h 5 1 hwrite
+  h 8 fh hwrite
+  br
+end
+
+{ 1 when a byte is ready in the buffer, reading the file when it is empty }
+#_br_more ( br:BitIn -- ok:Int )
+  br BitIn_raw -> [ h ]
+  h 1 hread h 2 hread < cond [ 1 ] else [
+    h 5 hread 0 = cond [ 0 ] else [
+      h 8 hread :fh h 0 hread :a 0 :start h 0 hread bytes_len :count bytes_read -> [ got ]
+      h 1 0 hwrite
+      h 2 got 0 max hwrite
+      got 0 > not when [ h 5 0 hwrite ]
+      got 0 >
+    ] ?
+  ] ?
+end
+
+{ the next byte of the source into the bits read ahead }
+#_br_take ( br:BitIn -- )
+  br BitIn_raw -> [ h ]
+  h 0 hread h 1 hread bytes_get h 4 hread bitshl h 3 hread bitor -> [ acc ]
+  h 3 acc hwrite
+  h 4 h 4 hread 8 + hwrite
+  h 1 h 1 hread 1 + hwrite
+  h 7 h 7 hread 1 + hwrite
+end
+
+{ read ahead to at least 57 bits, or to the end of the source }
+#_br_fill ( br:BitIn -- )
+  br BitIn_raw -> [ h ]
+  8 [times| k | until [ h 4 hread 56 > ] br _br_more when [ br _br_take ] ]
+end
+
+{ the next n bits (0 .. 32), not consumed }
+#br_peek ( br:BitIn n:Int -- v:Int )
+  br BitIn_raw -> [ h ]
+  h 4 hread n < when [ br _br_fill ]
+  h 3 hread 1 n bitshl 1 - bitand
+end
+
+{ consume n bits; past the end, the missing bits read as 0 and br_over is 1 }
+#br_drop ( br:BitIn n:Int -- )
+  br BitIn_raw -> [ h ]
+  h 4 hread n < when [ br _br_fill ]
+  h 4 hread n < when [ h 6 1 hwrite ]
+  h 3 h 3 hread n bitshr hwrite
+  h 4 h 4 hread n - 0 max hwrite
+end
+
+{ the next n bits (0 .. 32), consumed: the first bit read is bit 0 }
+#br_get ( br:BitIn n:Int -- v:Int ) br n br_peek -> [ v ] br n br_drop v end
+
+{ skip to the next byte boundary }
+#br_align ( br:BitIn -- ) br br BitIn_raw 4 hread 8 \ br_drop end
+
+{ 1 when a read went past the end of the source }
+#br_over ( br:BitIn -- f:Int ) br BitIn_raw 6 hread end
+
+{ 1 when no bit is left }
+#br_at_end ( br:BitIn -- f:Int ) br BitIn_raw 4 hread 0 = br _br_more not and end
+
+{ the bytes of the source consumed so far (whole bytes; the bits read }
+{ ahead are not counted) }
+#br_pos ( br:BitIn -- n:Int ) br BitIn_raw -> [ h ] h 7 hread h 4 hread 8 / - end
+
+{ bytes from the bits read ahead, one at a time }
+#_br_drain ( br:BitIn dst:Bytes off:Int count:Int done:Int -- got:Int )
+  done count < br BitIn_raw 4 hread 8 < not and cond [
+    dst off done + br 8 br_get bytes_set
+    br :br dst :dst off :off count :count done 1 + :done _br_drain
+  ] else [ done ] ?
+end
+
+{ m bytes from the buffer into dst at dpos }
+#_br_copy ( br:BitIn dst:Bytes dpos:Int m:Int -- )
+  br BitIn_raw -> [ h ]
+  h 0 hread :src h 1 hread :soff dst :dst dpos :doff m :count bytes_move
+  h 1 h 1 hread m + hwrite
+  h 7 h 7 hread m + hwrite
+end
+
+{ bytes straight from the buffer, a buffer at a time }
+#_br_bulk ( br:BitIn dst:Bytes off:Int count:Int done:Int -- got:Int )
+  done count < br _br_more and cond [
+    br BitIn_raw -> [ h ]
+    count done - h 2 hread h 1 hread - min -> [ m ]
+    br :br dst :dst off done + :dpos m :m _br_copy
+    br :br dst :dst off :off count :count done m + :done _br_bulk
+  ] else [ done ] ?
+end
+
+{ from the next byte boundary, up to count bytes into dst at off (a stored }
+{ block); got is less than count at the end of the source }
+#br_bytes ( br:BitIn dst:Bytes off:Int count:Int -- got:Int )
+  br br_align
+  br :br dst :dst off :off count :count 0 :done _br_drain -> [ d ]
+  br :br dst :dst off :off count :count d :done _br_bulk
+end
+
+{ the low n bits of v in reverse order (a Huffman code read bit by bit, }
+{ or a table index for codes packed from their top bit) }
+#br_rev ( v:Int n:Int -- r:Int )
+  0 n [times| k | 1 bitshl v k bitshr 1 bitand bitor ]
+end
