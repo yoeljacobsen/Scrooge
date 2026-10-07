@@ -24,7 +24,7 @@ use "util"
   argument is an operand, not a flag: `args_demo ""` names a file whose
   path is the empty string, which f_read_file will then fail to open. }
 #is_flag ( s:Block -- flag:Int )
-  s len 0 >
+  s block_len 0 >
   cond [ s 0 block_get 45 = ] else [ 0 ] ?
 end
 
@@ -42,8 +42,8 @@ end
   -> [ path counting text ok ] ok
   cond [
     counting
-    cond [ path str_print 58 print_char 32 print_char text len print_line 1 ]
-    else [ f_stdout text fwrite text len = ] ?
+    cond [ path str_print 58 print_char 32 print_char text block_len print_line 1 ]
+    else [ f_stdout text fwrite text block_len = ] ?
   ] else [
     text drop
     f_stderr arg_prog fwrite drop
@@ -60,11 +60,11 @@ end
 #main ( -- )
   "-c" arg_find -> [ cpos cfound ]
     cpos drop
-    arg_tail operands -> [ files ] files len 0 =
+    arg_tail operands -> [ files ] files block_len 0 =
     cond [
       { no operands: behave as a filter on standard input }
       cfound
-      cond [ f_stdin f_read_all len print_line ]
+      cond [ f_stdin f_read_all block_len print_line ]
       else [ f_stdout f_stdin f_read_all fwrite drop ] ?
     ] else [
       cfound files [fold| idx acc val ctx | idx acc val ctx emit_step from 1 ]

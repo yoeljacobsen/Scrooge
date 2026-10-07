@@ -65,11 +65,11 @@ end
   a b idx 1 + a idx block_get b idx block_get = acc and
 end
 #ae_loop ( a:Block b:Block idx:Int acc:Int -- equal:Int )
-  idx a len < acc and
+  idx a block_len < acc and
   cond [ a b idx acc ae_step ae_loop ] else [ acc ] ?
 end
 #ae_eq_check ( a:Block b:Block -- equal:Int )
-  a len b len =
+  a block_len b block_len =
   cond [ a b 0 :idx 1 :acc ae_loop ] else [ 0 ] ?
 end
 
@@ -117,14 +117,14 @@ end
 { ---- this lexicon (strings.sg has str_to_int, but lexicons do not use   ---- }
 { ---- one another).                                                      ---- }
 #ai_digits_loop ( s:Block k:Int acc:Int -- n:Int ok:Int )
-  k s len = cond [ acc 1 ] else [
+  k s block_len = cond [ acc 1 ] else [
     s k block_get -> [ c ] c 48 < c 57 > or cond [ 0 0 ] else [ s k 1 + acc 10 * c 48 - + ai_digits_loop ]
   ]
 end
 #ai_parse_check ( s:Block -- n:Int ok:Int )
-  s len 0 = cond [ 0 0 ] else [
+  s block_len 0 = cond [ 0 0 ] else [
     s 0 block_get 45 = cond [
-      s len 1 = cond [ 0 0 ] else [ s 1 0 ai_digits_loop -> [ n ok ] 0 n - ok ]
+      s block_len 1 = cond [ 0 0 ] else [ s 1 0 ai_digits_loop -> [ n ok ] 0 n - ok ]
     ] else [ s 0 0 ai_digits_loop ]
   ]
 end
@@ -143,8 +143,8 @@ end
   m to_float 10.0 k pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
 end
 #af_parse_check ( s:Block -- x:Float ok:Int )
-  s len 0 = cond [ 0.0 0 ] else [
-    s 0 block_get 45 = -> [ neg ] 0 :m 0 :k 0 :dot 0 :bad 0 :nd neg s len [for| i | s i block_get :c af_char_step ] neg af_value_check
+  s block_len 0 = cond [ 0.0 0 ] else [
+    s 0 block_get 45 = -> [ neg ] 0 :m 0 :k 0 :dot 0 :bad 0 :nd neg s block_len [for| i | s i block_get :c af_char_step ] neg af_value_check
   ] ?
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }

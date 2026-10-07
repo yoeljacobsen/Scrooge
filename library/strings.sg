@@ -40,7 +40,7 @@ end
 { int_to_str_pad pads with zeros to a total width, the sign counted in it,
   as printf's %0Nd does: -5 3 int_to_str_pad is "-05". }
 #itsp_pad_loop ( s:Block neg:Int width:Int -- s:Block )
-  s len neg + width < cond [ s 48 cons neg width itsp_pad_loop ] else [ s ]
+  s block_len neg + width < cond [ s 48 cons neg width itsp_pad_loop ] else [ s ]
 end
 #int_to_str_pad ( n:Int width:Int -- s:Block )
   n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 cons ]
@@ -145,7 +145,7 @@ end
   because lexicon source was never run through the checker at all; a gate now
   requires every library/*.sg to pass --check-only standalone. }
 #find_sub ( hay:Block needle:Block start:Int -- pos:Int found:Int )
-  hay needle start :i hay len :hlen needle len :nlen fs_scan_loop
+  hay needle start :i hay block_len :hlen needle block_len :nlen fs_scan_loop
 end
 
 { ---- StrBuf (v1.84): text built in place, in one Bytes that grows by  ---- }
@@ -168,9 +168,9 @@ end
   b 1 _sb_room b strbuf_len -> [ n ] b _sb_a n ch bytes_set b StrBuf_raw 1 n 1 + hwrite
 end
 #strbuf_add ( b:StrBuf s:Block -- )
-  b s len _sb_room b _sb_a -> [ a ] b strbuf_len -> [ n ]
-  s len [times| i | a n i + s i block_get bytes_set ]
-  b StrBuf_raw 1 n s len + hwrite
+  b s block_len _sb_room b _sb_a -> [ a ] b strbuf_len -> [ n ]
+  s block_len [times| i | a n i + s i block_get bytes_set ]
+  b StrBuf_raw 1 n s block_len + hwrite
 end
 #strbuf_add_int ( b:StrBuf n:Int -- ) b n int_to_str strbuf_add end
 #strbuf_add_float ( b:StrBuf x:Scalar decimals:Int -- ) b x decimals float_to_str strbuf_add end
@@ -181,7 +181,7 @@ end
 { ---- Padding to a width with spaces (v1.84); a string at least that    ---- }
 { ---- wide is returned as it is. int_to_str_pad pads a number with 0s.  ---- }
 #str_pad_left ( s:Block width:Int -- s2:Block )
-  s len width < cond [ s 32 cons width str_pad_left ] else [ s ] ?
+  s block_len width < cond [ s 32 cons width str_pad_left ] else [ s ] ?
 end
 #_pad_spaces ( acc:Block k:Int -- acc:Block )
   k 0 > cond [ acc 32 cons k 1 - _pad_spaces ] else [ acc ] ?
@@ -190,7 +190,7 @@ end
   i 0 < cond [ acc ] else [ s i 1 - acc s i block_get cons _pad_prepend ] ?
 end
 #str_pad_right ( s:Block width:Int -- s2:Block )
-  s s len 1 - nil width s len - _pad_spaces _pad_prepend
+  s s block_len 1 - nil width s block_len - _pad_spaces _pad_prepend
 end
 
 { ---- An integer in hexadecimal, lowercase; a negative one as its 64-bit ---- }
@@ -209,4 +209,4 @@ end
       s ch i 1 - :i i :stop acc s i 1 + stop i - 1 - block_slice cons :acc _split_loop
     ] else [ s ch i 1 - :i stop acc _split_loop ] ? ] ?
 end
-#str_split ( s:Block ch:Int -- parts:Block ) s ch s len 1 - :i s len :stop nil :acc _split_loop end
+#str_split ( s:Block ch:Int -- parts:Block ) s ch s block_len 1 - :i s block_len :stop nil :acc _split_loop end

@@ -3,7 +3,7 @@
 use "file"
 use "strings"
 
-#_parse ( line:Block -- n:Int ok:Int ) line 0 line len str_to_int end
+#_parse ( line:Block -- n:Int ok:Int ) line 0 line block_len str_to_int end
 
 { the number of lines left in fh }
 #_count_loop ( fh:File n:Int -- total:Int )

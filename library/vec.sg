@@ -66,8 +66,8 @@ end
 #vec_clear ( v:Vec -- ) v Vec_raw 0 0 hwrite end
 
 #vec_from_block ( b:Block -- v:Vec )
-  b len vec_new -> [ v ]
-  b len [times| i | v b i block_get vec_push ]
+  b block_len vec_new -> [ v ]
+  b block_len [times| i | v b i block_get vec_push ]
   v
 end
 

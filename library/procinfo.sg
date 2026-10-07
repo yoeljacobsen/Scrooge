@@ -3,7 +3,7 @@
 
 { ---- the number in a status line after its key: "VmHWM:\t  245180 kB" is 245180 ---- }
 #proc_line_num ( line:Block start:Int -- n:Int )
-  0 start line len [for| i |
+  0 start line block_len [for| i |
     line i block_get -> [ c ] c 48 < c 57 > or cond [ ] else [ 10 * c 48 - + ] ?
   ]
 end
@@ -12,8 +12,8 @@ end
 #proc_scan_loop ( fh:File key:Block -- kb:Int ok:Int )
   fh freadline -> [ line got ]
     got not cond [ 0 0 ] else [
-      line len key len < cond [ fh key proc_scan_loop ] else [
-        line 0 key len block_slice key = cond [ line key len proc_line_num 1 ] else [ fh key proc_scan_loop ] ?
+      line block_len key block_len < cond [ fh key proc_scan_loop ] else [
+        line 0 key block_len block_slice key = cond [ line key block_len proc_line_num 1 ] else [ fh key proc_scan_loop ] ?
       ] ?
     ] ?
 end

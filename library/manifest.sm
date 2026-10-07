@@ -188,7 +188,7 @@ prim name "rot" sig "( x:Unknown y:Unknown z:Unknown -- y:Unknown z:Unknown x:Un
 prim name "over" sig "( x:Unknown y:Unknown -- x:Unknown y:Unknown x:Unknown )" desc "Copy the second value to the top."
 prim name "cons" sig "( b:Block x:Unknown -- b2:Block )" desc "Prepend x to a Block (the Block first, as every word that adds to something)."
 prim name "pair" sig "( a:Unknown b:Unknown -- b2:Block )" desc "The two-slot Block [ a b ]."
-prim name "len" sig "( b:Unknown -- n:Int )" desc "Slot count of a Block."
+prim name "block_len" sig "( b:Unknown -- n:Int )" desc "Slot count of a Block (its length; a string's number of characters). Named `len` before v1.91."
 prim name "block_slice" sig "( b:Block start:Int count:Int -- b2:Block )" desc "The count elements from start as a new Block; the range clamps to the Block, and a count <= 0 gives nil."
 prim name "at" sig "( b:Block i:Int -- v:Unknown )" desc "Integer-indexed read of a homogeneous Block (spec Sec.4 _at)."
 prim name "array_at" sig "( b:Block i:Int -- v:Unknown )" desc "Spelling of `at` for arrays."

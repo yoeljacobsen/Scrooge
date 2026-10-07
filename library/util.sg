@@ -39,7 +39,7 @@ end
   ("Fatal: len operand must be a block/list"); `=` alone would compare it
   and carry on. They keep that behaviour, in the same order, for O(1). }
 #block_eq ( b1:Block b2:Block -- equal:Int )
-  b1 len drop b2 len drop b1 b2 =
+  b1 block_len drop b2 block_len drop b1 b2 =
 end
 
 #insert_sort_step ( idx:Int acc:Block val:Unknown ctx:Unknown -- acc:Block )
@@ -76,7 +76,7 @@ end
 end
 #block_sort ( blk:Block -- sorted:Block )
   hmark -> [ m ]
-    blk len -> [ n ]
+    blk block_len -> [ n ]
       n hnew -> [ p ]
         p blk [fold| idx acc val p2 | idx acc val p2 :p bsort_fill_step from 0 ] drop
         p 0 n hsort

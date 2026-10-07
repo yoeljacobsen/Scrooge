@@ -1,14 +1,22 @@
-# Scrooge Programming Language (v1.90)
+# Scrooge Programming Language (v1.91)
 
-Repository status: **Scrooge v1.90**.
+Repository status: **Scrooge v1.91**.
 
 ## Start here: learning Scrooge and writing a program in it
 
 1. **The cheat sheet** ([`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md)): the language on one screen, with the mistakes that cost the most.
-2. **The specification** ([`spec/scrooge_spec_v1_90.txt`](spec/scrooge_spec_v1_90.txt)), once, end to end: it is short and normative.
+2. **The specification** ([`spec/scrooge_spec_v1_91.txt`](spec/scrooge_spec_v1_91.txt)), once, end to end: it is short and normative.
 3. **The skill guide** ([`spec/scrooge_skill.md`](spec/scrooge_skill.md)): how to work. Sections 0 and 0b: how to learn the language and how to build a program (design top down, then build and test bottom up, one layer at a time, each in its own module); section 1: small words, each with `#test_` words; section 8b: changing words with `--edit`.
 4. **The library**: [`library/manifest.sm`](library/manifest.sm) lists every word with its signature; `scroogec_fast -L library --lookup NAME`, `--apropos TERMS`, `--explain ErrorClass` and `--stack WORD FILE` answer most questions without leaving the terminal.
 5. **Small probe programs** for whatever is still unclear.
+
+### What changed in v1.91
+
+From gzip agy-2, the first run on v1.90. **One breaking change**: `len` is now `block_len`.
+
+- **`len` is renamed `block_len`**, like every other length (`bytes_len`, `ints_len`, `floats_len`, `vec_len`, `strbuf_len`), and `len` is free for a program's own names: every recent run named a parameter `len` and was rejected. A call of `len` says what to write.
+- **`AllocInLoop` warning**: a word called on every trip of a loop (a times/for/find loop, a map or fold, or a word that calls itself) that allocates heap memory nothing frees, with the chain of calls that reaches the allocation. Two gzip runs allocated their code-length arrays once per DEFLATE block (6 and 50 KB a block, never freed) while their reports said they allocated nothing per block. Allocate once before the loop, or put `region [ ]` around one trip's work.
+- **One word, one step**: the skill guide, spec, cheat sheet and the `LargeWord` message now state the small-words rule as a rule: a short sequence of calls with at most one `cond` or loop, under 30 tokens; a branch inside a branch is a word of its own. The 60-token limit is a backstop.
 
 ### What changed in v1.90
 
@@ -547,7 +555,7 @@ For complete technical documentation on compiler architecture, C codegen optimiz
 ## 2. Language Specification & Skill Guide
 
 - **Cheat sheet**: [`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md), the language on one screen.
-- **Core Language Specification**: [`spec/scrooge_spec_v1_90.txt`](spec/scrooge_spec_v1_90.txt) (defines v1.90 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
+- **Core Language Specification**: [`spec/scrooge_spec_v1_91.txt`](spec/scrooge_spec_v1_91.txt) (defines v1.91 syntax, the `cond` form, plain decimal floats `3.14`, `to_float` casting, inter-macro tagged parameter type validation, arity drift protection, and error class specifications).
 - **LLM Skill & Pattern Guide**: [`spec/scrooge_skill.md`](spec/scrooge_skill.md) (operational guide for LLM generation, block-building idioms, unbracketed `cond` rules, and standard library usage).
 - **System Prompt**: the specification itself is written as the system prompt for LLM generation; there is no separate file.
 
