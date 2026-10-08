@@ -1,0 +1,112 @@
+{ ---- tokens: split a line of arithmetic into numbers, names and        ---- }
+{ ---- operators. A token is a kind, a start and a length in the text;   ---- }
+{ ---- the tokens are kept in three Ints arrays of one record, so the    ---- }
+{ ---- text is never copied. Each word reads one kind of token.          ---- }
+{ ----                                                                   ---- }
+{ ---- Build: compiler/scroogec_fast -L library -o tokens examples/tokens/tokens.sg }
+{ ---- Test:  compiler/scroogec_fast -L library --test examples/tokens/tokens.sg }
+{ ---- Run:   ./tokens "rate = 42 * (x1 - 7)"                            ---- }
+use "args"
+use "strings"
+use "util"
+
+#enum Kind number word op end
+
+#TOK_MAX ( -- n:Int ) 256 end
+#mk_ints ( -- a:Ints ) TOK_MAX ints_new end
+
+#record Toks
+  text Block 1 nil
+  kind Ints 1 mk_ints
+  start Ints 1 mk_ints
+  len Ints 1 mk_ints
+  n Int 1 0
+end
+
+{ the character at i, or 0 past the end }
+#_ch ( t:Toks i:Int -- c:Int )
+  t Toks_text -> [ s ]
+  i s block_len < cond [ s i block_get ] else [ 0 ] ?
+end
+
+#_is_name ( c:Int -- f:Int ) c is_lower c is_upper or c '_' = or end
+
+{ how many characters from i belong to a token of kind k }
+#_run ( t:Toks i:Int k:Kind -- m:Int )
+  t Toks_text block_len i - -> [ left ]
+  left [find| j | t i j + k _ends ] left _or_all
+end
+
+{ whether the character at i ends a token of kind k }
+#_ends ( t:Toks i:Int k:Kind -- f:Int ) t i _ch k _stops end
+
+{ the place found, or all of them when none was (-1) }
+#_or_all ( m:Int all:Int -- n:Int ) m 0 < cond [ all ] else [ m ] ? end
+
+#_stops ( c:Int k:Kind -- f:Int )
+  k Kind_number = cond [ c is_digit not ] else [ c _is_name c is_digit or not ] ?
+end
+
+{ record one token }
+#_add ( t:Toks k:Kind i:Int m:Int -- )
+  t Toks_n -> [ n ]
+  n TOK_MAX >= when [ "too many tokens" abort ]
+  t n k i m _put
+  t n 1 + Toks_n_set
+end
+
+#_put ( t:Toks n:Int k:Kind i:Int m:Int -- )
+  t Toks_kind n k Kind_raw ints_set t Toks_start n i ints_set t Toks_len n m ints_set
+end
+
+{ the kind of token that starts with c }
+#_kind ( c:Int -- k:Kind ) c is_digit cond [ Kind_number ] else [ c _is_name cond [ Kind_word ] else [ Kind_op ] ? ] ? end
+
+{ the token at i (not a space): its length }
+#_one ( t:Toks i:Int -- m:Int )
+  t i _ch _kind -> [ k ]
+  k Kind_op = cond [ 1 ] else [ t i k _run ] ?
+  -> [ m ] t :t k :k i :i m :m _add m
+end
+
+{ every token of the text, from i }
+#_scan ( t:Toks i:Int -- )
+  i t Toks_text block_len < when [
+    t i _ch is_space cond [ 1 ] else [ t i _one ] ?
+    -> [ m ] t i m + _scan
+  ]
+end
+
+#tokenize ( s:Block -- t:Toks ) Toks_new -> [ t ] t s Toks_text_set t 0 _scan t end
+
+{ token k's kind, and its text }
+#tok_kind ( t:Toks k:Int -- kind:Kind ) t Toks_kind k ints_get Kind_of end
+#tok_text ( t:Toks k:Int -- s:Block )
+  t Toks_text t Toks_start k ints_get t Toks_len k ints_get block_slice
+end
+
+#show ( t:Toks -- )
+  t Toks_n [times| k |
+    t k tok_kind Kind_name str_print 32 print_char
+    t k tok_text str_print 10 print_char
+  ]
+end
+
+#test_kinds ( -- ok:Int )
+  "ab1 = 42*(x - 7)" tokenize -> [ t ]
+  t Toks_n 9 "nine tokens" expect_eq
+  t 0 tok_kind Kind_raw Kind_word Kind_raw "a word" expect_eq and
+  t 2 tok_kind Kind_raw Kind_number Kind_raw "then a number" expect_eq and
+end
+
+#test_text ( -- ok:Int )
+  "ab1 = 42*(x - 7)" tokenize -> [ t ]
+  t 0 tok_text "ab1" "a word with a digit" expect_eq
+  t 2 tok_text "42" "a number" expect_eq and
+  t 8 tok_text ")" "the last token" expect_eq and
+end
+
+#test_empty ( -- ok:Int ) "   " tokenize Toks_n 0 "only spaces: no token" expect_eq end
+
+#main ( -- ) 1 "a + 1" arg_or tokenize show end
+main

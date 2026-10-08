@@ -1,0 +1,108 @@
+{ ---- matvec: y = W x for a matrix W of rows x cols floats, stored row  ---- }
+{ ---- after row in one Floats array. Two kernels: a counted loop over    ---- }
+{ ---- floats_get, and floats_dot, which does one row in C. They give    ---- }
+{ ---- the same y; the program times both, passing the kernel as a word. ---- }
+{ ---- Allocation happens once, outside the loops.                       ---- }
+{ ----                                                                   ---- }
+{ ---- Build: compiler/scroogec_fast -L library -o matvec examples/matvec/matvec.sg }
+{ ---- Test:  compiler/scroogec_fast -L library --test examples/matvec/matvec.sg }
+{ ---- Run:   ./matvec [-n 512]                                          ---- }
+use "args"
+use "strings"
+use "util"
+
+#mk_floats ( -- a:Floats ) 0 floats_new end
+
+#record Mat
+  rows Int 1 0
+  cols Int 1 0
+  w Floats 1 mk_floats
+end
+
+#mat_new ( rows:Int cols:Int -- m:Mat )
+  Mat_new -> [ m ]
+  m rows Mat_rows_set m cols Mat_cols_set
+  m rows cols * floats_new Mat_w_set m
+end
+
+{ ---- the two kernels ---- }
+
+{ row r of W times x, one element at a time }
+#_row_loop ( m:Mat x:Floats r:Int -- s:Float )
+  m Mat_w -> [ w ] r m Mat_cols * -> [ base ]
+  0.0 m Mat_cols [times| j | w base j + floats_get x j floats_get * + ]
+end
+
+{ row r of W times x, with the library's dot product }
+#_row_dot ( m:Mat x:Floats r:Int -- s:Float )
+  m Mat_w :a r m Mat_cols * :ao x :b 0 :bo m Mat_cols :n floats_dot
+end
+
+{ y = W x with either kernel: the row word is passed (`m x y '_row_dot matvec`), }
+{ and each word passed compiles its own copy, so passing costs nothing        }
+#matvec ( m:Mat x:Floats y:Floats row:Word(Mat,Floats,Int--Float) -- )
+  m Mat_rows [times| r | y r m x r row floats_set ]
+end
+
+{ ---- data and checks ---- }
+
+{ a fixed pattern, so every run is the same: (i mod 7 - 3) / 4 }
+#fill ( a:Floats -- )
+  a floats_len [times| i | a i i 7 \ 3 - to_float 4.0 / floats_set ]
+end
+
+#_close ( y1:Floats y2:Floats i:Int -- f:Int ) y1 i floats_get y2 i floats_get - abs 0.000001 < end
+
+#same ( y1:Floats y2:Floats -- f:Int ) 1 y1 floats_len [times| i | y1 y2 i _close and ] end
+
+{ W = [ 1 0 2 ; 0 3 0 ] }
+#_small ( -- m:Mat )
+  2 3 mat_new -> [ m ] m Mat_w -> [ w ]
+  w 0 1.0 floats_set w 2 2.0 floats_set w 4 3.0 floats_set m
+end
+
+#_ones ( n:Int -- v:Floats ) n floats_new -> [ v ] v 0 :start n :count 1.0 :x floats_fill v end
+
+#_near ( got:Float want:Float msg:Block -- ok:Int ) got want 0.000001 :tol msg expect_near end
+
+#test_small ( -- ok:Int )
+  2 floats_new -> [ y ] _small 3 _ones y '_row_dot matvec
+  y 0 floats_get 3.0 "row 0: 1 + 2" _near
+  y 1 floats_get 3.0 "row 1: 3" _near and
+end
+
+{ a filled n x n matrix and vector, and room for y }
+#_case ( n:Int -- m:Mat x:Floats y:Floats )
+  n n mat_new -> [ m ] m Mat_w fill
+  n floats_new -> [ x ] x fill
+  m x n floats_new
+end
+
+#test_same ( -- ok:Int )
+  5 _case -> [ m x y1 ] 5 floats_new -> [ y2 ]
+  m x y1 '_row_loop matvec m x y2 '_row_dot matvec
+  y1 y2 same 1 "both kernels agree" expect_eq
+end
+
+{ ---- timing ---- }
+
+#_ms ( t0:Int -- ms:Float ) clock_ns t0 - to_float 1000000.0 / end
+
+{ 20 products with one kernel, and the time they took }
+#_time ( m:Mat x:Floats y:Floats row:Word(Mat,Floats,Int--Float) -- ms:Float )
+  clock_ns -> [ t0 ]
+  20 [times| k | m x y 'row matvec ]
+  t0 _ms
+end
+
+#_show ( name:Block ms:Float -- ) name str_print ms 1 print_float " ms for 20 products" str_print 10 print_char end
+
+#_value ( name:Block v:Float -- ) name str_print v 4 print_float 10 print_char end
+
+#main ( -- )
+  "-n" 512 arg_int_or _case -> [ m x y ]
+  "loop " m x y '_row_loop _time _show
+  "dot  " m x y '_row_dot _time _show
+  "y[1] = " y 1 floats_get _value
+end
+main

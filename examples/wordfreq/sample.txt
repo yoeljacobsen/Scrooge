@@ -1,0 +1,4 @@
+The stack holds the values; a word takes its inputs from the stack
+and leaves its outputs on the stack. The checker knows the effect of
+every word, so a word that leaves the wrong number of values is
+rejected before the program runs.

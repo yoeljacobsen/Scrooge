@@ -111,8 +111,42 @@ end
 
 #wav_close ( w:Wav -- ) w Wav_fh fclose drop end
 
+{ ---- test files: each test writes the WAV file it reads, so the tests ---- }
+{ ---- run from any directory and say what is in the file.              ---- }
+#TEST_WAV ( -- path:Block ) "/tmp/wavstat_test.wav" end
+
+#_put16 ( a:Bytes i:Int v:Int -- ) a i v 255 bitand bytes_set a i 1 + v 8 bitshr bytes_set end
+#_put32 ( a:Bytes i:Int v:Int -- ) a i v 65535 bitand _put16 a i 2 + v 16 bitshr _put16 end
+
+{ the RIFF header (its first id given, to make a file that is not a WAV) }
+#_riff ( a:Bytes id:Int n:Int -- ) a 0 id _put32 a 4 n 36 + _put32 a 8 ID_WAVE _put32 end
+
+{ PCM, 2 channels, 8000 Hz, 16 bits }
+#_fmt ( a:Bytes -- ) a 12 ID_FMT _put32 a 16 16 _put32 a 20 1 _put16 a 22 2 _put16 a _rate end
+#_rate ( a:Bytes -- ) a 24 8000 _put32 a 28 32000 _put32 a 32 4 _put16 a 34 16 _put16 end
+
+{ n data bytes: every frame is left 16384, right 8192 }
+#_data ( a:Bytes n:Int -- )
+  a 36 ID_DATA _put32 a 40 n _put32
+  n 4 / [times| k | a 44 k 4 * + _frame ]
+end
+#_frame ( a:Bytes off:Int -- ) a off 16384 _put16 a off 2 + 8192 _put16 end
+
+{ a file of n data bytes, of which only the first keep bytes are written }
+#_test_file ( id:Int n:Int keep:Int -- )
+  n 44 + bytes_new -> [ a ]
+  a id n _riff a _fmt a n _data
+  a keep _save
+end
+#_save ( a:Bytes keep:Int -- )
+  TEST_WAV f_open_write -> [ fh ok ]
+  fh a 0 :start keep :count bytes_write drop
+  fh fclose drop
+end
+
 #test_open ( -- ok:Int )
-  "examples/wavstat/tone.wav" wav_open -> [ w ]
+  ID_RIFF 3200 3244 _test_file
+  TEST_WAV wav_open -> [ w ]
   w Wav_chans 2 "channels" expect_eq
   w Wav_rate 8000 "rate" expect_eq and
   w Wav_left 3200 "data bytes" expect_eq and
@@ -120,7 +154,8 @@ end
 end
 
 #test_read ( -- ok:Int )
-  "examples/wavstat/tone.wav" wav_open -> [ w ]
+  ID_RIFF 3200 3244 _test_file
+  TEST_WAV wav_open -> [ w ]
   w wav_read 3200 "one buffer holds it all" expect_eq
   w 1 wav_sample 8192 "first right sample" expect_eq and
   w wav_read 0 "then the end" expect_eq and
@@ -128,12 +163,15 @@ end
 end
 
 #test_not_wav ( -- ok:Int )
-  "not a RIFF WAVE file" expect_stop "examples/wavstat/notwav.wav" wav_open drop 1
+  "not a RIFF WAVE file" expect_stop
+  ID_DATA 3200 3244 _test_file
+  TEST_WAV wav_open drop 1
 end
 
 #test_cut ( -- ok:Int )
   "the file ends too early" expect_stop
-  "examples/wavstat/cut.wav" wav_open wav_read drop 1
+  ID_RIFF 3200 1000 _test_file
+  TEST_WAV wav_open wav_read drop 1
 end
 
-#test_missing ( -- ok:Int ) "cannot open the file" expect_stop "examples/wavstat/none.wav" wav_open drop 1 end
+#test_missing ( -- ok:Int ) "cannot open the file" expect_stop "/nonexistent/none.wav" wav_open drop 1 end

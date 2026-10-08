@@ -1,0 +1,95 @@
+{ ---- wordfreq: the most frequent words of a text file. The file is    ---- }
+{ ---- read a line at a time; a Dict counts the words; the counts become ---- }
+{ ---- a table, a Vec of rows [ -count word ], which vec_sort orders by  ---- }
+{ ---- its first column, then its second: the most frequent first, ties  ---- }
+{ ---- in alphabetical order. A row is a Block (no heap cell to free).   ---- }
+{ ----                                                                   ---- }
+{ ---- Build: compiler/scroogec_fast -L library -o wordfreq examples/wordfreq/wordfreq.sg }
+{ ---- Test:  compiler/scroogec_fast -L library --test examples/wordfreq/wordfreq.sg }
+{ ---- Run:   ./wordfreq FILE [-n 10]                                    ---- }
+use "args"
+use "dict"
+use "file"
+use "strings"
+use "util"
+use "vec"
+
+{ a row of the table: the count negated, so that ascending is most first }
+#_row ( w:Block n:Int -- r:Block ) 0 n - w pair end
+#row_count ( r:Block -- n:Int ) 0 r 0 block_get - end
+#row_word ( r:Block -- w:Block ) r 1 block_get end
+
+{ ---- counting ---- }
+
+{ a letter, folded to lower case; 0 for anything else }
+#_letter ( c:Int -- l:Int )
+  c is_upper cond [ c 32 + ] else [ c is_lower cond [ c ] else [ 0 ] ? ] ?
+end
+
+{ end the word being built, if any, and count it }
+#_flush ( d:Dict b:StrBuf -- )
+  b strbuf_len 0 > when [ d b strbuf_to_str 1 dict_add b strbuf_clear ]
+end
+
+{ every word of one line }
+#count_line ( d:Dict b:StrBuf line:Block -- )
+  line block_len [times| i |
+    line i block_get _letter -> [ l ]
+    l 0 = cond [ d b _flush ] else [ b l strbuf_add_char ] ?
+  ]
+  d b _flush
+end
+
+#_lines ( d:Dict b:StrBuf fh:File -- )
+  fh freadline -> [ line got ]
+  got when [ d b line count_line d b fh _lines ]
+end
+
+{ ---- the table ---- }
+
+#_add_slot ( d:Dict v:Vec i:Int -- )
+  d i dict_slot -> [ k n live ]
+  live when [ v k n _row vec_push ]
+end
+
+#table ( d:Dict -- v:Vec )
+  d dict_len vec_new -> [ v ]
+  d dict_cap [times| i | d v i _add_slot ]
+  v vec_sort v
+end
+
+#show ( v:Vec n:Int -- )
+  n v vec_len min [times| i |
+    v i vec_get -> [ r ]
+    r row_count int_to_str 6 str_pad_left str_print 32 print_char r row_word str_print 10 print_char
+  ]
+end
+
+{ the counts of the words of one line }
+#counts ( line:Block -- d:Dict ) 64 dict_new -> [ d ] d 16 strbuf_new line count_line d end
+
+#test_line ( -- ok:Int )
+  "The cat, the HAT; the end." counts -> [ d ]
+  d "the" 0 dict_get_or 3 "the, three times" expect_eq
+  d "hat" 0 dict_get_or 1 "upper case folded" expect_eq and
+  d dict_len 4 "four words" expect_eq and
+end
+
+#test_order ( -- ok:Int )
+  "b a b c a b" counts table -> [ v ]
+  v 0 vec_get row_word "b" "b first" expect_eq
+  v 1 vec_get row_word "a" "then a" expect_eq and
+end
+
+#die ( reason:Block -- ) f_stderr "wordfreq: " fwrite drop f_stderr reason fwrite drop 1 exit end
+
+#test_die ( -- ok:Int ) "wordfreq: no such file" expect_stop "no such file" die 1 end
+
+#main ( -- )
+  1 "" arg_or f_open_read -> [ fh ok ]
+  ok not when [ "cannot open the file\n" die ]
+  1024 dict_new -> [ d ]
+  d 64 strbuf_new fh _lines
+  d table "-n" 10 arg_int_or show
+end
+main

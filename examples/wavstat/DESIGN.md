@@ -28,7 +28,7 @@ Nothing is allocated inside the loop over the buffers.
 
 1. `err.sg` and its stop test.
 2. `wav.sg` far enough to open the file and check the header, with the end to end program printing only the format: the whole pipeline runs from the first hour.
-3. The `fmt ` and `data` chunks, then `wav_read` and `wav_sample`, each tested on `tone.wav` (made with Python's `wave` module, 800 frames of a 440 Hz tone and a square wave) and on `cut.wav` and `notwav.wav` for the errors.
+3. The `fmt ` and `data` chunks, then `wav_read` and `wav_sample`. Each test writes the small WAV file it reads (`_test_file`: a header and frames of known values, a wrong first id, or a file cut short), so the tests say what is in their input and run from any directory. `tone.wav` (made with Python's `wave` module, 800 frames of a 440 Hz tone and a square wave) and `cut.wav` are for running the program by hand.
 4. `stats.sg`, tested on numbers whose answer is known (a half-scale square wave has RMS 0.5).
 5. The report.
 

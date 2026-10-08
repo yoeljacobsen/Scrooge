@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.93)
+# Skill: Writing Correct Scrooge (v1.94)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_93.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_94.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -66,6 +66,8 @@ Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the 
 | stop on bad input with your own message | a `die` word: `f_stderr` and `fwrite` the line, then `1 exit` (`abort` prints `ABORT: ` first); test it with a stop test (`"msg" expect_stop`, util) |
 | time and memory | `clock_ns`, `proc_peak_kb` (procinfo) |
 | memory per unit of work | `region [ ... ]` frees what the body allocated |
+
+Three small programs show these words at work, each one file with its tests, every word at most 30 tokens: `examples/tokens/tokens.sg` (text into tokens: character literals, `[find|`, an `#enum`, token arrays in one record), `examples/wordfreq/wordfreq.sg` (a file a line at a time, counting with a Dict, a table of rows sorted by `vec_sort`, a `die` word) and `examples/matvec/matvec.sg` (a kernel on Floats, `floats_dot` against a loop, a word passed as a parameter, timing with `clock_ns`). `examples/wavstat/` is a whole program in modules.
 
 ---
 

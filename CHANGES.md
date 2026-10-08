@@ -2,6 +2,13 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.94
+
+Examples only; the compiler and the library are those of v1.93.
+
+- **Three idiom examples**, one file each with its tests, every word at most 30 tokens: `examples/tokens/tokens.sg` (a line of arithmetic into tokens: character literals, `[find|`, an `#enum`, the tokens as Ints arrays in one record), `examples/wordfreq/wordfreq.sg` (the most frequent words of a file: a line at a time, counting with a Dict, a table of `[ -count word ]` rows sorted by `vec_sort`, a `die` word with its stop test) and `examples/matvec/matvec.sg` (y = W x on Floats: `floats_dot` against a counted loop, the kernel passed as a word parameter, timing with `clock_ns`). The skill guide's section 0d and the README point to them.
+- **wavstat's tests run from any directory**: each test writes the small WAV file it reads, instead of reading files by a path relative to this repository, so `--test --deep` works from a project's own directory.
+
 ## What changed in v1.93
 
 From gzip agy-3, crush-6 and pi-3, the first runs on v1.92's documentation. Two new errors reject code that never did anything (an empty `when [ ]`, a `[for|` whose literal bounds run it zero times); every other v1.92 program still builds.
