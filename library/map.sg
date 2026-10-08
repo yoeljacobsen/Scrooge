@@ -9,7 +9,7 @@
 { ---- list or a plain Ptr is expected (or the reverse) is a TypeError. ---- }
 #type IntMap Ptr end
 
-#map_make ( buckets_size:Int -- m:IntMap )
+#map_make ( buckets_size:Int -- table:IntMap )
   buckets_size 2 * hnew -> [ data_ptr ]
     2 hnew -> [ hdr ]
       hdr 0 buckets_size hwrite
@@ -21,10 +21,10 @@ end
   \ 2 *
 end
 
-#map_find ( m:IntMap key:Int -- val:Unknown found:Int )
-  m IntMap_raw 1 hread
+#map_find ( table:IntMap key:Int -- val:Unknown found:Int )
+  table IntMap_raw 1 hread
   key
-  key m IntMap_raw 0 hread map_hash
+  key table IntMap_raw 0 hread map_hash
   -> [ data_ptr key bucket_idx ]
     data_ptr bucket_idx hread key =
     cond [
@@ -36,10 +36,10 @@ end
     ] ?
 end
 
-#map_get ( m:IntMap key:Int -- val:Unknown )
-  m IntMap_raw 1 hread
+#map_get ( table:IntMap key:Int -- val:Unknown )
+  table IntMap_raw 1 hread
   key
-  key m IntMap_raw 0 hread map_hash
+  key table IntMap_raw 0 hread map_hash
   -> [ data_ptr key bucket_idx ]
     data_ptr bucket_idx hread key =
     cond [
@@ -55,11 +55,11 @@ end
 { an unrelated existing key is the closest analogue this structure has to }
 { "the table is full" -- the alternative (silently overwriting) would }
 { corrupt the other key's entry with no signal to the caller. }
-#map_set ( m:IntMap key:Int val:Unknown -- ok:Int )
+#map_set ( table:IntMap key:Int val:Unknown -- ok:Int )
   val
-  m IntMap_raw 1 hread
+  table IntMap_raw 1 hread
   key
-  key m IntMap_raw 0 hread map_hash
+  key table IntMap_raw 0 hread map_hash
   -> [ val data_ptr key bucket_idx ]
     val
     data_ptr

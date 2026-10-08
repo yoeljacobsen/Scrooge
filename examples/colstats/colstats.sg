@@ -10,16 +10,16 @@ use "strings"
 use "readnums"
 use "stats"
 
-#show ( label:Block x:Scalar -- ) label str_print x 3 print_float 10 print_char end
-#show_int ( label:Block n:Int -- ) label str_print n print_int 10 print_char end
+#show ( label:Block value:Scalar -- ) label str_print value 3 print_float 10 print_char end
+#show_int ( label:Block value:Int -- ) label str_print value print_int 10 print_char end
 
-#report ( p:Ptr n:Int -- )
-  "count   " n show_int
-  "mean    " p n st_mean show
-  "sd      " p n st_sd show
-  "min     " p n st_min show
-  "max     " p n st_max show
-  "median  " p n st_median show
+#report ( cells:Ptr count:Int -- )
+  "count   " count show_int
+  "mean    " cells count st_mean show
+  "sd      " cells count st_sd show
+  "min     " cells count st_min show
+  "max     " cells count st_max show
+  "median  " cells count st_median show
 end
 
 #main ( -- )

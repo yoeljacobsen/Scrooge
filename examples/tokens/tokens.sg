@@ -12,8 +12,8 @@ use "util"
 
 #enum Kind number word op end
 
-#TOK_MAX ( -- n:Int ) 256 end
-#mk_ints ( -- a:Ints ) TOK_MAX ints_new end
+#TOK_MAX ( -- limit:Int ) 256 end
+#mk_ints ( -- slots:Ints ) TOK_MAX ints_new end
 
 #record Toks
   text Block 1 nil
@@ -23,72 +23,72 @@ use "util"
   n Int 1 0
 end
 
-{ the character at i, or 0 past the end }
-#_ch ( t:Toks i:Int -- c:Int )
-  t Toks_text -> [ s ]
-  i s block_len < cond [ s i block_get ] else [ 0 ] ?
+{ the character at pos, or 0 past the end }
+#_ch ( toks:Toks pos:Int -- char:Int )
+  toks Toks_text -> [ s ]
+  pos s block_len < cond [ s pos block_get ] else [ 0 ] ?
 end
 
-#_is_name ( c:Int -- f:Int ) c is_lower c is_upper or c '_' = or end
+#_is_name ( char:Int -- flag:Int ) char is_lower char is_upper or char '_' = or end
 
-{ how many characters from i belong to a token of kind k }
-#_run ( t:Toks i:Int k:Kind -- m:Int )
-  t Toks_text block_len i - -> [ left ]
-  left [find| j | t i j + k _ends ] left _or_all
+{ how many characters from pos belong to a token of this kind }
+#_run ( toks:Toks pos:Int kind:Kind -- length:Int )
+  toks Toks_text block_len pos - -> [ left ]
+  left [find| j | toks pos j + kind _ends ] left _or_all
 end
 
-{ whether the character at i ends a token of kind k }
-#_ends ( t:Toks i:Int k:Kind -- f:Int ) t i _ch k _stops end
+{ whether the character at pos ends a token of this kind }
+#_ends ( toks:Toks pos:Int kind:Kind -- flag:Int ) toks pos _ch kind _stops end
 
 { the place found, or all of them when none was (-1) }
-#_or_all ( m:Int all:Int -- n:Int ) m 0 < cond [ all ] else [ m ] ? end
+#_or_all ( found:Int all:Int -- length:Int ) found 0 < cond [ all ] else [ found ] ? end
 
-#_stops ( c:Int k:Kind -- f:Int )
-  k Kind_number = cond [ c is_digit not ] else [ c _is_name c is_digit or not ] ?
+#_stops ( char:Int kind:Kind -- flag:Int )
+  kind Kind_number = cond [ char is_digit not ] else [ char _is_name char is_digit or not ] ?
 end
 
 { record one token }
-#_add ( t:Toks k:Kind i:Int m:Int -- )
-  t Toks_n -> [ n ]
-  n TOK_MAX >= when [ "too many tokens" abort ]
-  t n k i m _put
-  t n 1 + Toks_n_set
+#_add ( toks:Toks kind:Kind pos:Int length:Int -- )
+  toks Toks_n -> [ slot ]
+  slot TOK_MAX >= when [ "too many tokens" abort ]
+  toks slot kind pos length _put
+  toks slot 1 + Toks_n_set
 end
 
-#_put ( t:Toks n:Int k:Kind i:Int m:Int -- )
-  t Toks_kind n k Kind_raw ints_set t Toks_start n i ints_set t Toks_len n m ints_set
+#_put ( toks:Toks slot:Int kind:Kind pos:Int length:Int -- )
+  toks Toks_kind slot kind Kind_raw ints_set toks Toks_start slot pos ints_set toks Toks_len slot length ints_set
 end
 
-{ the kind of token that starts with c }
-#_kind ( c:Int -- k:Kind ) c is_digit cond [ Kind_number ] else [ c _is_name cond [ Kind_word ] else [ Kind_op ] ? ] ? end
+{ the kind of token that starts with char }
+#_kind ( char:Int -- kind:Kind ) char is_digit cond [ Kind_number ] else [ char _is_name cond [ Kind_word ] else [ Kind_op ] ? ] ? end
 
-{ the token at i (not a space): its length }
-#_one ( t:Toks i:Int -- m:Int )
-  t i _ch _kind -> [ k ]
-  k Kind_op = cond [ 1 ] else [ t i k _run ] ?
-  -> [ m ] t :t k :k i :i m :m _add m
+{ the token at pos (not a space): its length }
+#_one ( toks:Toks pos:Int -- length:Int )
+  toks pos _ch _kind -> [ kind ]
+  kind Kind_op = cond [ 1 ] else [ toks pos kind _run ] ?
+  -> [ length ] toks kind pos length _add length
 end
 
-{ every token of the text, from i }
-#_scan ( t:Toks i:Int -- )
-  i t Toks_text block_len < when [
-    t i _ch is_space cond [ 1 ] else [ t i _one ] ?
-    -> [ m ] t i m + _scan
+{ every token of the text, from pos }
+#_scan ( toks:Toks pos:Int -- )
+  pos toks Toks_text block_len < when [
+    toks pos _ch is_space cond [ 1 ] else [ toks pos _one ] ?
+    -> [ m ] toks pos m + _scan
   ]
 end
 
-#tokenize ( s:Block -- t:Toks ) Toks_new -> [ t ] t s Toks_text_set t 0 _scan t end
+#tokenize ( text:Block -- toks:Toks ) Toks_new -> [ t ] t text Toks_text_set t 0 _scan t end
 
-{ token k's kind, and its text }
-#tok_kind ( t:Toks k:Int -- kind:Kind ) t Toks_kind k ints_get Kind_of end
-#tok_text ( t:Toks k:Int -- s:Block )
-  t Toks_text t Toks_start k ints_get t Toks_len k ints_get block_slice
+{ the kind of token index, and its text }
+#tok_kind ( toks:Toks index:Int -- kind:Kind ) toks Toks_kind index ints_get Kind_of end
+#tok_text ( toks:Toks index:Int -- text:Block )
+  toks Toks_text toks Toks_start index ints_get toks Toks_len index ints_get block_slice
 end
 
-#show ( t:Toks -- )
-  t Toks_n [times| k |
-    t k tok_kind Kind_name str_print 32 print_char
-    t k tok_text str_print 10 print_char
+#show ( toks:Toks -- )
+  toks Toks_n [times| k |
+    toks k tok_kind Kind_name str_print 32 print_char
+    toks k tok_text str_print 10 print_char
   ]
 end
 

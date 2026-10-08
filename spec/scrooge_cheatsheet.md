@@ -1,8 +1,8 @@
-# Scrooge on one screen (v1.94)
+# Scrooge on one screen (v1.95)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_94.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_95.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
-**Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( s:Int n:Int -- m:Float ) s to_float n to_float / end`. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
+**Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. Name each parameter for what it is, as the primitives and the library do (`vec_set ( vec index value )`): labels, frame names and ArgumentOrder are checked against these names. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
 **Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. A name is never also a word: an alias or input spelled like one of your words is an error (AliasShadowsWord, ParamNamedLikeWord). `x :name` labels a value with the parameter it is for, checked at the call: `p :p 0 :i 5 :v hwrite`; a label does not name the value (to use it again, `-> [ h ]`). A call with 4 or more inputs must have every argument labelled or passed by a matching name, except one whose type no other parameter has (the one Ptr or Float among Ints).
 
@@ -53,14 +53,14 @@ use "vec"
 use "strings"
 #enum Shape circle square end
 #record Item shape Shape 1 Shape_circle width Int 1 0 end
-#item ( s:Shape n:Int -- p:Item ) Item_new -> [ p ] p s Item_shape_set p n Item_width_set p end
-#by_width ( a:Item b:Item -- f:Int ) a Item_width b Item_width < end
-#show_item ( p:Item -- ) p Item_shape Shape_name str_print 32 print_char p Item_width print_int 10 print_char end
+#make_item ( shape:Shape width:Int -- item:Item ) Item_new -> [ item ] item shape Item_shape_set item width Item_width_set item end
+#by_width ( left:Item right:Item -- flag:Int ) left Item_width right Item_width < end
+#show_item ( item:Item -- ) item Item_shape Shape_name str_print 32 print_char item Item_width print_int 10 print_char end
 #main ( -- )
   4 vec_new -> [ v ]
-  v Shape_square 3 item vec_push
-  v Shape_circle 1 item vec_push
-  v Shape_square 2 item vec_push
+  v Shape_square 3 make_item vec_push
+  v Shape_circle 1 make_item vec_push
+  v Shape_square 2 make_item vec_push
   v 'by_width vec_sort_by
   v vec_len [times| i | v i vec_get show_item ]
 end

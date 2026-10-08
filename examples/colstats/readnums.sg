@@ -3,31 +3,31 @@
 use "file"
 use "strings"
 
-#_parse ( line:Block -- n:Int ok:Int ) line 0 line block_len str_to_int end
+#_parse ( line:Block -- value:Int ok:Int ) line 0 line block_len str_to_int end
 
 { the number of lines left in fh }
-#_count_loop ( fh:File n:Int -- total:Int )
+#_count_loop ( fh:File seen:Int -- total:Int )
   fh freadline -> [ line got ]
-  got cond [ fh n 1 + _count_loop ] else [ n ] ?
+  got cond [ fh seen 1 + _count_loop ] else [ seen ] ?
 end
 
-{ parse the lines left in fh into p[i..]; the number of cells filled }
-#_fill_loop ( fh:File p:Ptr i:Int -- filled:Int )
+{ parse the lines left in fh into cells[index..]; the number of cells filled }
+#_fill_loop ( fh:File cells:Ptr index:Int -- filled:Int )
   fh freadline -> [ line got ]
-  got not cond [ i ] else [
+  got not cond [ index ] else [
     line _parse -> [ v ok ]
-    ok cond [ p i v hwrite fh p i 1 + _fill_loop ] else [ fh p i _fill_loop ] ?
+    ok cond [ cells index v hwrite fh cells index 1 + _fill_loop ] else [ fh cells index _fill_loop ] ?
   ] ?
 end
 
-#_line_count ( path:Block -- n:Int ) f_open_read -> [ fh ok ] fh 0 _count_loop fh fclose drop end
+#_line_count ( path:Block -- lines:Int ) f_open_read -> [ fh ok ] fh 0 _count_loop fh fclose drop end
 
-#_fill ( path:Block n:Int -- p:Ptr filled:Int )
-  n hnew -> [ p ] path f_open_read -> [ fh ok ] fh p 0 _fill_loop fh fclose drop -> [ k ] p k
+#_fill ( path:Block count:Int -- cells:Ptr filled:Int )
+  count hnew -> [ p ] path f_open_read -> [ fh ok ] fh p 0 _fill_loop fh fclose drop -> [ k ] p k
 end
 
 { the numbers in the file at path: cells, how many, and whether the file could be read }
-#rn_read ( path:Block -- p:Ptr n:Int ok:Int )
+#rn_read ( path:Block -- cells:Ptr count:Int ok:Int )
   path f_open_read -> [ fh ok ] fh fclose drop
   ok cond [ path path _line_count _fill 1 ] else [ hnull 0 0 ] ?
 end

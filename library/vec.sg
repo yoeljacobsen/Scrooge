@@ -7,7 +7,7 @@
 #type Vec Ptr end
 
 { a new, empty Vec with room for cap values before it grows }
-#vec_new ( cap:Int -- v:Vec )
+#vec_new ( cap:Int -- vec:Vec )
   3 hnew -> [ h ]
   h 0 0 hwrite
   h 1 cap 1 max hwrite
@@ -15,69 +15,68 @@
   h Vec_of
 end
 
-#vec_len ( v:Vec -- n:Int ) v Vec_raw 0 hread end
-#vec_cap ( v:Vec -- n:Int ) v Vec_raw 1 hread end
+#vec_len ( vec:Vec -- length:Int ) vec Vec_raw 0 hread end
+#vec_cap ( vec:Vec -- capacity:Int ) vec Vec_raw 1 hread end
 
 { the cells holding the values, at 0 .. vec_len - 1, for the heap words  }
-{ (hsort, hmove, the numeric lexicon); a push may move them, so get it   }
-{ again after one }
-#vec_data ( v:Vec -- p:Ptr ) v Vec_raw 2 hread end
+{ (hsort, hmove, the numeric lexicon); the Ptr stays the same when the  }
+{ Vec grows (hresize, since v1.95), so a Vec made before a region can    }
+{ grow inside it }
+#vec_data ( vec:Vec -- ptr:Ptr ) vec Vec_raw 2 hread end
 
 { room for at least n values }
-#vec_reserve ( v:Vec n:Int -- )
-  v vec_cap n < when [
-    v vec_cap 2 * n max -> [ c ]
-    c hnew -> [ q ]
-    v vec_data :src 0 :soff q :dst 0 :doff v vec_len :count hmove
-    v Vec_raw 2 q hwrite
-    v Vec_raw 1 c hwrite
+#vec_reserve ( vec:Vec count:Int -- )
+  vec vec_cap count < when [
+    vec vec_cap 2 * count max -> [ c ]
+    vec vec_data c hresize
+    vec Vec_raw 1 c hwrite
   ]
 end
 
-#vec_push ( v:Vec x:Unknown -- )
-  v v vec_len 1 + vec_reserve
-  v vec_data v vec_len x hwrite
-  v Vec_raw 0 v vec_len 1 + hwrite
+#vec_push ( vec:Vec value:Unknown -- )
+  vec vec vec_len 1 + vec_reserve
+  vec vec_data vec vec_len value hwrite
+  vec Vec_raw 0 vec vec_len 1 + hwrite
 end
 
-#vec_get ( v:Vec i:Int -- x:Unknown )
-  i 0 < i v vec_len < not or when [ "vec_get: the index is outside 0 .. vec_len - 1" abort ]
-  v vec_data i hread
+#vec_get ( vec:Vec index:Int -- value:Unknown )
+  index 0 < index vec vec_len < not or when [ "vec_get: the index is outside 0 .. vec_len - 1" abort ]
+  vec vec_data index hread
 end
 
-#vec_set ( v:Vec i:Int x:Unknown -- )
-  i 0 < i v vec_len < not or when [ "vec_set: the index is outside 0 .. vec_len - 1" abort ]
-  v vec_data i x hwrite
+#vec_set ( vec:Vec index:Int value:Unknown -- )
+  index 0 < index vec vec_len < not or when [ "vec_set: the index is outside 0 .. vec_len - 1" abort ]
+  vec vec_data index value hwrite
 end
 
-#vec_last ( v:Vec -- x:Unknown )
-  v vec_len 0 = when [ "vec_last: the Vec is empty" abort ]
-  v vec_data v vec_len 1 - hread
+#vec_last ( vec:Vec -- value:Unknown )
+  vec vec_len 0 = when [ "vec_last: the Vec is empty" abort ]
+  vec vec_data vec vec_len 1 - hread
 end
 
-#vec_pop ( v:Vec -- x:Unknown )
-  v vec_len 0 = when [ "vec_pop: the Vec is empty" abort ]
-  v vec_len 1 - -> [ n ]
-  v Vec_raw 0 n hwrite
-  v vec_data n hread
+#vec_pop ( vec:Vec -- value:Unknown )
+  vec vec_len 0 = when [ "vec_pop: the Vec is empty" abort ]
+  vec vec_len 1 - -> [ n ]
+  vec Vec_raw 0 n hwrite
+  vec vec_data n hread
 end
 
 { empties the Vec, keeping its capacity }
-#vec_clear ( v:Vec -- ) v Vec_raw 0 0 hwrite end
+#vec_clear ( vec:Vec -- ) vec Vec_raw 0 0 hwrite end
 
-#vec_from_block ( b:Block -- v:Vec )
-  b block_len vec_new -> [ v ]
-  b block_len [times| i | v b i block_get vec_push ]
-  v
+#vec_from_block ( block:Block -- vec:Vec )
+  block block_len vec_new -> [ vec ]
+  block block_len [times| i | vec block i block_get vec_push ]
+  vec
 end
 
-#vec_to_block ( v:Vec -- b:Block )
-  nil v vec_len [times| i | v vec_data v vec_len 1 - i - hread cons ]
+#vec_to_block ( vec:Vec -- block:Block )
+  nil vec vec_len [times| i | vec vec_data vec vec_len 1 - i - hread cons ]
 end
 
 { sorts the values ascending, as hsort orders them: numbers by value, }
 { strings and rows element by element; stable }
-#vec_sort ( v:Vec -- ) v vec_data 0 v vec_len hsort end
+#vec_sort ( vec:Vec -- ) vec vec_data 0 vec vec_len hsort end
 
 { ---- sort_by: sorts the n cells of p from off, stably, in the order a    ---- }
 { ---- word you pass gives: `less ( a b -- f )` is nonzero when a must come ---- }

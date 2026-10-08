@@ -8,12 +8,12 @@ use "util"
 use "err"
 
 { the four-byte chunk ids, as bytes_le32 reads them }
-#ID_RIFF ( -- n:Int ) 0x46464952 end
-#ID_WAVE ( -- n:Int ) 0x45564157 end
-#ID_FMT ( -- n:Int ) 0x20746D66 end
-#ID_DATA ( -- n:Int ) 0x61746164 end
+#ID_RIFF ( -- id:Int ) 0x46464952 end
+#ID_WAVE ( -- id:Int ) 0x45564157 end
+#ID_FMT ( -- id:Int ) 0x20746D66 end
+#ID_DATA ( -- id:Int ) 0x61746164 end
 
-#wav_buf ( -- a:Bytes ) 4096 bytes_new end
+#wav_buf ( -- buf:Bytes ) 4096 bytes_new end
 
 #record Wav
   path Block 1 nil
@@ -25,56 +25,56 @@ use "err"
   left Int 1 0
 end
 
-#_fail ( w:Wav reason:Block -- ) w Wav_path reason die end
+#_fail ( wav:Wav reason:Block -- ) wav Wav_path reason die end
 
-{ n bytes (at most the buffer) into the buffer, or stop: the file is cut short }
-#_read ( w:Wav n:Int -- )
-  w Wav_fh :fh w Wav_buf :a 0 :start n :count bytes_read -> [ got ]
-  got n < when [ w "the file ends too early" _fail ]
+{ count bytes (at most the buffer) into the buffer, or stop: the file is cut short }
+#_read ( wav:Wav count:Int -- )
+  wav Wav_fh :fh wav Wav_buf :array 0 :start count :count bytes_read -> [ got ]
+  got count < when [ wav "the file ends too early" _fail ]
 end
 
 { the Int at offset off of the buffer }
-#_u32 ( w:Wav off:Int -- n:Int ) w Wav_buf off bytes_le32 end
-#_u16 ( w:Wav off:Int -- n:Int ) w Wav_buf off bytes_le16 end
+#_u32 ( wav:Wav off:Int -- value:Int ) wav Wav_buf off bytes_le32 end
+#_u16 ( wav:Wav off:Int -- value:Int ) wav Wav_buf off bytes_le16 end
 
-{ skip n bytes, a buffer at a time }
-#_skip ( w:Wav n:Int -- )
-  n 0 > when [ n 4096 min -> [ k ] w k _read w n k - _skip ]
+{ skip count bytes, a buffer at a time }
+#_skip ( wav:Wav count:Int -- )
+  count 0 > when [ count 4096 min -> [ k ] wav k _read wav count k - _skip ]
 end
 
-#_check_riff ( w:Wav -- )
-  w 12 _read
-  w 0 _u32 ID_RIFF = w 8 _u32 ID_WAVE = and not when [ w "not a RIFF WAVE file" _fail ]
+#_check_riff ( wav:Wav -- )
+  wav 12 _read
+  wav 0 _u32 ID_RIFF = wav 8 _u32 ID_WAVE = and not when [ wav "not a RIFF WAVE file" _fail ]
 end
 
 { a chunk's body: size bytes and a pad byte when size is odd }
-#_skip_body ( w:Wav size:Int -- ) w size size 1 bitand + _skip end
+#_skip_body ( wav:Wav size:Int -- ) wav size size 1 bitand + _skip end
 
 { skip chunks up to the one with this id; its size }
-#_find ( w:Wav id:Int -- size:Int )
-  w 8 _read
-  w 4 _u32 -> [ size ]
-  w 0 _u32 id = cond [ size ] else [ w size _skip_body w id _find ] ?
+#_find ( wav:Wav id:Int -- size:Int )
+  wav 8 _read
+  wav 4 _u32 -> [ size ]
+  wav 0 _u32 id = cond [ size ] else [ wav size _skip_body wav id _find ] ?
 end
 
-#_check_pcm ( w:Wav -- ) w 0 _u16 1 = not when [ w "not PCM (format tag is not 1)" _fail ] end
-#_check_bits ( w:Wav -- ) w Wav_bits 16 = not when [ w "only 16-bit samples are read" _fail ] end
-#_check_chans ( w:Wav -- ) w Wav_chans 0 = when [ w "no channels" _fail ] end
+#_check_pcm ( wav:Wav -- ) wav 0 _u16 1 = not when [ wav "not PCM (format tag is not 1)" _fail ] end
+#_check_bits ( wav:Wav -- ) wav Wav_bits 16 = not when [ wav "only 16-bit samples are read" _fail ] end
+#_check_chans ( wav:Wav -- ) wav Wav_chans 0 = when [ wav "no channels" _fail ] end
 
 { the fields of the 16 bytes of a `fmt ` chunk in the buffer }
-#_fmt_fields ( w:Wav -- )
-  w _check_pcm
-  w w 2 _u16 Wav_chans_set
-  w w 4 _u32 Wav_rate_set
-  w w 14 _u16 Wav_bits_set
-  w _check_bits w _check_chans
+#_fmt_fields ( wav:Wav -- )
+  wav _check_pcm
+  wav wav 2 _u16 Wav_chans_set
+  wav wav 4 _u32 Wav_rate_set
+  wav wav 14 _u16 Wav_bits_set
+  wav _check_bits wav _check_chans
 end
 
-#_read_fmt ( w:Wav -- )
-  w ID_FMT _find -> [ size ]
-  size 16 < when [ w "the fmt chunk is too short" _fail ]
-  w 16 _read w _fmt_fields
-  w size 16 - _skip_body
+#_read_fmt ( wav:Wav -- )
+  wav ID_FMT _find -> [ size ]
+  size 16 < when [ wav "the fmt chunk is too short" _fail ]
+  wav 16 _read wav _fmt_fields
+  wav size 16 - _skip_body
 end
 
 #_open ( path:Block -- fh:File )
@@ -84,7 +84,7 @@ end
 end
 
 { the open file, at the first sample }
-#wav_open ( path:Block -- w:Wav )
+#wav_open ( path:Block -- wav:Wav )
   Wav_new -> [ w ]
   w path Wav_path_set
   w path _open Wav_fh_set
@@ -95,52 +95,52 @@ end
 
 { the bytes of the next samples, into the buffer: how many (0 at the end); }
 { always whole frames }
-#wav_read ( w:Wav -- n:Int )
-  w Wav_chans 2 * -> [ frame ]
-  w Wav_left 4096 frame / frame * min -> [ n ]
-  w n _read
-  w w Wav_left n - Wav_left_set
+#wav_read ( wav:Wav -- count:Int )
+  wav Wav_chans 2 * -> [ frame ]
+  wav Wav_left 4096 frame / frame * min -> [ n ]
+  wav n _read
+  wav wav Wav_left n - Wav_left_set
   n
 end
 
-{ sample k (0-based) of the buffer, a signed 16-bit value }
-#wav_sample ( w:Wav k:Int -- s:Int )
-  w k 2 * _u16 -> [ u ]
+{ sample index (0-based) of the buffer, a signed 16-bit value }
+#wav_sample ( wav:Wav index:Int -- sample:Int )
+  wav index 2 * _u16 -> [ u ]
   u 32768 < cond [ u ] else [ u 65536 - ] ?
 end
 
-#wav_close ( w:Wav -- ) w Wav_fh fclose drop end
+#wav_close ( wav:Wav -- ) wav Wav_fh fclose drop end
 
 { ---- test files: each test writes the WAV file it reads, so the tests ---- }
 { ---- run from any directory and say what is in the file.              ---- }
 #TEST_WAV ( -- path:Block ) "/tmp/wavstat_test.wav" end
 
-#_put16 ( a:Bytes i:Int v:Int -- ) a i v 255 bitand bytes_set a i 1 + v 8 bitshr bytes_set end
-#_put32 ( a:Bytes i:Int v:Int -- ) a i v 65535 bitand _put16 a i 2 + v 16 bitshr _put16 end
+#_put16 ( array:Bytes index:Int value:Int -- ) array index value 255 bitand bytes_set array index 1 + value 8 bitshr bytes_set end
+#_put32 ( array:Bytes index:Int value:Int -- ) array index value 65535 bitand _put16 array index 2 + value 16 bitshr _put16 end
 
 { the RIFF header (its first id given, to make a file that is not a WAV) }
-#_riff ( a:Bytes id:Int n:Int -- ) a 0 id _put32 a 4 n 36 + _put32 a 8 ID_WAVE _put32 end
+#_riff ( array:Bytes id:Int size:Int -- ) array 0 id _put32 array 4 size 36 + _put32 array 8 ID_WAVE _put32 end
 
 { PCM, 2 channels, 8000 Hz, 16 bits }
-#_fmt ( a:Bytes -- ) a 12 ID_FMT _put32 a 16 16 _put32 a 20 1 _put16 a 22 2 _put16 a _rate end
-#_rate ( a:Bytes -- ) a 24 8000 _put32 a 28 32000 _put32 a 32 4 _put16 a 34 16 _put16 end
+#_fmt ( array:Bytes -- ) array 12 ID_FMT _put32 array 16 16 _put32 array 20 1 _put16 array 22 2 _put16 array _rate end
+#_rate ( array:Bytes -- ) array 24 8000 _put32 array 28 32000 _put32 array 32 4 _put16 array 34 16 _put16 end
 
-{ n data bytes: every frame is left 16384, right 8192 }
-#_data ( a:Bytes n:Int -- )
-  a 36 ID_DATA _put32 a 40 n _put32
-  n 4 / [times| k | a 44 k 4 * + _frame ]
+{ size data bytes: every frame is left 16384, right 8192 }
+#_data ( array:Bytes size:Int -- )
+  array 36 ID_DATA _put32 array 40 size _put32
+  size 4 / [times| k | array 44 k 4 * + _frame ]
 end
-#_frame ( a:Bytes off:Int -- ) a off 16384 _put16 a off 2 + 8192 _put16 end
+#_frame ( array:Bytes off:Int -- ) array off 16384 _put16 array off 2 + 8192 _put16 end
 
-{ a file of n data bytes, of which only the first keep bytes are written }
-#_test_file ( id:Int n:Int keep:Int -- )
-  n 44 + bytes_new -> [ a ]
-  a id n _riff a _fmt a n _data
+{ a file of size data bytes, of which only the first keep bytes are written }
+#_test_file ( id:Int size:Int keep:Int -- )
+  size 44 + bytes_new -> [ a ]
+  a id size _riff a _fmt a size _data
   a keep _save
 end
-#_save ( a:Bytes keep:Int -- )
+#_save ( array:Bytes keep:Int -- )
   TEST_WAV f_open_write -> [ fh ok ]
-  fh a 0 :start keep :count bytes_write drop
+  fh array 0 :start keep :count bytes_write drop
   fh fclose drop
 end
 

@@ -18,15 +18,15 @@
   h 2 c hwrite
   h 3 c hnew hwrite
   h 4 c hnew hwrite
-  c hnew -> [ st ] st :p 0 :start c :count 0 :v hfill h 5 st hwrite
+  c hnew -> [ st ] st :ptr 0 :start c :count 0 :value hfill h 5 st hwrite
   h Dict_of
 end
 
 { a new, empty Dict with room for about n keys before it grows }
-#dict_new ( n:Int -- d:Dict ) 8 n 2 * _dict_pow2 _dict_alloc end
+#dict_new ( count:Int -- dict:Dict ) 8 count 2 * _dict_pow2 _dict_alloc end
 
-#dict_len ( d:Dict -- n:Int ) d Dict_raw 0 hread end
-#dict_cap ( d:Dict -- n:Int ) d Dict_raw 2 hread end
+#dict_len ( dict:Dict -- length:Int ) dict Dict_raw 0 hread end
+#dict_cap ( dict:Dict -- capacity:Int ) dict Dict_raw 2 hread end
 #_dict_used ( d:Dict -- n:Int ) d Dict_raw 1 hread end
 #_dict_keys ( d:Dict -- p:Ptr ) d Dict_raw 3 hread end
 #_dict_vals ( d:Dict -- p:Ptr ) d Dict_raw 4 hread end
@@ -49,10 +49,10 @@ end
   k 0x7fffffff bitand k 31 bitshr 0x7fffffff bitand bitxor 2654435761 * 0x7fffffffffff bitand
 end
 
-#dict_hash ( k:Unknown -- h:Int )
-  k type_of -> [ t ]
-  t 2 = cond [ k _dict_hash_str ]
-  else [ t 0 = cond [ k _dict_hash_int ] else [ "dict: a key must be an integer, a string or another Block (a #struct)" abort ] ]
+#dict_hash ( key:Unknown -- hash:Int )
+  key type_of -> [ t ]
+  t 2 = cond [ key _dict_hash_str ]
+  else [ t 0 = cond [ key _dict_hash_int ] else [ "dict: a key must be an integer, a string or another Block (a #struct)" abort ] ]
 end
 
 { along the probe path from slot i: the slot holding k (found 1), or else }
@@ -85,45 +85,79 @@ end
 end
 
 { before a store: rebuild into a table twice as big (or as big, when }
-{ deleted slots fill it) once used slots would pass three quarters }
+{ deleted slots fill it) once used slots would pass three quarters. The }
+{ three arrays keep their slots (hresize, since v1.95), so a Dict made  }
+{ before a region can grow inside it; the copy of the old entries is    }
+{ released at the end }
 #_dict_make_room ( d:Dict -- )
   d _dict_used 1 + 4 * d dict_cap 3 * > when [
-    d dict_len 1 + 4 * d dict_cap 2 * > cond [ d dict_cap 2 * ] else [ d dict_cap ] _dict_alloc -> [ e ]
-    d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ e k v _dict_put ] ]
-    e Dict_raw :src 0 :soff d Dict_raw :dst 0 :doff 6 :count hmove
+    d dict_len 1 + 4 * d dict_cap 2 * > cond [ d dict_cap 2 * ] else [ d dict_cap ] -> [ c ]
+    region [ d c _dict_rehash ]
   ]
 end
 
-#dict_set ( d:Dict k:Unknown v:Unknown -- ) d _dict_make_room d k v _dict_put end
+#_dict_rehash ( d:Dict c:Int -- )
+  d dict_cap -> [ n ]
+  d _dict_keys n _dict_copy -> [ ks ]
+  d _dict_vals n _dict_copy -> [ vs ]
+  d _dict_states n _dict_copy -> [ st ]
+  d c _dict_empty
+  n [times| i | st i hread 1 = when [ d ks i hread vs i hread _dict_put ] ]
+end
+
+{ d with c slots, all empty }
+#_dict_empty ( d:Dict c:Int -- )
+  d _dict_keys c _dict_clear
+  d _dict_vals c _dict_clear
+  d _dict_states c _dict_clear
+  d Dict_raw 0 0 hwrite
+  d Dict_raw 1 0 hwrite
+  d Dict_raw 2 c hwrite
+end
+
+{ a new array holding the first n cells of p }
+#_dict_copy ( p:Ptr n:Int -- q:Ptr )
+  n hnew -> [ q ]
+  p :src 0 :soff q :dst 0 :doff n :count hmove
+  q
+end
+
+{ p resized to c cells, every one 0 }
+#_dict_clear ( p:Ptr c:Int -- )
+  p c hresize
+  p :ptr 0 :start c :count 0 :value hfill
+end
+
+#dict_set ( dict:Dict key:Unknown value:Unknown -- ) dict _dict_make_room dict key value _dict_put end
 
 { the value of k and 1, or 0 0 when k is absent }
-#dict_find ( d:Dict k:Unknown -- v:Unknown found:Int )
-  d k _dict_slot -> [ s found ]
-  found cond [ d _dict_vals s hread 1 ] else [ 0 0 ]
+#dict_find ( dict:Dict key:Unknown -- value:Unknown found:Int )
+  dict key _dict_slot -> [ s found ]
+  found cond [ dict _dict_vals s hread 1 ] else [ 0 0 ]
 end
 
 { stops the program when k is absent; dict_find or dict_get_or when it may be }
-#dict_get ( d:Dict k:Unknown -- v:Unknown )
-  d k dict_find unless [ "dict_get: the key is not in the Dict" abort ]
+#dict_get ( dict:Dict key:Unknown -- value:Unknown )
+  dict key dict_find unless [ "dict_get: the key is not in the Dict" abort ]
 end
 
-#dict_get_or ( d:Dict k:Unknown default:Unknown -- v:Unknown )
-  d k dict_find cond [ ] else [ drop default ]
+#dict_get_or ( dict:Dict key:Unknown default:Unknown -- value:Unknown )
+  dict key dict_find cond [ ] else [ drop default ]
 end
 
-#dict_has ( d:Dict k:Unknown -- f:Int ) d k _dict_slot swap drop end
+#dict_has ( dict:Dict key:Unknown -- flag:Int ) dict key _dict_slot swap drop end
 
 { adds n to the number stored at k (0 when absent): counting }
-#dict_add ( d:Dict k:Unknown n:Int -- ) d k d k 0 dict_get_or n + dict_set end
+#dict_add ( dict:Dict key:Unknown amount:Int -- ) dict key dict key 0 dict_get_or amount + dict_set end
 
 { removes k; 1 if it was there }
-#dict_del ( d:Dict k:Unknown -- found:Int )
-  d k _dict_slot -> [ s found ]
+#dict_del ( dict:Dict key:Unknown -- found:Int )
+  dict key _dict_slot -> [ s found ]
   found when [
-    d _dict_states s 2 hwrite
-    d _dict_keys s 0 hwrite
-    d _dict_vals s 0 hwrite
-    d Dict_raw 0 d dict_len 1 - hwrite
+    dict _dict_states s 2 hwrite
+    dict _dict_keys s 0 hwrite
+    dict _dict_vals s 0 hwrite
+    dict Dict_raw 0 dict dict_len 1 - hwrite
   ]
   found
 end
@@ -131,11 +165,11 @@ end
 { slot i, 0 <= i < dict_cap: its key and value and 1 when it holds one, }
 { else 0 0 0. To visit every entry: }
 { `d dict_cap [times| i | d i dict_slot -> [ k v live ] live when [ ... ] ]` }
-#dict_slot ( d:Dict i:Int -- k:Unknown v:Unknown live:Int )
-  d _dict_states i hread 1 = cond [ d _dict_keys i hread d _dict_vals i hread 1 ] else [ 0 0 0 ]
+#dict_slot ( dict:Dict index:Int -- key:Unknown value:Unknown live:Int )
+  dict _dict_states index hread 1 = cond [ dict _dict_keys index hread dict _dict_vals index hread 1 ] else [ 0 0 0 ]
 end
 
 { every key, in slot order (no particular order) }
-#dict_keys ( d:Dict -- b:Block )
-  nil d dict_cap [times| i | d i dict_slot -> [ k v live ] live cond [ k cons ] else [ ] ]
+#dict_keys ( dict:Dict -- keys:Block )
+  nil dict dict_cap [times| i | dict i dict_slot -> [ k v live ] live cond [ k cons ] else [ ] ]
 end

@@ -76,11 +76,11 @@ end
 { ---- file -- the same reason lst_grow doubles instead of adding a        ---- }
 { ---- constant. The cap keeps fread's up-front byte buffer bounded no     ---- }
 { ---- matter how large the input turns out to be.                        ---- }
-#f_chunk (  -- n:Int )
+#f_chunk (  -- size:Int )
   65536
 end
-#f_next_chunk ( n:Int -- n:Int )
-  n 2 * 4194304 min
+#f_next_chunk ( size:Int -- size:Int )
+  size 2 * 4194304 min
 end
 #f_read_all_loop ( fh:File acc:Block n:Int -- str:Block )
   fh acc n fh n fread

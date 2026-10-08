@@ -4,7 +4,7 @@
 use "file"
 use "util"
 
-#_say ( s:Block -- ) f_stderr s fwrite drop end
+#_say ( text:Block -- ) f_stderr text fwrite drop end
 
 { never returns, so a cond branch ending in it needs no matching value }
 #die ( path:Block reason:Block -- )

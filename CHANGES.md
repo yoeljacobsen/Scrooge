@@ -2,6 +2,17 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.95
+
+From SQL agy-9, the first run on v1.94: 8884/8884 in 33 s, but 15 GB of memory, because a region around each query failed and was dropped. **Breaking:** labels that name a primitive's or a library word's parameters by their old one-letter names (`:p :i :v` for `hwrite`, `:x` for `vec_push`, `:a :ao :b :bo :n` for `floats_dot`) are ArgumentLabel errors now; use the new names (`--lookup NAME` shows them).
+
+- **Meaningful parameter names everywhere.** Every primitive, library word and generated word now names its parameters for what they are: `vec_set ( vec index value )`, `hwrite ( ptr index value )`, `bytes_fill ( array start count value )`, `bitshl ( value shift )`, `- ( left right )`, `floats_axpy ( dst doff src soff count scale )`, `Name_of ( base -- value )`, a record's `Name_field ( record index -- field )`. Labels, frame names and ArgumentOrder are checked against these names, so a name that matches now means something: `box 0 i vec_set` (a loop index stored as a value) drew an ArgumentOrder warning in v1.94, because `vec_set` took `( v i x )`. ArgumentOrder now checks the primitives too, except the commutative ones. The skill guide, the cheat sheet and the examples ask the same of your own words.
+- **Collections keep their slot when they grow**: the new primitives `hresize ( ptr count -- )` and `bytes_resize` / `ints_resize` / `floats_resize ( array count -- )` resize an allocation in place, and Vec, Dict, list and StrBuf grow with them. A collection made before a `region [ ]` may now grow inside it: in v1.94, pushing a number onto an outer Vec inside a region was accepted and failed at run time when the Vec grew (its new cells were made inside the region and released at its end). With one region around each query, agy-9's engine runs in 302 MB instead of 15 GB. Growth no longer leaves the old cells behind either.
+- **A program's private words no longer collide with a lexicon's**: `#_hex_digit` beside `use "strings"` was ACCEPTed and then failed in the C generator with a DuplicateWordError; a lexicon's `_` words are now private to it, as a module's are.
+- **`--edit` with a terminal on stdin** stops with a message that shows the here-document form, instead of waiting for input with no word.
+- **`--log`** records why a refused `--edit` was refused (the lines after "error: not written ...:"), not only that line.
+- **Benchmark prompts** (measurement only): the report lists every warning of the final build by class, and the benchmark reruns the final timed run under the memory cap.
+
 ## What changed in v1.94
 
 Examples only; the compiler and the library are those of v1.93.

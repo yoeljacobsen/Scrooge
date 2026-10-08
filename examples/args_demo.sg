@@ -23,9 +23,9 @@ use "util"
 { An operand is any argument that does not begin with '-'. An empty
   argument is an operand, not a flag: `args_demo ""` names a file whose
   path is the empty string, which f_read_file will then fail to open. }
-#is_flag ( s:Block -- flag:Int )
-  s block_len 0 >
-  cond [ s 0 block_get 45 = ] else [ 0 ] ?
+#is_flag ( arg:Block -- flag:Int )
+  arg block_len 0 >
+  cond [ arg 0 block_get 45 = ] else [ 0 ] ?
 end
 
 #keep_step ( idx:Int acc:Block val:Block ctx:Int -- acc2:Block )

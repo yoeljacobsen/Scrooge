@@ -15,58 +15,58 @@ use "util"
 use "vec"
 
 { a row of the table: the count negated, so that ascending is most first }
-#_row ( w:Block n:Int -- r:Block ) 0 n - w pair end
-#row_count ( r:Block -- n:Int ) 0 r 0 block_get - end
-#row_word ( r:Block -- w:Block ) r 1 block_get end
+#_row ( word:Block count:Int -- row:Block ) 0 count - word pair end
+#row_count ( row:Block -- count:Int ) 0 row 0 block_get - end
+#row_word ( row:Block -- word:Block ) row 1 block_get end
 
 { ---- counting ---- }
 
 { a letter, folded to lower case; 0 for anything else }
-#_letter ( c:Int -- l:Int )
-  c is_upper cond [ c 32 + ] else [ c is_lower cond [ c ] else [ 0 ] ? ] ?
+#_letter ( char:Int -- letter:Int )
+  char is_upper cond [ char 32 + ] else [ char is_lower cond [ char ] else [ 0 ] ? ] ?
 end
 
 { end the word being built, if any, and count it }
-#_flush ( d:Dict b:StrBuf -- )
-  b strbuf_len 0 > when [ d b strbuf_to_str 1 dict_add b strbuf_clear ]
+#_flush ( tally:Dict buf:StrBuf -- )
+  buf strbuf_len 0 > when [ tally buf strbuf_to_str 1 dict_add buf strbuf_clear ]
 end
 
 { every word of one line }
-#count_line ( d:Dict b:StrBuf line:Block -- )
+#count_line ( tally:Dict buf:StrBuf line:Block -- )
   line block_len [times| i |
     line i block_get _letter -> [ l ]
-    l 0 = cond [ d b _flush ] else [ b l strbuf_add_char ] ?
+    l 0 = cond [ tally buf _flush ] else [ buf l strbuf_add_char ] ?
   ]
-  d b _flush
+  tally buf _flush
 end
 
-#_lines ( d:Dict b:StrBuf fh:File -- )
+#_lines ( tally:Dict buf:StrBuf fh:File -- )
   fh freadline -> [ line got ]
-  got when [ d b line count_line d b fh _lines ]
+  got when [ tally buf line count_line tally buf fh _lines ]
 end
 
 { ---- the table ---- }
 
-#_add_slot ( d:Dict v:Vec i:Int -- )
-  d i dict_slot -> [ k n live ]
-  live when [ v k n _row vec_push ]
+#_add_slot ( tally:Dict rows:Vec slot:Int -- )
+  tally slot dict_slot -> [ k n live ]
+  live when [ rows k n _row vec_push ]
 end
 
-#table ( d:Dict -- v:Vec )
-  d dict_len vec_new -> [ v ]
-  d dict_cap [times| i | d v i _add_slot ]
+#table ( tally:Dict -- rows:Vec )
+  tally dict_len vec_new -> [ v ]
+  tally dict_cap [times| i | tally v i _add_slot ]
   v vec_sort v
 end
 
-#show ( v:Vec n:Int -- )
-  n v vec_len min [times| i |
-    v i vec_get -> [ r ]
+#show ( rows:Vec limit:Int -- )
+  limit rows vec_len min [times| i |
+    rows i vec_get -> [ r ]
     r row_count int_to_str 6 str_pad_left str_print 32 print_char r row_word str_print 10 print_char
   ]
 end
 
 { the counts of the words of one line }
-#counts ( line:Block -- d:Dict ) 64 dict_new -> [ d ] d 16 strbuf_new line count_line d end
+#counts ( line:Block -- tally:Dict ) 64 dict_new -> [ d ] d 16 strbuf_new line count_line d end
 
 #test_line ( -- ok:Int )
   "The cat, the HAT; the end." counts -> [ d ]

@@ -12,32 +12,32 @@ use "err"
 use "wav"
 use "stats"
 
-{ the samples now in the buffer (n bytes) into the accumulators }
-#_add_buffer ( w:Wav a:Acc n:Int -- )
-  w Wav_chans -> [ ch ]
-  n 2 / [times| k | a :a k ch \ :c w k wav_sample :s acc_add ]
+{ the samples now in the buffer (nbytes bytes) into the accumulators }
+#_add_buffer ( wav:Wav acc:Acc nbytes:Int -- )
+  wav Wav_chans -> [ ch ]
+  nbytes 2 / [times| k | acc k ch \ :channel wav k wav_sample :sample acc_add ]
 end
 
 { every sample of the file, a buffer at a time }
-#_add_all ( w:Wav a:Acc -- )
-  w wav_read -> [ n ]
-  n 0 > when [ w a n _add_buffer w a _add_all ]
+#_add_all ( wav:Wav acc:Acc -- )
+  wav wav_read -> [ n ]
+  n 0 > when [ wav acc n _add_buffer wav acc _add_all ]
 end
 
-#_show_channel ( a:Acc c:Int -- )
-  "channel " str_print c print_int
-  ": peak " str_print a c acc_peak print_int
-  ", rms " str_print a c acc_rms 4 print_float 10 print_char
+#_show_channel ( acc:Acc channel:Int -- )
+  "channel " str_print channel print_int
+  ": peak " str_print acc channel acc_peak print_int
+  ", rms " str_print acc channel acc_rms 4 print_float 10 print_char
 end
 
-#_show_format ( w:Wav frames:Int -- )
-  w Wav_chans print_int " channels, " str_print w Wav_rate print_int " Hz, " str_print
+#_show_format ( wav:Wav frames:Int -- )
+  wav Wav_chans print_int " channels, " str_print wav Wav_rate print_int " Hz, " str_print
   frames print_int " frames\n" str_print
 end
 
-#report ( w:Wav a:Acc frames:Int -- )
-  w frames _show_format
-  w Wav_chans [times| c | a c _show_channel ]
+#report ( wav:Wav acc:Acc frames:Int -- )
+  wav frames _show_format
+  wav Wav_chans [times| c | acc c _show_channel ]
 end
 
 #_path ( -- path:Block )
@@ -46,13 +46,13 @@ end
   path
 end
 
-#_open ( path:Block -- w:Wav )
+#_open ( path:Block -- wav:Wav )
   path wav_open -> [ w ]
   w Wav_chans ACC_MAX > when [ path "more than 8 channels" die ]
   w
 end
 
-#_frames ( w:Wav -- n:Int ) w Wav_left w Wav_chans 2 * / end
+#_frames ( wav:Wav -- frames:Int ) wav Wav_left wav Wav_chans 2 * / end
 
 #main ( -- )
   _path _open -> [ w ]

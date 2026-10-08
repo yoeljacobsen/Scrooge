@@ -30,9 +30,9 @@ end
   n 0 =
   cond [ acc ] else [ n 10 / acc n 10 \ 48 + cons its_loop ] ?
 end
-#int_to_str ( n:Int -- str:Block )
-  n 0 =
-  cond [ "0" ] else [ n 0 < cond [ 0 n - nil its_loop 45 cons ] else [ n nil its_loop ] ? ] ?
+#int_to_str ( value:Int -- str:Block )
+  value 0 =
+  cond [ "0" ] else [ value 0 < cond [ 0 value - nil its_loop 45 cons ] else [ value nil its_loop ] ? ] ?
 end
 
 { ---- Print an integer via string conversion, then newline ---- }
@@ -42,8 +42,8 @@ end
 #itsp_pad_loop ( s:Block neg:Int width:Int -- s:Block )
   s block_len neg + width < cond [ s 48 cons neg width itsp_pad_loop ] else [ s ]
 end
-#int_to_str_pad ( n:Int width:Int -- s:Block )
-  n abs int_to_str n 0 < width itsp_pad_loop n 0 < cond [ 45 cons ]
+#int_to_str_pad ( value:Int width:Int -- str:Block )
+  value abs int_to_str value 0 < width itsp_pad_loop value 0 < cond [ 45 cons ]
 end
 { print_fixed prints an integer as a fixed-point number with `decimals`
   digits after the point: 12345 3 print_fixed is 12.345, -5 2 is -0.05,
@@ -55,16 +55,16 @@ end
 #pf_pow10_loop ( d:Int acc:Int -- p:Int )
   d 0 = cond [ acc ] else [ d 1 - acc 10 * pf_pow10_loop ]
 end
-#print_fixed ( v:Int decimals:Int --  )
-  -> [ v d ]
-    v abs -> [ a ] d 1 pf_pow10_loop -> [ sc ] a sc \ -> [ fr ]
-          v 0 < cond [ 45 print_char ]
+#print_fixed ( value:Int decimals:Int --  )
+  -> [ value d ]
+    value abs -> [ a ] d 1 pf_pow10_loop -> [ sc ] a sc \ -> [ fr ]
+          value 0 < cond [ 45 print_char ]
           a sc / print_int
           d 0 > cond [ 46 print_char fr d int_to_str_pad str_print ]
 end
 
-#print_line ( n:Int --  )
-  n int_to_str str_print 10 print_char
+#print_line ( value:Int --  )
+  value int_to_str str_print 10 print_char
 end
 
 { ---- String -> integer (multi-digit, signed, found-flag rather than a  ---- }
@@ -94,7 +94,7 @@ end
   word short on the literal token match). Confirmed by bisection: this
   word fails to compile with `end` bound here, and compiles cleanly with
   `stop`. }
-#str_to_int ( chars:Block start:Int count:Int -- n:Int ok:Int )
+#str_to_int ( chars:Block start:Int count:Int -- value:Int ok:Int )
   start count + -> [ stop ]
     chars
     start
@@ -125,8 +125,8 @@ end
   j nlen < ok and
   cond [ hay needle i j nlen ok fs_cmp_step fs_cmp_loop ] else [ ok ] ?
 end
-#fs_matches_at ( hay:Block needle:Block i:Int nlen:Int -- match:Int )
-  hay needle i 0 :j nlen 1 :ok fs_cmp_loop
+#fs_matches_at ( hay:Block needle:Block index:Int nlen:Int -- match:Int )
+  hay needle index :i 0 :j nlen 1 :ok fs_cmp_loop
 end
 #fs_scan_step ( hay:Block needle:Block i:Int hlen:Int nlen:Int -- hay:Block needle:Block i:Int hlen:Int nlen:Int )
   hay needle i 1 + hlen nlen
@@ -134,7 +134,7 @@ end
 #fs_scan_loop ( hay:Block needle:Block i:Int hlen:Int nlen:Int -- pos:Int found:Int )
   i nlen + hlen > not
   cond [
-    hay needle i nlen fs_matches_at
+    hay needle i :index nlen fs_matches_at
     cond [ i 1 ] else [ hay needle i hlen nlen fs_scan_step fs_scan_loop ] ?
   ] else [ 0 0 ] ?
 end
@@ -149,39 +149,37 @@ end
 end
 
 { ---- StrBuf (v1.84): text built in place, in one Bytes that grows by  ---- }
-{ ---- doubling, instead of a Block copied by every cons. The record     ---- }
+{ ---- doubling in place (bytes_resize, since v1.95), instead of a Block ---- }
+{ ---- copied by every cons. The record                                  ---- }
 { ---- first, the value last; strbuf_write writes to a file (fh first).  ---- }
 #type StrBuf Ptr end
-#strbuf_new ( cap:Int -- b:StrBuf )
+#strbuf_new ( cap:Int -- buf:StrBuf )
   2 hnew -> [ p ] p 0 cap 1 max bytes_new hwrite p 1 0 hwrite p StrBuf_of
 end
 #_sb_a ( b:StrBuf -- a:Bytes ) b StrBuf_raw 0 hread end
-#strbuf_len ( b:StrBuf -- n:Int ) b StrBuf_raw 1 hread end
+#strbuf_len ( buf:StrBuf -- length:Int ) buf StrBuf_raw 1 hread end
 #_sb_room ( b:StrBuf n:Int -- )
   b _sb_a -> [ a ] b strbuf_len n + -> [ need ]
-  need a bytes_len > when [
-    need a bytes_len 2 * max bytes_new -> [ a2 ]
-    a :src 0 :soff a2 :dst 0 :doff b strbuf_len :count bytes_move
-    b StrBuf_raw 0 a2 hwrite ]
+  need a bytes_len > when [ a need a bytes_len 2 * max bytes_resize ]
 end
-#strbuf_add_char ( b:StrBuf ch:Int -- )
-  b 1 _sb_room b strbuf_len -> [ n ] b _sb_a n ch bytes_set b StrBuf_raw 1 n 1 + hwrite
+#strbuf_add_char ( buf:StrBuf ch:Int -- )
+  buf 1 _sb_room buf strbuf_len -> [ n ] buf _sb_a n ch bytes_set buf StrBuf_raw 1 n 1 + hwrite
 end
-#strbuf_add ( b:StrBuf s:Block -- )
-  b s block_len _sb_room b _sb_a -> [ a ] b strbuf_len -> [ n ]
-  s block_len [times| i | a n i + s i block_get bytes_set ]
-  b StrBuf_raw 1 n s block_len + hwrite
+#strbuf_add ( buf:StrBuf str:Block -- )
+  buf str block_len _sb_room buf _sb_a -> [ a ] buf strbuf_len -> [ n ]
+  str block_len [times| i | a n i + str i block_get bytes_set ]
+  buf StrBuf_raw 1 n str block_len + hwrite
 end
-#strbuf_add_int ( b:StrBuf n:Int -- ) b n int_to_str strbuf_add end
-#strbuf_add_float ( b:StrBuf x:Scalar decimals:Int -- ) b x decimals float_to_str strbuf_add end
-#strbuf_to_str ( b:StrBuf -- s:Block ) b _sb_a 0 b strbuf_len bytes_to_block end
-#strbuf_write ( fh:File b:StrBuf -- written:Int ) fh :fh b _sb_a :a 0 :start b strbuf_len :count bytes_write end
-#strbuf_clear ( b:StrBuf -- ) b StrBuf_raw 1 0 hwrite end
+#strbuf_add_int ( buf:StrBuf value:Int -- ) buf value int_to_str strbuf_add end
+#strbuf_add_float ( buf:StrBuf number:Scalar decimals:Int -- ) buf number decimals float_to_str strbuf_add end
+#strbuf_to_str ( buf:StrBuf -- str:Block ) buf _sb_a 0 buf strbuf_len bytes_to_block end
+#strbuf_write ( fh:File buf:StrBuf -- written:Int ) fh :fh buf _sb_a :array 0 :start buf strbuf_len :count bytes_write end
+#strbuf_clear ( buf:StrBuf -- ) buf StrBuf_raw 1 0 hwrite end
 
 { ---- Padding to a width with spaces (v1.84); a string at least that    ---- }
 { ---- wide is returned as it is. int_to_str_pad pads a number with 0s.  ---- }
-#str_pad_left ( s:Block width:Int -- s2:Block )
-  s block_len width < cond [ s 32 cons width str_pad_left ] else [ s ] ?
+#str_pad_left ( str:Block width:Int -- padded:Block )
+  str block_len width < cond [ str 32 cons width str_pad_left ] else [ str ] ?
 end
 #_pad_spaces ( acc:Block k:Int -- acc:Block )
   k 0 > cond [ acc 32 cons k 1 - _pad_spaces ] else [ acc ] ?
@@ -189,8 +187,8 @@ end
 #_pad_prepend ( s:Block i:Int acc:Block -- acc:Block )
   i 0 < cond [ acc ] else [ s i 1 - acc s i block_get cons _pad_prepend ] ?
 end
-#str_pad_right ( s:Block width:Int -- s2:Block )
-  s s block_len 1 - nil width s block_len - _pad_spaces _pad_prepend
+#str_pad_right ( str:Block width:Int -- padded:Block )
+  str str block_len 1 - nil width str block_len - _pad_spaces _pad_prepend
 end
 
 { ---- An integer in hexadecimal, lowercase; a negative one as its 64-bit ---- }
@@ -199,14 +197,15 @@ end
 #_hex_loop ( n:Int k:Int acc:Block -- s:Block )
   n 0 = k 16 = or cond [ acc ] else [ n 4 bitshr k 1 + acc n 15 bitand _hex_digit cons _hex_loop ] ?
 end
-#int_to_hex ( n:Int -- s:Block ) n 0 = cond [ "0" ] else [ n 0 nil _hex_loop ] ? end
+#int_to_hex ( value:Int -- str:Block ) value 0 = cond [ "0" ] else [ value 0 nil _hex_loop ] ? end
 
-{ ---- The pieces of s between the separator ch, in order; n separators  ---- }
-{ ---- give n+1 pieces, empty ones included ("a,,b" is a, "", b).        ---- }
-#_split_loop ( s:Block ch:Int i:Int stop:Int acc:Block -- parts:Block )
-  i 0 < cond [ acc s 0 stop block_slice cons ] else [
-    s i block_get ch = cond [
-      s ch i 1 - :i i :stop acc s i 1 + stop i - 1 - block_slice cons :acc _split_loop
-    ] else [ s ch i 1 - :i stop acc _split_loop ] ? ] ?
+{ ---- The pieces of str between the separator ch, in order; n         ---- }
+{ ---- separators give n+1 pieces, empty ones included ("a,,b" is a,   ---- }
+{ ---- "", b).                                                          ---- }
+#_split_loop ( str:Block ch:Int i:Int stop:Int acc:Block -- parts:Block )
+  i 0 < cond [ acc str 0 stop block_slice cons ] else [
+    str i block_get ch = cond [
+      str ch i 1 - :i i :stop acc str i 1 + stop i - 1 - block_slice cons :acc _split_loop
+    ] else [ str ch i 1 - :i stop acc _split_loop ] ? ] ?
 end
-#str_split ( s:Block ch:Int -- parts:Block ) s ch s block_len 1 - :i s block_len :stop nil :acc _split_loop end
+#str_split ( str:Block ch:Int -- parts:Block ) str ch str block_len 1 - :i str block_len :stop nil :acc _split_loop end

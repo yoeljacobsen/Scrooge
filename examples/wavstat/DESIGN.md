@@ -35,11 +35,11 @@ Nothing is allocated inside the loop over the buffers.
 ## Signatures (the promises the checker holds)
 
 ```
-die        ( path:Block reason:Block -- )   never returns
-wav_open   ( path:Block -- w:Wav )
-wav_read   ( w:Wav -- n:Int )               bytes now in the buffer, whole frames; 0 at the end
-wav_sample ( w:Wav k:Int -- s:Int )         sample k of the buffer, -32768 .. 32767
-acc_add    ( a:Acc c:Int s:Int -- )
-acc_peak   ( a:Acc c:Int -- p:Int )
-acc_rms    ( a:Acc c:Int -- r:Float )       a fraction of full scale
+die        ( path:Block reason:Block -- )          never returns
+wav_open   ( path:Block -- wav:Wav )
+wav_read   ( wav:Wav -- count:Int )                bytes now in the buffer, whole frames; 0 at the end
+wav_sample ( wav:Wav index:Int -- sample:Int )     sample index of the buffer, -32768 .. 32767
+acc_add    ( acc:Acc channel:Int sample:Int -- )
+acc_peak   ( acc:Acc channel:Int -- peak:Int )
+acc_rms    ( acc:Acc channel:Int -- rms:Float )    a fraction of full scale
 ```

@@ -2,7 +2,7 @@
 { ---- Memory figures come from /proc/self/status, in kB.                 ---- }
 
 { ---- the number in a status line after its key: "VmHWM:\t  245180 kB" is 245180 ---- }
-#proc_line_num ( line:Block start:Int -- n:Int )
+#proc_line_num ( line:Block start:Int -- value:Int )
   0 start line block_len [for| i |
     line i block_get -> [ c ] c 48 < c 57 > or cond [ ] else [ 10 * c 48 - + ] ?
   ]

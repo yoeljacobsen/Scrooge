@@ -2,7 +2,7 @@
 { ---- one sample at a time. Up to ACC_MAX channels.                     ---- }
 use "util"
 
-#ACC_MAX ( -- n:Int ) 8 end
+#ACC_MAX ( -- limit:Int ) 8 end
 
 #record Acc
   peak Int 8 0
@@ -10,25 +10,25 @@ use "util"
   count Int 8 0
 end
 
-#_abs ( s:Int -- a:Int ) s 0 < cond [ 0 s - ] else [ s ] ? end
+#_abs ( sample:Int -- magnitude:Int ) sample 0 < cond [ 0 sample - ] else [ sample ] ? end
 
-#_add_peak ( a:Acc c:Int m:Int -- ) m a c Acc_peak > when [ a c m Acc_peak_set ] end
+#_add_peak ( acc:Acc channel:Int magnitude:Int -- ) magnitude acc channel Acc_peak > when [ acc channel magnitude Acc_peak_set ] end
 
-#_add_square ( a:Acc c:Int x:Float -- ) a c a c Acc_sq x x * + Acc_sq_set end
+#_add_square ( acc:Acc channel:Int value:Float -- ) acc channel acc channel Acc_sq value value * + Acc_sq_set end
 
-{ one sample s of channel c }
-#acc_add ( a:Acc c:Int s:Int -- )
-  a c s _abs _add_peak
-  a c s to_float _add_square
-  a c a c Acc_count 1 + Acc_count_set
+{ one sample of a channel }
+#acc_add ( acc:Acc channel:Int sample:Int -- )
+  acc channel sample _abs _add_peak
+  acc channel sample to_float _add_square
+  acc channel acc channel Acc_count 1 + Acc_count_set
 end
 
-#acc_peak ( a:Acc c:Int -- p:Int ) a c Acc_peak end
+#acc_peak ( acc:Acc channel:Int -- peak:Int ) acc channel Acc_peak end
 
-{ the RMS of channel c as a fraction of full scale (32768), 0.0 for no samples }
-#acc_rms ( a:Acc c:Int -- r:Float )
-  a c Acc_count -> [ n ]
-  n 0 = cond [ 0.0 ] else [ a c Acc_sq n to_float / sqrt 32768.0 / ] ?
+{ the RMS of a channel as a fraction of full scale (32768), 0.0 for no samples }
+#acc_rms ( acc:Acc channel:Int -- rms:Float )
+  acc channel Acc_count -> [ n ]
+  n 0 = cond [ 0.0 ] else [ acc channel Acc_sq n to_float / sqrt 32768.0 / ] ?
 end
 
 #test_peak ( -- ok:Int )

@@ -26,8 +26,8 @@ end
 { ---- Total accessor: the argument at a C index, or `default` when there  ---- }
 { ---- is none. This is the word to reach for -- it removes the flag from  ---- }
 { ---- the call site, in the spirit of array.sg's nth_or_default.          ---- }
-#arg_or ( i:Int default:Block -- arg:Block )
-  default i argv
+#arg_or ( index:Int default:Block -- arg:Block )
+  default index argv
   -> [ default a ok ] ok
   cond [ a ] else [ a drop default ] ?
 end
@@ -93,7 +93,7 @@ end
 { ---- index and so is never a real answer.                               ---- }
 { ---- This is the flag-scanning primitive: `"-v" arg_find` answers        ---- }
 { ---- "was -v passed, and where".                                        ---- }
-#arg_find ( name:Block -- i:Int found:Int )
+#arg_find ( name:Block -- index:Int found:Int )
   name 1 af_loop
 end
 
@@ -128,8 +128,8 @@ end
     ] else [ s 0 0 ai_digits_loop ]
   ]
 end
-#arg_int_or ( name:Block default:Int -- n:Int )
-  name nil arg_value_or ai_parse_check -> [ n ok ] ok cond [ n ] else [ default ]
+#arg_int_or ( name:Block default:Int -- value:Int )
+  name nil arg_value_or ai_parse_check -> [ value ok ] ok cond [ value ] else [ default ]
 end
 { ---- Private: strict decimal parse, [-]digits[.digits] with at least   ---- }
 { ---- one digit (no exponent). The digits are kept as an integer and     ---- }
@@ -149,6 +149,6 @@ end
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }
 { ---- absent or its value is not a plain decimal                          ---- }
-#arg_float_or ( name:Block default:Float -- x:Float )
-  name nil arg_value_or af_parse_check -> [ x ok ] ok cond [ x ] else [ default ] ?
+#arg_float_or ( name:Block default:Float -- value:Float )
+  name nil arg_value_or af_parse_check -> [ value ok ] ok cond [ value ] else [ default ] ?
 end

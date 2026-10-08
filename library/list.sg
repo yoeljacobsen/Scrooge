@@ -59,22 +59,11 @@ end
   cond [ src dst idx stop lst_copy_step lst_copy_loop ] else [ ] ?
 end
 
+{ the cells keep their slot (hresize, since v1.95) }
 #lst_grow ( ptr:Ptr --  )
-  ptr
-  ptr 0 hread
-  -> [ ptr old_cap ]
-    ptr
-    old_cap
-    old_cap lst_new_cap
-  -> [ ptr old_cap new_cap ]
-    ptr
-    old_cap
-    new_cap
-    new_cap hnew
-  -> [ ptr old_cap new_cap new_data ]
-    ptr 2 hread :src new_data :dst 0 :idx old_cap :stop lst_copy_loop
-    ptr 0 new_cap hwrite
-    ptr 2 new_data hwrite
+  ptr 0 hread lst_new_cap -> [ new_cap ]
+  ptr 2 hread new_cap hresize
+  ptr 0 new_cap hwrite
 end
 
 #lst_push ( ptr:Ptr val:Unknown --  )

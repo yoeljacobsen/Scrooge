@@ -1,44 +1,44 @@
-{ ---- stats: summary statistics of the n numbers in heap cells p[0..n),   ---- }
-{ ---- n >= 1. One job per word; the #test_ words below check each one on  ---- }
-{ ---- an input worked out by hand. Run them with                          ---- }
+{ ---- stats: summary statistics of the count numbers in heap cells     ---- }
+{ ---- cells[0..count), count >= 1. One job per word; the #test_ words  ---- }
+{ ---- below check each one on an input worked out by hand. Run them with ---- }
 { ----   compiler/scroogec_fast -L library --test examples/colstats/stats.sg ---- }
 use "numeric"
 use "util"
 
-#st_mean ( p:Ptr n:Int -- m:Float ) p 0 n vec_sum to_float n to_float / end
+#st_mean ( cells:Ptr count:Int -- mean:Float ) cells 0 count vec_sum to_float count to_float / end
 
-{ the squared deviation of x from m }
-#_sq_dev ( x:Float m:Float -- d:Float ) x m - -> [ d ] d d * end
+{ the squared deviation of value from mean }
+#_sq_dev ( value:Float mean:Float -- square:Float ) value mean - -> [ d ] d d * end
 
 { population variance: the mean squared deviation from the mean }
-#st_var ( p:Ptr n:Int -- v:Float )
-  p n st_mean -> [ m ]
-  0.0 n [times| i | p i hread m _sq_dev + ] n to_float /
+#st_var ( cells:Ptr count:Int -- variance:Float )
+  cells count st_mean -> [ m ]
+  0.0 count [times| i | cells i hread m _sq_dev + ] count to_float /
 end
 
-#st_sd ( p:Ptr n:Int -- s:Float ) st_var sqrt end
+#st_sd ( cells:Ptr count:Int -- sd:Float ) st_var sqrt end
 { one loop, two uses: `pick` is a word parameter, so st_min and st_max }
 { share the loop instead of copying it (each compiles to its own word) }
-#_reduce ( p:Ptr n:Int pick:Word(Scalar,Scalar--Scalar) -- x:Scalar )
-  p 0 hread n [times| i | p i hread pick ]
+#_reduce ( cells:Ptr count:Int pick:Word(Scalar,Scalar--Scalar) -- result:Scalar )
+  cells 0 hread count [times| i | cells i hread pick ]
 end
-#st_min ( p:Ptr n:Int -- x:Scalar ) 'min _reduce end
-#st_max ( p:Ptr n:Int -- x:Scalar ) 'max _reduce end
+#st_min ( cells:Ptr count:Int -- least:Scalar ) 'min _reduce end
+#st_max ( cells:Ptr count:Int -- greatest:Scalar ) 'max _reduce end
 
 { a sorted copy, so the median leaves the caller's cells as they were }
-#_sorted_copy ( p:Ptr n:Int -- q:Ptr ) n hnew -> [ q ] p :src 0 :soff q :dst 0 :doff n :count hmove q 0 n hsort q end
+#_sorted_copy ( cells:Ptr count:Int -- copy:Ptr ) count hnew -> [ q ] cells :src 0 :soff q :dst 0 :doff count :count hmove q 0 count hsort q end
 
-{ the middle of n sorted values: the middle one, or the mean of the two middle ones }
-#_middle ( q:Ptr n:Int -- m:Scalar )
-  n 2 / -> [ h ]
-  n 2 \ 1 = cond [ q h hread ] else [ q h 1 - hread q h hread + 2.0 / ] ?
+{ the middle of count sorted values: the middle one, or the mean of the two middle ones }
+#_middle ( sorted:Ptr count:Int -- median:Scalar )
+  count 2 / -> [ h ]
+  count 2 \ 1 = cond [ sorted h hread ] else [ sorted h 1 - hread sorted h hread + 2.0 / ] ?
 end
 
-#st_median ( p:Ptr n:Int -- m:Scalar ) p n _sorted_copy n _middle end
+#st_median ( cells:Ptr count:Int -- median:Scalar ) cells count _sorted_copy count _middle end
 
 { ---- tests ---- }
 { 2 4 4 4 5 5 7 9: mean 5, variance 4, sd 2, median 4.5, min 2, max 9 }
-#_sample ( -- p:Ptr n:Int )
+#_sample ( -- cells:Ptr count:Int )
   [ 2 4 4 4 5 5 7 9 ] 8 hnew -> [ vals p ]
   vals [fold| i acc v _ | p i v hwrite acc from 0 ] drop p 8
 end
