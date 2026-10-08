@@ -2,6 +2,18 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.93
+
+From gzip agy-3, crush-6 and pi-3, the first runs on v1.92's documentation. Two new errors reject code that never did anything (an empty `when [ ]`, a `[for|` whose literal bounds run it zero times); every other v1.92 program still builds.
+
+- **`--log FILE`** appends one tab-separated line per compiler call to FILE: the time, the seconds, the exit status, the verdict, the errors by class, the warnings, the arguments and the first error line. A three-line wrapper script that passes it on every call records a whole session; the benchmarks used a twenty-line script that read the same figures out of the printed text.
+- **`--edit` on a rejected file says what is left**: when FILE was rejected before the edit and still is, the edit is written as before, and now the remaining errors are printed and the exit status is 1 (it was 0, so every edit needed a second call to see the errors: about 40 calls in one run).
+- **`--edit` knows the program's records**: a `#record` given to `--edit` may have a field whose type is a record of another module (it was a ParseError, "expected one of Int Float ...").
+- **An empty `when [ ]` or `unless [ ]` is a ParseError.** A word has no early return, so `flag when [ ]` before the work never skipped it: three bugs in one run.
+- **`lo hi [for|` with literal bounds and lo >= hi is a ParseError** naming the count-down form: `16 1 [for|` ran zero times, silently, twice in one run.
+- **ArgumentOrder warns on one name in another parameter's place**: `data path f_write_file`, which takes `( path str )`, wrote a file named by the data. Not for primitives, whose inputs have generic names, nor for a word's call to itself; a label (`path :str`) says it is meant. Only two names swapped were warned before.
+- **Documentation**: a shift takes the value, then the count (`1 k bitshl` is 2^k, `k 1 bitshl` is 2k: two runs lost an hour each to it); a label checks and does not name the value; labels are each word's own parameter names (`--lookup`); `use` finds modules next to the file that says it, so a probe sits next to them, and two modules may use each other; a record field's count is a number of cells, 1 for a whole Bytes, Ints or Floats array.
+
 ## What changed in v1.92
 
 From gzip crush-5 and pi-2 (qwen) and QMNIST agy-2, the first runs with no development advice in the prompt. Nothing breaks: every v1.91 program still builds.

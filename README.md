@@ -1,13 +1,13 @@
-# Scrooge Programming Language (v1.92)
+# Scrooge Programming Language (v1.93)
 
-Repository status: **Scrooge v1.92**.
+Repository status: **Scrooge v1.93**.
 
 Scrooge is a small concatenative (postfix) language whose compiler checks every word's stack effect, types and argument order before it builds a native program through C. It is designed to be written by language models: one required, explicit, checked form for each thing.
 
 ## Start here: learning Scrooge and writing a program in it
 
 1. **The cheat sheet** ([`spec/scrooge_cheatsheet.md`](spec/scrooge_cheatsheet.md)): the language on one screen, with the mistakes that cost the most.
-2. **The specification** ([`spec/scrooge_spec_v1_92.txt`](spec/scrooge_spec_v1_92.txt)), once, end to end: it is short and normative.
+2. **The specification** ([`spec/scrooge_spec_v1_93.txt`](spec/scrooge_spec_v1_93.txt)), once, end to end: it is short and normative.
 3. **The skill guide** ([`spec/scrooge_skill.md`](spec/scrooge_skill.md)): how to work. Section 0: how to learn the language; 0b: how to build a program (design top down, name the library words of each layer, then build and test bottom up, one module per layer, and run the whole program early); **0d: which library words do which job**; section 1: small words (one word, one step), each with `#test_` words; 8b: changing words with `--edit`.
 4. **A whole program built that way**: [`examples/wavstat/`](examples/wavstat/) and its [`examples/wavstat/DESIGN.md`](examples/wavstat/DESIGN.md): four modules, a state record, a file read as a stream, its own error line, tests and stop tests in every module. Copy its shape.
 5. **The library**: [`library/manifest.sm`](library/manifest.sm) lists every word with its signature; `--lookup NAME`, `--apropos TERMS`, `--explain ErrorClass` and `--stack WORD FILE` answer most questions without leaving the terminal.

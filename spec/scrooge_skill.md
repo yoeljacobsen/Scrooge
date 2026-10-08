@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.92)
+# Skill: Writing Correct Scrooge (v1.93)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_92.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_93.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -47,7 +47,7 @@ Learn from the documents and your experiments, not from the compiler's internals
 
 ## 0d. Which Words for Which Job
 
-Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the rest.
+Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the rest. The labels below are each word's own parameter names, which differ from word to word (`bytes_read` calls its Bytes `a`, `br_bytes` calls it `dst`): take them from `--lookup`.
 
 | job | words (lexicon to `use`) |
 |---|---|
@@ -119,7 +119,7 @@ Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only f
 
 ---
 
-**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `p :p 0 :i 5 :v hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name); a parameter whose type no other parameter has (the one Ptr, Bytes, Dict or Float among Ints) needs neither, since a swap there is a TypeError. So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Int acc:Int -- i:Int acc:Int )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`) draws the warning ArgumentOrder.
+**Label the arguments whose order is easy to get wrong.** `x :name` after a value says which parameter it is for, and the checker holds you to it: `p :p 0 :i 5 :v hwrite`, `src :src 0 :soff dst :dst 0 :doff n :count hmove`. Labels are optional for short calls. A call with 4 or more inputs must have every argument either labelled or passed by a name equal to the parameter's (a frame name, an input, or a word's declared result name); a parameter whose type no other parameter has (the one Ptr, Bytes, Dict or Float among Ints) needs neither, since a swap there is a TypeError. So `fh p start count fread_into` needs no labels, and `fh p 0 4096 fread_into` needs `0 :start 4096 :count`. In a loop that passes a step word's results back to itself, name the step's results like its inputs: `#step ( i:Int acc:Int -- i:Int acc:Int )`. Then the recursive call `i acc step loop` is checked by name. `--unchecked-calls FILE` lists the calls whose arguments are neither labelled nor named. A swapped pair of names (`b a sub` for `sub ( a b )`), or one name in the place of another parameter of that name (`data path f_write_file`, which takes `( path str )`), draws the warning ArgumentOrder. A label checks; it does not name: after `d Dec_hf :h` there is no `h`, so bind the value with `-> [ h ]` to use it again.
 
 ## 2b. How Stack Effects Add Up
 
@@ -367,11 +367,13 @@ compiler/scroogec_fast -L library --lookup vec_push        # a word's signature 
 compiler/scroogec_fast -L library --apropos hash string    # words whose name or description has every term
 compiler/scroogec_fast --explain TypeError                 # an error class: the rule, a wrong and a corrected example
 compiler/scroogec_fast -L library --stack st_var src/stats.sg   # the stack at the end of each line of one word
+compiler/scroogec_fast --log build_log.tsv -L library -o prog prog.sg   # any command, plus one line in the log
 ```
 
 - The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.
 - Warnings go to stderr after `ACCEPT`: `MutualRecursion` (words calling each other in tail position where one takes no inputs, so the cycle cannot run as a loop and stops at 65,536 trips; words that pass their state as inputs run as a loop), and `LargeWord` (a word to split, section 1). Take them seriously.
 - `exit ( code -- )` ends a program with a status of your choosing.
+- `--log FILE`, with any command, appends one tab-separated line to FILE (made with a header when missing): the time, the seconds the call took, the exit status, the verdict, the errors by class, the warnings, the arguments (without `-L` and `--log`) and the first error line. A wrapper script that passes it on every call keeps a record of a whole session.
 - For a final speed measurement of a program that already runs correctly, `--no-ptr-check` leaves out the stale-Ptr check (about 7% in heap-read-heavy code). Develop and test with the check on.
 
 **Find where the time goes with `--profile`**, not by guessing (a `--profile` build compiles every call as a real call, so small words show up in the table): `compiler/scroogec_fast --profile -L library -o prog prog.sg` builds a program that prints, at exit, each word's calls, self time and total time to stderr. Its own output is unchanged. Each timed call adds about 10 ns, so read the call counts as well as the times: a tiny word called 100 million times is the place to restructure.
@@ -406,7 +408,7 @@ into rows.sg
 - `delete NAME` removes a word and its comment. `rename OLD NEW` renames the definition, every call and every `'OLD` reference in the program and its modules, but not strings or comments; a private `_word` only in its own module. It refuses a NEW that is already defined or reserved, and an OLD that is also a local name somewhere. `move NAME MODULE` moves a word to the module next to FILE, adds the `use` lines it needs there and `use "FILE"` where it is still called; it refuses while the word calls words that stay behind, so move those first (in the same script).
 - A step line starts at column 0; everything else is definition text, checked before anything is written (balanced brackets, every definition ended, the parser accepts it).
 - A word's comment is the run of comment lines directly above its `#name` line, with no blank line between: `--show` prints it, `delete` removes it, and a replacement replaces it when the new text brings its own, and keeps it otherwise.
-- **The whole script is one checked edit.** The compiler writes the files, checks FILE, and if FILE was accepted before and would now be rejected, it restores every file and prints the errors, so a bad edit never reaches the disk. `--no-check` skips the check. The message lists the steps and ends with `checked: src/token.sg: ACCEPT`.
+- **The whole script is one checked edit.** The compiler writes the files, checks FILE, and if FILE was accepted before and would now be rejected, it restores every file and prints the errors, so a bad edit never reaches the disk. `--no-check` skips the check. The message lists the steps and ends with `checked: src/token.sg: ACCEPT`. When FILE was rejected before the edit and still is after it, the edit is written, the errors that remain are printed, and the exit status is 1, so one call shows what is left to fix.
 - To change a few lines inside a long word, `--show` it, edit the text, and give it back to `--edit FILE` on stdin.
 - `--fmt` changes only leading whitespace, never the code or the line count, and `--fmt --check` reports whether a file is already formatted.
 
