@@ -61,16 +61,16 @@ end
 { ---- Private: Block equality, on character codes. Duplicated from        ---- }
 { ---- util.sg's block_eq rather than imported, because every lexicon in   ---- }
 { ---- library/ is self-contained (none of them `use` another).            ---- }
-#ae_step ( a:Block b:Block idx:Int acc:Int -- a:Block b:Block idx:Int acc:Int )
-  a b idx 1 + a idx block_get b idx block_get = acc and
+#ae_step ( left:Block right:Block idx:Int acc:Int -- left:Block right:Block idx:Int acc:Int )
+  left right idx 1 + left idx block_get right idx block_get = acc and
 end
-#ae_loop ( a:Block b:Block idx:Int acc:Int -- equal:Int )
-  idx a block_len < acc and
-  cond [ a b idx acc ae_step ae_loop ] else [ acc ] ?
+#ae_loop ( left:Block right:Block idx:Int acc:Int -- equal:Int )
+  idx left block_len < acc and
+  cond [ left right idx acc ae_step ae_loop ] else [ acc ] ?
 end
 #ae_eq_check ( a:Block b:Block -- equal:Int )
   a block_len b block_len =
-  cond [ a b 0 :idx 1 :acc ae_loop ] else [ 0 ] ?
+  cond [ a :left b :right 0 :idx 1 :acc ae_loop ] else [ 0 ] ?
 end
 
 { ---- Private: does the argument at this index equal `name`? A missing    ---- }
@@ -107,8 +107,8 @@ end
 #arg_flag ( name:Block -- found:Int )
   name arg_find -> [ i found ] found
 end
-#av_pick_check ( i:Int found:Int default:Block -- value:Block )
-  found cond [ i 1 + default arg_or ] else [ default ]
+#av_pick_check ( index:Int found:Int default:Block -- value:Block )
+  found cond [ index 1 + default arg_or ] else [ default ]
 end
 #arg_value_or ( name:Block default:Block -- value:Block )
   name arg_find default av_pick_check
@@ -116,9 +116,9 @@ end
 { ---- Private: strict integer parse, self-contained like the rest of     ---- }
 { ---- this lexicon (strings.sg has str_to_int, but lexicons do not use   ---- }
 { ---- one another).                                                      ---- }
-#ai_digits_loop ( s:Block k:Int acc:Int -- n:Int ok:Int )
-  k s block_len = cond [ acc 1 ] else [
-    s k block_get -> [ c ] c 48 < c 57 > or cond [ 0 0 ] else [ s k 1 + acc 10 * c 48 - + ai_digits_loop ]
+#ai_digits_loop ( str:Block pos:Int acc:Int -- value:Int ok:Int )
+  pos str block_len = cond [ acc 1 ] else [
+    str pos block_get -> [ c ] c 48 < c 57 > or cond [ 0 0 ] else [ str pos 1 + acc 10 * c 48 - + ai_digits_loop ]
   ]
 end
 #ai_parse_check ( s:Block -- n:Int ok:Int )
@@ -134,17 +134,17 @@ end
 { ---- Private: strict decimal parse, [-]digits[.digits] with at least   ---- }
 { ---- one digit (no exponent). The digits are kept as an integer and     ---- }
 { ---- divided once at the end, so "0.07" is the double nearest 0.07.     ---- }
-#af_char_step ( m:Int k:Int dot:Int bad:Int nd:Int c:Int -- m:Int k:Int dot:Int bad:Int nd:Int )
-  c 47 > c 58 < and cond [ m 10 * c 48 - + k dot + dot bad nd 1 + ] else [
-    c 46 = cond [ m k 1 dot bad or nd ] else [ m k dot 1 nd ] ?
+#af_char_step ( mantissa:Int places:Int dot:Int bad:Int nd:Int ch:Int -- mantissa:Int places:Int dot:Int bad:Int nd:Int )
+  ch 47 > ch 58 < and cond [ mantissa 10 * ch 48 - + places dot + dot bad nd 1 + ] else [
+    ch 46 = cond [ mantissa places 1 dot bad or nd ] else [ mantissa places dot 1 nd ] ?
   ] ?
 end
-#af_value_check ( m:Int k:Int dot:Int bad:Int nd:Int neg:Int -- x:Float ok:Int )
-  m to_float 10.0 k pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
+#af_value_check ( mantissa:Int places:Int dot:Int bad:Int nd:Int neg:Int -- value:Float ok:Int )
+  mantissa to_float 10.0 places pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
 end
 #af_parse_check ( s:Block -- x:Float ok:Int )
   s block_len 0 = cond [ 0.0 0 ] else [
-    s 0 block_get 45 = -> [ neg ] 0 :m 0 :k 0 :dot 0 :bad 0 :nd neg s block_len [for| i | s i block_get :c af_char_step ] neg af_value_check
+    s 0 block_get 45 = -> [ neg ] 0 :mantissa 0 :places 0 :dot 0 :bad 0 :nd neg s block_len [for| i | s i block_get :ch af_char_step ] neg af_value_check
   ] ?
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }

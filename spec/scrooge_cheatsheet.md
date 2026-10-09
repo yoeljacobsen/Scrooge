@@ -1,8 +1,8 @@
-# Scrooge on one screen (v1.95)
+# Scrooge on one screen (v1.96)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_95.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_96.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
-**Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. Name each parameter for what it is, as the primitives and the library do (`vec_set ( vec index value )`): labels, frame names and ArgumentOrder are checked against these names. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
+**Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. **Name every word for what it does and every parameter for what it holds** (`put_cell ( cells row value )`, not `_pc ( t r v )`), as the primitives and the library do (`vec_set ( vec index value )`): on a stack the names are the only meaning a value carries, and labels, frame names, ArgumentOrder and every error message use them. The checker warns `ShortName` on a one-letter input of a word with three or more. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
 **Stack and names.** `dup drop swap over rot` exist, but prefer names: `-> [ a b ]` binds the top two values (a is the deeper one) until the end of the block. Every mention of a name pushes it again. A name is never also a word: an alias or input spelled like one of your words is an error (AliasShadowsWord, ParamNamedLikeWord). `x :name` labels a value with the parameter it is for, checked at the call: `p :p 0 :i 5 :v hwrite`; a label does not name the value (to use it again, `-> [ h ]`). A call with 4 or more inputs must have every argument labelled or passed by a matching name, except one whose type no other parameter has (the one Ptr or Float among Ints).
 
@@ -47,6 +47,7 @@ Other loops are words that call themselves in tail position.
 6. Progress that never appears: stdout is block-buffered when redirected to a file. Print progress to `f_stderr`, or follow it with `f_stdout fflush drop`.
 7. Memory that only grows: heap cells, compact arrays, records, Vec and Dict are not collected. Allocate working arrays once (record fields) and pass them in, or put `region [ ... ]` around each unit of work (a block, a query, a file); everything it allocated is freed at its end. The compiler warns `AllocInLoop` when a loop allocates.
 8. A field word takes its record: `st St_pos` leaves only the field, so `st St_pos n step` with `step ( st pos n )` is one value short. Push the record once for each word that takes it: `st st St_pos n step`.
+9. Names that say nothing: `_sat ( m i x )` type-checks, then a wrong argument order or a value one short is invisible at the call and the message says `parameter 'x'`. Name words and parameters for what they are.
 
 ```scrooge
 use "vec"

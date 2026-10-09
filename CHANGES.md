@@ -2,6 +2,15 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.96
+
+From SQL crush-6 (v1.95) and its comparison with the same task in Go: Scrooge took 2x the agent turns and 8x the compiler calls for a program of the same size. 76% of its 1,693 parameters had one or two letters, after the skill guide had asked for meaningful names. Nothing breaks: every v1.95 program still builds; some draw a new warning.
+
+- **`ShortName` warning**: a word of three or more inputs with a one-letter input name. The names are what labels, frame names, ArgumentOrder and every TypeError and ArityMismatch use: `parameter 'x' expects Int` says nothing. `--explain ShortName` shows the fix. The library's own helper words are renamed to pass it.
+- **Names in the documentation, stronger**: the skill guide's section 1 now says why names matter in a stack language (a value on the stack has no name; the word's name and its parameters' names are all the meaning there is), for word names as well as parameters, with the measured cost. The cheat sheet and the rules file say it on their first screen, and the cheat sheet lists it as costly mistake 9.
+- **UnknownWordError names the nearest words**: a field written bare names its field word (`nums` gives `Box_nums`), parts in another order (`print_str` gives `str_print`), and words of the same family (`vec_drain` gives `vec_clear`, `vec_len`, ...). For a word not written yet, it says that an `--edit` script can add it in the same edit. These were 10 of crush-6's 29 UnknownWordError calls.
+- **`--edit` knows the types of the lexicons a file uses**: a `#record` with a `Vec` or `Dict` field was refused by `--edit` ("has type `Vec`; expected one of ..."), though the file built.
+
 ## What changed in v1.95
 
 From SQL agy-9, the first run on v1.94: 8884/8884 in 33 s, but 15 GB of memory, because a region around each query failed and was dropped. **Breaking:** labels that name a primitive's or a library word's parameters by their old one-letter names (`:p :i :v` for `hwrite`, `:x` for `vec_push`, `:a :ao :b :bo :n` for `floats_dot`) are ArgumentLabel errors now; use the new names (`--lookup NAME` shows them).

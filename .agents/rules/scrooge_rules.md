@@ -1,6 +1,6 @@
-# Scrooge v1.95 Workspace Rules & Agent Directives
+# Scrooge v1.96 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_95.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_96.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -21,7 +21,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 
 ---
 
-## 2. Core Scrooge v1.95 Language Reference
+## 2. Core Scrooge v1.96 Language Reference
 
 ### 2.1 Core Data Types
 * **Int and Float:** a 64-bit signed integer (`42`, `0xff`) and an IEEE double (`3.14`, `-0.5`, `314e-2`); Scalar is either kind. An operator takes two numbers of one kind (`x 2.0 *` for a Float x): an Int with a Float is a TypeError, so convert with `to_float`, `to_int` or `floor`. Indexes, counts, loop bounds and flags are Ints.
@@ -42,7 +42,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Block Operations: `cons`, `pair`, `block_len`, `nil`, and `b i block_get` / `b i v block_set` (spec Sec.4; one spelling).
 * Heap: `size hnew -> ptr`, `ptr idx hread -> val`, `ptr idx val hwrite`, `region [ body ]` (an `hmark`/`hrelease` pair; nothing made inside may be stored into a structure made before it); bulk `hmove`, `hfill`, `hsort`.
 * Records: `#record Name  field Type count init ...  end` (every field names its initial value: `0`, `nil`, `hnull`, an enum member or a constructor word) declares the type `Name` and generates `Name_new`, `Name_size`, typed `Name_field` and record-first `Name_field_set` (`s v`, or `s i v`); use it instead of hand-numbered heap offsets (spec Sec.5).
-* Argument labels: `x :name` names the parameter a value is for (`p :ptr 0 :index 5 :value hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's. Name every parameter for what it is (`#put_row ( table:Ptr row:Int cells:Block -- )`), as the primitives and the library do (`vec_set ( vec index value )`): labels, frame names and ArgumentOrder are checked against those names.
+* Argument labels: `x :name` names the parameter a value is for (`p :ptr 0 :index 5 :value hwrite`), checked and never reordered. A call with 4 or more inputs must have every argument labelled or passed by a name equal to the parameter's. Name every word for what it does and every parameter for what it holds (`#put_row ( table:Ptr row:Int cells:Block -- )`, not `#_pr ( t r c )`), as the primitives and the library do (`vec_set ( vec index value )`): on a stack the names are the only meaning a value carries, and labels, frame names, ArgumentOrder and every error message use them. The checker warns `ShortName` on a one-letter input of a word with three or more inputs; rename it.
 * Edit with the compiler, not with text replacement: `--edit FILE` with the changed definition on stdin (FILE: the module you are working on; more steps: `delete NAME`, `rename OLD NEW`, `move NAME MODULE`, `into FILE`); each edit is checked and undone if it would make FILE rejected.
 * Look things up instead of guessing: `compiler/scroogec_fast -L library --lookup NAME [FILE]`, `--apropos TEXT`, `--explain ErrorClass`, `--stack WORD FILE` (the stack after each line).
 * Compact arrays (primitives): `Bytes`, `Ints`, `Floats` (1, 8, 8 bytes per element): `n floats_new`, `a i floats_get`, `a i x floats_set`, `K_len`, `K_fill`, `K_move`, `bytes_read`/`bytes_write`, `ints_sort`. Prefer them to hnew cells for numeric or byte data.

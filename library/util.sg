@@ -68,17 +68,17 @@ end
   (element by element, shorter first on a tie), so a Block of strings sorts
   in byte order and a Block of rows column by column; numbers sort before
   Blocks. A Ptr element is a fatal error. }
-#bsort_fill_step ( idx:Int acc:Int val:Unknown p:Ptr -- acc:Int )
-  p idx val hwrite acc
+#bsort_fill_step ( idx:Int acc:Int val:Unknown ptr:Ptr -- acc:Int )
+  ptr idx val hwrite acc
 end
-#bsort_collect_loop ( p:Ptr i:Int acc:Block -- sorted:Block )
-  i 0 = cond [ acc ] else [ p i 1 - acc p i 1 - hread cons bsort_collect_loop ]
+#bsort_collect_loop ( ptr:Ptr index:Int acc:Block -- sorted:Block )
+  index 0 = cond [ acc ] else [ ptr index 1 - acc ptr index 1 - hread cons bsort_collect_loop ]
 end
 #block_sort ( blk:Block -- sorted:Block )
   hmark -> [ m ]
     blk block_len -> [ n ]
       n hnew -> [ p ]
-        p blk [fold| idx acc val p2 | idx acc val p2 :p bsort_fill_step from 0 ] drop
+        p blk [fold| idx acc val p2 | idx acc val p2 :ptr bsort_fill_step from 0 ] drop
         p 0 n hsort
         p n nil bsort_collect_loop
         m hrelease

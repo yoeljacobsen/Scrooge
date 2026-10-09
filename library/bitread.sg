@@ -99,12 +99,12 @@ end
   ] else [ done ] ?
 end
 
-{ m bytes from the buffer into dst at dpos }
-#_br_copy ( br:BitIn dst:Bytes dpos:Int m:Int -- )
+{ count bytes from the buffer into dst at dpos }
+#_br_copy ( br:BitIn dst:Bytes dpos:Int count:Int -- )
   br BitIn_raw -> [ h ]
-  h 0 hread :src h 1 hread :soff dst :dst dpos :doff m :count bytes_move
-  h 1 h 1 hread m + hwrite
-  h 7 h 7 hread m + hwrite
+  h 0 hread :src h 1 hread :soff dst :dst dpos :doff count :count bytes_move
+  h 1 h 1 hread count + hwrite
+  h 7 h 7 hread count + hwrite
 end
 
 { bytes straight from the buffer, a buffer at a time }
@@ -112,7 +112,7 @@ end
   done count < br _br_more and cond [
     br BitIn_raw -> [ h ]
     count done - h 2 hread h 1 hread - min -> [ m ]
-    br :br dst :dst off done + :dpos m :m _br_copy
+    br :br dst :dst off done + :dpos m :count _br_copy
     br :br dst :dst off :off count :count done m + :done _br_bulk
   ] else [ done ] ?
 end

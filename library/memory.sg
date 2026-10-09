@@ -1,29 +1,29 @@
-#hclear_step ( p:Ptr idx:Int stop_idx:Int -- p:Ptr idx:Int stop_idx:Int )
-  p idx 0 hwrite p idx 1 + stop_idx
+#hclear_step ( ptr:Ptr idx:Int stop_idx:Int -- ptr:Ptr idx:Int stop_idx:Int )
+  ptr idx 0 hwrite ptr idx 1 + stop_idx
 end
-#hclear_loop ( p:Ptr idx:Int stop_idx:Int --  )
+#hclear_loop ( ptr:Ptr idx:Int stop_idx:Int --  )
   idx stop_idx <
-  cond [ p idx stop_idx hclear_step hclear_loop ] else [ ] ?
+  cond [ ptr idx stop_idx hclear_step hclear_loop ] else [ ] ?
 end
 #hclear ( ptr:Ptr start:Int size:Int --  )
   ptr start start size + hclear_loop
 end
-#hfill_step ( val:Scalar p:Ptr idx:Int stop_idx:Int -- val:Scalar p:Ptr idx:Int stop_idx:Int )
-  p idx val hwrite val p idx 1 + stop_idx
+#hfill_step ( val:Scalar ptr:Ptr idx:Int stop_idx:Int -- val:Scalar ptr:Ptr idx:Int stop_idx:Int )
+  ptr idx val hwrite val ptr idx 1 + stop_idx
 end
-#hfill_loop ( val:Scalar p:Ptr idx:Int stop_idx:Int --  )
+#hfill_loop ( val:Scalar ptr:Ptr idx:Int stop_idx:Int --  )
   idx stop_idx <
-  cond [ val p idx stop_idx hfill_step hfill_loop ] else [ ] ?
+  cond [ val ptr idx stop_idx hfill_step hfill_loop ] else [ ] ?
 end
 #hloop_fill ( ptr:Ptr start:Int count:Int val:Int --  )
   val ptr start :idx start count + :stop_idx hfill_loop
 end
-#hadd_step ( val:Scalar p:Ptr idx:Int stop_idx:Int -- val:Scalar p:Ptr idx:Int stop_idx:Int )
-  p idx p idx hread val + hwrite val p idx 1 + stop_idx
+#hadd_step ( val:Scalar ptr:Ptr idx:Int stop_idx:Int -- val:Scalar ptr:Ptr idx:Int stop_idx:Int )
+  ptr idx ptr idx hread val + hwrite val ptr idx 1 + stop_idx
 end
-#hadd_loop ( val:Scalar p:Ptr idx:Int stop_idx:Int --  )
+#hadd_loop ( val:Scalar ptr:Ptr idx:Int stop_idx:Int --  )
   idx stop_idx <
-  cond [ val p idx stop_idx hadd_step hadd_loop ] else [ ] ?
+  cond [ val ptr idx stop_idx hadd_step hadd_loop ] else [ ] ?
 end
 #hloop_add ( ptr:Ptr start:Int count:Int val:Int --  )
   val ptr start :idx start count + :stop_idx hadd_loop

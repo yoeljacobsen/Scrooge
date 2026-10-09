@@ -82,10 +82,10 @@ end
 #f_next_chunk ( size:Int -- size:Int )
   size 2 * 4194304 min
 end
-#f_read_all_loop ( fh:File acc:Block n:Int -- str:Block )
-  fh acc n fh n fread
-  -> [ fh acc n chunk ] chunk block_len 0 =
-  cond [ acc ] else [ fh acc chunk f_cat_loop n f_next_chunk f_read_all_loop ] ?
+#f_read_all_loop ( fh:File acc:Block size:Int -- str:Block )
+  fh acc size fh size fread
+  -> [ fh acc size chunk ] chunk block_len 0 =
+  cond [ acc ] else [ fh acc chunk f_cat_loop size f_next_chunk f_read_all_loop ] ?
 end
 #f_read_all ( fh:File -- str:Block )
   fh nil f_chunk f_read_all_loop
@@ -123,8 +123,8 @@ end
   Any other path, "~user/..." included, or an unset HOME, comes back
   unchanged. Self-contained like every lexicon, so it joins with its own
   loop rather than util's concat. }
-#feh_cat_loop ( a:Block b:Block i:Int -- ab:Block )
-  i 0 = cond [ b ] else [ a b a i 1 - block_get cons i 1 - feh_cat_loop ]
+#feh_cat_loop ( left:Block right:Block index:Int -- ab:Block )
+  index 0 = cond [ right ] else [ left right left index 1 - block_get cons index 1 - feh_cat_loop ]
 end
 #feh_join_check ( path:Block -- path:Block )
   "HOME" getenv -> [ home ok ]

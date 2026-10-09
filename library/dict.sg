@@ -58,29 +58,29 @@ end
 { along the probe path from slot i: the slot holding k (found 1), or else }
 { the first deleted slot passed (free, -1 if none) or the empty one that  }
 { ends the path (found 0) }
-#_dict_probe ( d:Dict k:Unknown i:Int free:Int -- s:Int found:Int )
-  d _dict_states i hread -> [ st ]
-  st 0 = cond [ free 0 < cond [ i ] else [ free ] 0 ]
+#_dict_probe ( dict:Dict key:Unknown slot:Int free:Int -- found_slot:Int found:Int )
+  dict _dict_states slot hread -> [ st ]
+  st 0 = cond [ free 0 < cond [ slot ] else [ free ] 0 ]
   else [
-    st 1 = and_then [ d _dict_keys i hread k = ]
-    cond [ i 1 ]
-    else [ d k i 1 + d dict_cap 1 - bitand :i st 2 = free 0 < and cond [ i ] else [ free ] :free _dict_probe ]
+    st 1 = and_then [ dict _dict_keys slot hread key = ]
+    cond [ slot 1 ]
+    else [ dict key slot 1 + dict dict_cap 1 - bitand :slot st 2 = free 0 < and cond [ slot ] else [ free ] :free _dict_probe ]
   ]
 end
 
 #_dict_slot ( d:Dict k:Unknown -- s:Int found:Int )
-  d k k dict_hash d dict_cap 1 - bitand :i -1 :free _dict_probe
+  d :dict k :key k dict_hash d dict_cap 1 - bitand :slot -1 :free _dict_probe
 end
 
 { stores without growing }
-#_dict_put ( d:Dict k:Unknown v:Unknown -- )
-  d k _dict_slot -> [ s found ]
-  d _dict_vals s v hwrite
+#_dict_put ( dict:Dict key:Unknown value:Unknown -- )
+  dict key _dict_slot -> [ s found ]
+  dict _dict_vals s value hwrite
   found unless [
-    d _dict_keys s k hwrite
-    d _dict_states s hread 0 = when [ d Dict_raw 1 d _dict_used 1 + hwrite ]
-    d _dict_states s 1 hwrite
-    d Dict_raw 0 d dict_len 1 + hwrite
+    dict _dict_keys s key hwrite
+    dict _dict_states s hread 0 = when [ dict Dict_raw 1 dict _dict_used 1 + hwrite ]
+    dict _dict_states s 1 hwrite
+    dict Dict_raw 0 dict dict_len 1 + hwrite
   ]
 end
 
