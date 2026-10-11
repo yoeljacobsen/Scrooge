@@ -176,7 +176,7 @@ tool "vec" name "vec_clear" sig "( vec:Vec -- )" desc "Empties the Vec, keeping 
 tool "vec" name "vec_from_block" sig "( block:Block -- vec:Vec )" desc "A Vec holding the elements of block, in order."
 tool "vec" name "vec_to_block" sig "( vec:Vec -- block:Block )" desc "The values as a Block, in order."
 tool "vec" name "vec_sort" sig "( vec:Vec -- )" desc "Sorts the values ascending as hsort orders them (numbers by value, strings and rows element by element), stably. A Ptr value (a Vec, a Dict, hnull) stops the program: sort rows as Blocks or #struct values, and turn a NULL into a number first."
-tool "vec" name "sort_by" sig "( p:Ptr off:Int n:Int less:Word(Unknown,Unknown--Int) -- )" desc "Sorts the n cells of p from off, stably, in the order of the word passed: less ( a b -- f ) is nonzero when a must come before b. `p 0 n 'by_age sort_by`."
+tool "vec" name "sort_by" sig "( ptr:Ptr start:Int count:Int less:Word(Unknown,Unknown--Int) -- )" desc "Sorts the n cells of p from off, stably, in the order of the word passed: less ( a b -- f ) is nonzero when a must come before b. `p 0 n 'by_age sort_by`."
 tool "vec" name "vec_sort_by" sig "( v:Vec less:Word(Unknown,Unknown--Int) -- )" desc "Sorts the Vec as sort_by does: `v 'by_age vec_sort_by`."
 
 { ---- Primitives: built into the compiler, no `use` needed. Not loaded by the compiler; checked against it by tools/build_manifest.py ---- }
@@ -188,7 +188,7 @@ prim name "rot" sig "( first:Unknown second:Unknown third:Unknown -- second:Unkn
 prim name "over" sig "( first:Unknown second:Unknown -- first:Unknown second:Unknown first:Unknown )" desc "Copy the second value to the top."
 prim name "cons" sig "( block:Block value:Unknown -- result:Block )" desc "Prepend value to a Block (the Block first, as every word that adds to something)."
 prim name "pair" sig "( first:Unknown second:Unknown -- block:Block )" desc "The two-slot Block [ first second ]."
-prim name "block_len" sig "( block:Unknown -- length:Int )" desc "Slot count of a Block (its length; a string's number of characters). Named `len` before v1.91."
+prim name "block_len" sig "( block:Block -- length:Int )" desc "Slot count of a Block (its length; a string's number of characters). Named `len` before v1.91."
 prim name "block_slice" sig "( block:Block start:Int count:Int -- slice:Block )" desc "The count elements from start as a new Block; the range clamps to the Block, and a count <= 0 gives nil."
 prim name "at" sig "( block:Block index:Int -- value:Unknown )" desc "Integer-indexed read of a homogeneous Block (spec Sec.4 _at)."
 prim name "array_at" sig "( block:Block index:Int -- value:Unknown )" desc "Spelling of `at` for arrays."

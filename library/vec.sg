@@ -71,7 +71,7 @@ end
 end
 
 #vec_to_block ( vec:Vec -- block:Block )
-  nil vec vec_len [times| i | vec vec_data vec vec_len 1 - i - hread cons ]
+  nil vec vec_len [times| i block | block vec vec_data vec vec_len 1 - i - hread cons ]
 end
 
 { sorts the values ascending, as hsort orders them: numbers by value, }
@@ -87,34 +87,33 @@ end
 { whether the next value comes from the left run p[off+i ..): it has one,  }
 { and the right run is used up or its head is not less than the left's, so }
 { equal values keep their order }
-#_sort_left ( p:Ptr off:Int mid:Int hi:Int i:Int j:Int less:Word(Unknown,Unknown--Int) -- f:Int )
-  i mid < and_then [ j hi < not or_else [ p off j + hread p off i + hread less not ] ]
+#_sort_left ( ptr:Ptr start:Int mid:Int hi:Int lpos:Int rpos:Int less:Word(Unknown,Unknown--Int) -- flag:Int )
+  lpos mid < and_then [ rpos hi < not or_else [ ptr start rpos + hread ptr start lpos + hread less not ] ]
 end
 
-{ merges p[off+lo .. off+mid) and p[off+mid .. off+hi) into t[lo .. hi) }
-#_sort_merge ( p:Ptr off:Int t:Ptr lo:Int mid:Int hi:Int less:Word(Unknown,Unknown--Int) -- )
-  lo mid hi lo - [times| k |
-    -> [ i j ]
-    p off mid hi i j 'less _sort_left
-    cond [ t lo k + p off i + hread hwrite i 1 + j ]
-    else [ t lo k + p off j + hread hwrite i j 1 + ]
+{ merges ptr[start+lo .. start+mid) and ptr[start+mid .. start+hi) into tmp[lo .. hi) }
+#_sort_merge ( ptr:Ptr start:Int tmp:Ptr lo:Int mid:Int hi:Int less:Word(Unknown,Unknown--Int) -- )
+  lo mid hi lo - [times| k i j |
+    ptr start mid hi i :lpos j :rpos 'less _sort_left
+    cond [ tmp lo k + ptr start i + hread hwrite i 1 + j ]
+    else [ tmp lo k + ptr start j + hread hwrite i j 1 + ]
   ]
   drop drop
 end
 
-{ one pass: merges each pair of runs of length w into t, then copies back }
-#_sort_pass ( p:Ptr off:Int n:Int t:Ptr w:Int less:Word(Unknown,Unknown--Int) -- )
-  n 2 w * + 1 - 2 w * / [times| r |
-    2 w * r * -> [ lo ]
-    p off t lo lo w + n min :mid lo 2 w * + n min :hi 'less _sort_merge
+{ one pass: merges each pair of runs of length width into tmp, then copies back }
+#_sort_pass ( ptr:Ptr start:Int count:Int tmp:Ptr width:Int less:Word(Unknown,Unknown--Int) -- )
+  count 2 width * + 1 - 2 width * / [times| r |
+    2 width * r * -> [ lo ]
+    ptr start tmp lo lo width + count min :mid lo 2 width * + count min :hi 'less _sort_merge
   ]
-  t :src 0 :soff p :dst off :doff n :count hmove
+  tmp :src 0 :soff ptr :dst start :doff count :count hmove
 end
 
-#sort_by ( p:Ptr off:Int n:Int less:Word(Unknown,Unknown--Int) -- )
+#sort_by ( ptr:Ptr start:Int count:Int less:Word(Unknown,Unknown--Int) -- )
   hmark -> [ mk ]
-  n 1 max hnew -> [ t ]
-  1 64 [times| k | -> [ w ] w n < cond [ p off n t w 'less _sort_pass w 2 * ] else [ w ] ]
+  count 1 max hnew -> [ t ]
+  1 64 [times| k w | w count < cond [ ptr start count t :tmp w :width 'less _sort_pass w 2 * ] else [ w ] ]
   drop
   mk hrelease
 end

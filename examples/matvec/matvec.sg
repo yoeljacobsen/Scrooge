@@ -30,7 +30,7 @@ end
 { row index of W times input, one element at a time }
 #_row_loop ( mat:Mat input:Floats index:Int -- dot:Float )
   mat Mat_w -> [ w ] index mat Mat_cols * -> [ base ]
-  0.0 mat Mat_cols [times| j | w base j + floats_get input j floats_get * + ]
+  0.0 mat Mat_cols [times| j dot | dot w base j + floats_get input j floats_get * + ]
 end
 
 { row index of W times input, with the library's dot product }
@@ -54,7 +54,7 @@ end
 
 #_close ( y1:Floats y2:Floats index:Int -- agree:Int ) y1 index floats_get y2 index floats_get - abs 0.000001 < end
 
-#same ( y1:Floats y2:Floats -- agree:Int ) 1 y1 floats_len [times| i | y1 y2 i _close and ] end
+#same ( y1:Floats y2:Floats -- agree:Int ) 1 y1 floats_len [times| i agree | agree y1 y2 i _close and ] end
 
 { W = [ 1 0 2 ; 0 3 0 ] }
 #_small ( -- mat:Mat )

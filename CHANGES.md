@@ -2,6 +2,24 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.97
+
+From the v1.96 round and the friction analysis: against Go, Scrooge needed 7-19x the compiler calls for programs of the same size. The cost is in the number of names and stack positions an agent has to keep track of. **Breaking:** a loop body that takes a value from below the loop without naming it is now an error. `scroogec_fast --name-carries FILE` rewrites such loops into the new form.
+
+- **A loop's state is named after its index** (one form): `0 10 [times| i sum | sum i + ]` leaves 45, and `0 1 20 [times| i a b | b a b + ] drop` leaves fib(20).
+  - The names are bound, the deepest first, from the values below the bound(s).
+  - The body leaves their next values and nothing else.
+  - An `until`/`while` test sees them (`until [ sum 20 > ]`).
+  - A body that reaches below the loop without names is an ArityMismatch that shows the named form. Six runs asked for this; a value left before `[times|` used to become the loop's state without a word.
+- **One word, one job, up to 60 tokens.** The "under 30 tokens, one level" target is gone from the docs and the LargeWord message. A cond ladder (`a cond [ .. ] else [ b cond [ .. ] else [ .. ] ]`) counts as one level of nesting. Splitting cohesive steps to meet the old target cost 10-14% of every program in signatures alone, and agents built records only to carry parameters between the pieces.
+- **`Name_field_add`** for every Int, Float or Scalar record field reads, adds and writes back in one word: `p 1.0 Pt_x_add`, `p 2 3 Pt_hits_add` for an indexed field. `p p Pt_x 1.0 + Pt_x_set` with one `p` too few was the commonest ArityMismatch of the qwen runs.
+- **Small fixes:**
+  - the names of the Block-access aliases removed in v1.83 (`at`, `list_get`, ...) are free for inputs and frames;
+  - ArgumentOrder no longer looks at the operators, whose inputs ( left right ) name positions (`right hi <` warned);
+  - `block_len` takes a Block, and a Bytes, Ints, Floats or Vec is a TypeError naming its own length word;
+  - `rename` refuses a name that two files define (it renamed both, turning a module's test into a helper);
+  - ShortName says it counts a word's inputs only, and an instance of a library template draws none of the library's warnings (the `sort_by` family's parameters are renamed).
+
 ## What changed in v1.96
 
 From SQL crush-6 (v1.95) and its comparison with the same task in Go: Scrooge took 2x the agent turns and 8x the compiler calls for a program of the same size. 76% of its 1,693 parameters had one or two letters, after the skill guide had asked for meaningful names. Nothing breaks: every v1.95 program still builds; some draw a new warning.

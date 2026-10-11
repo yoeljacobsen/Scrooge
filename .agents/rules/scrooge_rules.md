@@ -1,6 +1,6 @@
-# Scrooge v1.96 Workspace Rules & Agent Directives
+# Scrooge v1.97 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_96.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_97.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -16,12 +16,12 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 4. **No Reserved Names as Identifiers:** Never use a reserved word as a parameter name or frame alias. The list is in spec Sec.10 (85 words, including every primitive and `dup drop swap rot over`); the compiler enforces exactly that list.
 5. **Pointer Arithmetic Protection:** Pointers are opaque (`ptr 1 +` is a `TypeError`). Compute the integer offset first, then pass it: `ptr offset hread`, `ptr offset val hwrite`. Every word that stores into something takes it first and the value last (`b x cons`, `fh ch fputc`, `d k v dict_set`).
 6. **Look Signatures Up, Don't Guess:** `library/manifest.sm` has one typed line per library word (`tool`) and per compiler primitive (`prim`), generated and checked against the compiler. Skill guide section 0d says which words do which job (a file as a stream, bits, lists, tables, arguments, stopping with a message); name them for each layer in your design before writing code.
-7. **Small Words, Tested One by One:** Build programs from small words (under about 30 tokens, one job each) combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Int ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
+7. **Small Words, Tested One by One:** Build programs from words that each do one job (up to 60 tokens; a cond ladder counts as one level), combined into larger ones; calls to small words are compiled in place, so splitting costs no speed. Give each word `#test_` words ( -- ok:Int ) and run them with `compiler/scroogec_fast -L library --test <file.sg>`. The checker warns `LargeWord` above 60 tokens; split such words (skill guide section 1).
 8. **Build Like the Worked Example:** `examples/wavstat/` (with `examples/wavstat/DESIGN.md`) is a whole program built the way the skill guide says: one module per layer, a state record, tests and stop tests in every module, the program running end to end early. Copy its shape.
 
 ---
 
-## 2. Core Scrooge v1.96 Language Reference
+## 2. Core Scrooge v1.97 Language Reference
 
 ### 2.1 Core Data Types
 * **Int and Float:** a 64-bit signed integer (`42`, `0xff`) and an IEEE double (`3.14`, `-0.5`, `314e-2`); Scalar is either kind. An operator takes two numbers of one kind (`x 2.0 *` for a Float x): an Int with a Float is a TypeError, so convert with `to_float`, `to_int` or `floor`. Indexes, counts, loop bounds and flags are Ints.
@@ -61,7 +61,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
   - A closing `?` after the last branch is optional (older code writes `... else [ f ] ?`). A `?` or `else` anywhere else is a ParseError.
   - Iterators: `[map| idx val ctx | body ]` and `[fold| idx acc val ctx | body from init ]` (spec Sec.3).
   - Statements: `a when [ body ]` / `a unless [ body ]` run the body (net effect 0) when a is true / false. Short-circuit values: `a and_then [ b ]` is b if a is true, else 0; `a or_else [ b ]` is 1 if a is true, else b (b evaluated only when needed). `and`/`or` evaluate both sides.
-  - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); the body is net 0 and threads accumulators left below the loop (`0 10 [times| i | i + ]`). To stop early, `until [ c ]` or `while [ c ]` is the first thing in the body; `n [find| i | c ]` leaves the first index whose c is true, or -1.
+  - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); state the loop carries is named after the index and the body leaves its next values (`0 10 [times| i sum | sum i + ]` leaves 45); a body that takes an unnamed value from below the loop is an error. To stop early, `until [ c ]` or `while [ c ]` is the first thing in the body; `n [find| i | c ]` leaves the first index whose c is true, or -1.
 * Debugging: `x trace` prints a value and its line to stderr; `flag msg assert` (util) stops on a failed invariant; spec Sec.7 and the skill guide's debugging section.
 * Files: `freadline` (one pass per line), `freadline_into` (a line into a Bytes), `fread_into` (bytes into heap cells), `fseek`/`ftell`; text is built with the `strings` builder (`strbuf_new`, `strbuf_add`, `strbuf_write`).
 * Learning: learn Scrooge from the spec, the skill guide (sections 0 and 0b: how to learn, how to build) and `library/manifest.sm`, then by running small probe programs; not from generated C or compiler internals.

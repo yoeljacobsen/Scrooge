@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.96)
+# Scrooge on one screen (v1.97)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_96.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_97.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. **Name every word for what it does and every parameter for what it holds** (`put_cell ( cells row value )`, not `_pc ( t r v )`), as the primitives and the library do (`vec_set ( vec index value )`): on a stack the names are the only meaning a value carries, and labels, frame names, ArgumentOrder and every error message use them. The checker warns `ShortName` on a one-letter input of a word with three or more. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -11,7 +11,7 @@ Postfix: every word takes its inputs from the stack and leaves its outputs there
 | `f cond [ t ] else [ e ]` | ( f -- ... ) | the only branch (there is no `if`); both branches have the same net effect; with no `else`, the true branch is net 0 |
 | `f when [ b ]`, `f unless [ b ]` | ( f -- ) | body net 0 |
 | `a and_then [ b ]`, `a or_else [ b ]` | ( a -- v ) | short-circuit; the body leaves one value |
-| `n [times| i | b ]`, `lo hi [for| i | b ]` | ( n -- ), ( lo hi -- ) | body net 0; carry state on the stack below: `0 10 [times| i | i + ]` leaves 45; `until [ c ]` / `while [ c ]` first in the body stops it |
+| `n [times| i | b ]`, `lo hi [for| i | b ]` | ( n -- ), ( lo hi -- ) | body net 0; state is named after the index and the body leaves its next value: `0 10 [times| i sum | sum i + ]` leaves 45; `until [ c ]` / `while [ c ]` first in the body stops it |
 | `n [find| i | c ]` | ( n -- i ) | the first i whose c is true, or -1 |
 | `blk [map| i v _ | b ]` | ( blk -- blk' ) | b ( i v -- v' ) |
 | `blk [fold| i acc v _ | b from init ]` | ( blk -- acc ) | b ( i acc v -- acc' ) |
@@ -21,7 +21,7 @@ Other loops are words that call themselves in tail position.
 
 **Numbers.** `3` is an Int and `3.0` a Float. `+ - * / min max` and `< > >= <= = !=` take two numbers of one kind: `x 2.0 *` and `x 0.0 >` for a Float x, and an Int with a Float is a TypeError; convert with `to_float`, `to_int` or `floor`. Indexes, counts, loop bounds, flags (`and or not`, 0 is false), `\` and the bit words are Ints; a shift takes the value, then the count: `1 k bitshl` is 2^k (`k 1 bitshl` is 2k). Int `/` and `\` round down: `-7 2 /` is -4, `-7 2 \` is 1; `7.0 2.0 /` is 3.5. `'a'` is the Int 97 (`'\n'` 10). Print a Float with decimals: `x 2 print_float`, or `x 2 float_to_str`.
 
-**Heap.** `n hnew` gives n cells, each the integer 0; `p i hread`; `p i v hwrite`. `region [ body ]` frees everything the body allocated when it ends; storing it into something older is a RegionEscape error. Every word that stores into something takes it first and the value last: `p i v hwrite`, `b x cons`, `fh ch fputc`, `d k v dict_set`. A range is a start and a count everywhere (`hmove`, `hfill`, `bytes_to_block`, `block_slice`). For numbers or bytes in bulk use a compact array: `n floats_new` (also `ints_`, `bytes_`), `a i floats_get`, `a i x floats_set`. Inner loops: `floats_dot`, `floats_axpy`, `floats_sum`, `floats_argmax` and the rest (in C). `#record Pt x Float 1 0.0 y Float 1 0.0 end` (each field: name, type, count, initial value: a number, `nil` for a Block, `hnull`, an enum member, or a word that makes a Floats, Vec or Dict) gives the type `Pt`, `Pt_new`, `p Pt_x`, `p v Pt_x_set` (record first); a field word takes the record, so read-modify-write names it twice: `p p Pt_x 1.0 + Pt_x_set`.
+**Heap.** `n hnew` gives n cells, each the integer 0; `p i hread`; `p i v hwrite`. `region [ body ]` frees everything the body allocated when it ends; storing it into something older is a RegionEscape error. Every word that stores into something takes it first and the value last: `p i v hwrite`, `b x cons`, `fh ch fputc`, `d k v dict_set`. A range is a start and a count everywhere (`hmove`, `hfill`, `bytes_to_block`, `block_slice`). For numbers or bytes in bulk use a compact array: `n floats_new` (also `ints_`, `bytes_`), `a i floats_get`, `a i x floats_set`. Inner loops: `floats_dot`, `floats_axpy`, `floats_sum`, `floats_argmax` and the rest (in C). `#record Pt x Float 1 0.0 y Float 1 0.0 end` (each field: name, type, count, initial value: a number, `nil` for a Block, `hnull`, an enum member, or a word that makes a Floats, Vec or Dict) gives the type `Pt`, `Pt_new`, `p Pt_x`, `p v Pt_x_set` (record first), and for a number field `p 1.0 Pt_x_add` (adds in place); a field word takes the record, so any other change names it twice: `p p Pt_x 2.0 * Pt_x_set`.
 
 **Types of your own.** `#enum Tok num ident op end` gives `Tok_num` .. `Tok_op` (members are always prefixed), `Tok_name`, `Tok_count`, `Tok_of` and `Tok_raw` (so no member may be named `name`, `count`, `of` or `raw`); a Tok compared with a plain number is a TypeError. `#type Row Int end` gives `Row_of` and `Row_raw`. `#struct Pt x Int y Int end` is an immutable value: `1 :x 2 :y Pt_make`, `p Pt_x`, `p 5 Pt_with_x` (a new Pt); `=` and sorting go field by field.
 
@@ -39,14 +39,14 @@ Other loops are words that call themselves in tail position.
 - `--check-only FILE...` checks each file; `-o prog FILE` builds; `--unchecked-calls FILE` lists calls with unlabelled arguments; `--labels-required N` (default 4, 0 for never).
 
 **Mistakes that cost the most.**
-1. A name mentioned once too often, or not at all (ArityMismatch: read the per-line depths and the values left with their lines, or run `--stack`). A value left before `[times|` (one bound) or `[for|` (two) is carried through the loop, not a bound.
+1. A name mentioned once too often, or not at all (ArityMismatch: read the per-line depths and the values left with their lines, or run `--stack`). A loop's carried values are named after its index (`[times| i sum |`); a body that takes an unnamed value from below the loop is an error.
 2. Arguments in the wrong order. The container (cell, Block, collection, file) comes first and the value last, in every word. Look the word up, and label them.
 3. A code compared with a number: give codes an `#enum`.
-4. Large words. One word, one step: under 30 tokens and at most one `cond` or loop; a branch inside a branch is a word of its own, named after what it decides. Each word gets a test.
+4. Large words. One word, one job, up to 60 tokens; split where a word does two jobs. A decision among cases is one cond ladder (`else [ c cond [ .. ]`, one level). Each word gets a test.
 5. Writing a list, a hash map or a sort yourself: use `vec`, `dict` and `sort_by`.
 6. Progress that never appears: stdout is block-buffered when redirected to a file. Print progress to `f_stderr`, or follow it with `f_stdout fflush drop`.
 7. Memory that only grows: heap cells, compact arrays, records, Vec and Dict are not collected. Allocate working arrays once (record fields) and pass them in, or put `region [ ... ]` around each unit of work (a block, a query, a file); everything it allocated is freed at its end. The compiler warns `AllocInLoop` when a loop allocates.
-8. A field word takes its record: `st St_pos` leaves only the field, so `st St_pos n step` with `step ( st pos n )` is one value short. Push the record once for each word that takes it: `st st St_pos n step`.
+8. A field word takes its record: `st St_pos` leaves only the field, so `st St_pos n step` with `step ( st pos n )` is one value short. Push the record once for each word that takes it: `st st St_pos n step`; to add to a number field, `st 1 St_pos_add`.
 9. Names that say nothing: `_sat ( m i x )` type-checks, then a wrong argument order or a value one short is invisible at the call and the message says `parameter 'x'`. Name words and parameters for what they are.
 
 ```scrooge

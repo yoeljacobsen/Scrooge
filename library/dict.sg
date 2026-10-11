@@ -171,5 +171,5 @@ end
 
 { every key, in slot order (no particular order) }
 #dict_keys ( dict:Dict -- keys:Block )
-  nil dict dict_cap [times| i | dict i dict_slot -> [ k v live ] live cond [ k cons ] else [ ] ]
+  nil dict dict_cap [times| i keys | dict i dict_slot -> [ k v live ] live cond [ keys k cons ] else [ keys ] ]
 end

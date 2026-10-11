@@ -144,7 +144,8 @@ end
 end
 #af_parse_check ( s:Block -- x:Float ok:Int )
   s block_len 0 = cond [ 0.0 0 ] else [
-    s 0 block_get 45 = -> [ neg ] 0 :mantissa 0 :places 0 :dot 0 :bad 0 :nd neg s block_len [for| i | s i block_get :ch af_char_step ] neg af_value_check
+    s 0 block_get 45 = -> [ neg ] 0 0 0 0 0 neg s block_len [for| i mantissa places dot bad nd | mantissa places dot bad nd s i block_get :ch af_char_step ]
+    -> [ mantissa places dot bad nd ] mantissa places dot bad nd neg af_value_check
   ] ?
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }

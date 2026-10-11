@@ -8,7 +8,7 @@
 
 { ---- a[ao..ao+n) . b[bo..bo+n) ---- }
 #vec_dot ( left:Ptr loff:Int right:Ptr roff:Int count:Int -- sum:Float )
-  0.0 count [times| i | left loff i + hread right roff i + hread * + ]
+  0.0 count [times| i sum | sum left loff i + hread right roff i + hread * + ]
 end
 
 { ---- y[yo+i] += g * x[xo+i] for i < n ---- }
@@ -29,14 +29,14 @@ end
 
 { ---- the sum of p[off..off+n) (0 when n is 0) ---- }
 #vec_sum ( ptr:Ptr start:Int count:Int -- sum:Unknown )
-  0 count [times| i | ptr start i + hread + ]
+  0 count [times| i sum | sum ptr start i + hread + ]
 end
 
 { ---- the index (0..n-1) of the first largest of p[off..off+n); n must be at least 1 ---- }
 #vec_argmax ( ptr:Ptr start:Int count:Int -- index:Int )
   count 1 < cond [ "vec_argmax: empty range" abort ] else [ ] ?
-  0 ptr start hread 1 count [for| index |
-    -> [ bi bv ] ptr start index + hread -> [ v ] v bv > cond [ index v ] else [ bi bv ] ?
+  0 ptr start hread 1 count [for| index bi bv |
+    ptr start index + hread -> [ v ] v bv > cond [ index v ] else [ bi bv ] ?
   ] drop
 end
 

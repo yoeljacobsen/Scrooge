@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.96)
+# Skill: Writing Correct Scrooge (v1.97)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_96.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_97.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -67,13 +67,13 @@ Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the 
 | time and memory | `clock_ns`, `proc_peak_kb` (procinfo) |
 | memory per unit of work | `region [ ... ]` frees what the body allocated |
 
-Three small programs show these words at work, each one file with its tests, every word at most 30 tokens: `examples/tokens/tokens.sg` (text into tokens: character literals, `[find|`, an `#enum`, token arrays in one record), `examples/wordfreq/wordfreq.sg` (a file a line at a time, counting with a Dict, a table of rows sorted by `vec_sort`, a `die` word) and `examples/matvec/matvec.sg` (a kernel on Floats, `floats_dot` against a loop, a word passed as a parameter, timing with `clock_ns`). `examples/wavstat/` is a whole program in modules.
+Three small programs show these words at work, each one file with its tests, every word one job: `examples/tokens/tokens.sg` (text into tokens: character literals, `[find|`, an `#enum`, token arrays in one record), `examples/wordfreq/wordfreq.sg` (a file a line at a time, counting with a Dict, a table of rows sorted by `vec_sort`, a `die` word) and `examples/matvec/matvec.sg` (a kernel on Floats, `floats_dot` against a loop, a word passed as a parameter, timing with `clock_ns`). `examples/wavstat/` is a whole program in modules.
 
 ---
 
 ## 1. Decompose into Small Words
 
-**The rule: one word, one step.** Every word does one thing you can name in a few words. Its body is a short sequence of calls with at most one `cond` or one loop, never a branch inside a branch or a loop inside a branch, and it stays under 30 tokens. When a word needs a second level (a `cond` inside a `cond`, a loop inside a branch, a `cond ... else [ cond ...` chain), the inner part becomes a word of its own, named after what it decides or does; a choice among several cases is a sequence of small predicate words (`#is_literal`, `#is_length`) or a table lookup, not a nested cascade. The compiler's `LargeWord` limit (60 tokens or 3 levels) is a backstop, not a target: a word near it is already too big.
+**The rule: one word, one job.** Every word does one thing you can name in a few words, and its name says what (section "Names" below). A word of up to 60 tokens is fine when it does one job: a parser step that reads a token, checks it and builds a node is one job, and cutting it into three words that pass the same four values along costs more than it saves. Split where a word does two jobs (it computes something and also prints it; it decides a case and also carries out a loop over a table): each job becomes a word named after it, with its own test. A decision among several cases is one cond ladder, `kind 1 = cond [ .. ] else [ kind 2 = cond [ .. ] else [ .. ] ]`, which the checker counts as one level of nesting (since v1.97); a branch inside a branch (a cond inside a cond's true branch, a loop inside a branch) is where a second word usually belongs. The compiler warns `LargeWord` over 60 tokens or 3 levels.
 
 **Names carry the meaning the stack does not.** In Scrooge a value has no name while it is on the stack; the only names a reader, the checker and you yourself get are the word's name and its parameters' names. So both must say what they are, every time:
 - **Word names say what the word does,** in words: `parse_select`, `md5_round`, `row_matches`, `put_cell`. A module prefix is fine (`px_`, `md5_`); after it comes the step, not an abbreviation of it. `_gat`, `_sat`, `_gst`, `_rk` save four letters and cost the next reader (you, an hour later) the whole body.
@@ -88,7 +88,7 @@ Build every program from small words, each doing one job, and combine them into 
 
 **Small words cost nothing.** A call to a word that does not recurse and is small (at most about 60 tokens, counting the small words it calls in turn) is compiled as that word's body in place: no call, its values stay in registers, and a counted loop that calls it keeps its fast heap access (section 10, `--loops`). So never inline a helper by hand for speed; measure first if in doubt. A recursive word, and every word in a `--profile` build, is a real call.
 
-**Sizes.** Under 30 tokens and one level of nesting (a `cond` or a loop, not a loop inside a cond). `--words FILE` lists every word with its size in tokens, counted exactly as `LargeWord` counts (brackets and `?` are not tokens, a data literal is one). The checker warns (`WARNING LargeWord`) about a word over 60 tokens or with more than 3 nested conds and loops: split it.
+**Sizes.** Up to 60 tokens and 3 levels of nesting, a cond ladder counting as one. `--words FILE` lists every word with its size in tokens, counted exactly as `LargeWord` counts (brackets and `?` are not tokens, a data literal is one). The checker warns (`WARNING LargeWord`) about a word over 60 tokens or with more than 3 nested conds and loops: split it where it does two jobs.
 
 **The workflow, a word at a time:**
 1. Top down (section 0b): write the list of words with their signatures, from the program's outline down to the smallest steps. The top word should read like the outline: a short sequence of calls.
@@ -102,7 +102,7 @@ Build every program from small words, each doing one job, and combine them into 
 
 **Frames are flat.** A frame's body is the rest of the block, never bracketed (spec section 2): `-> [ a b ] a b + -> [ s ] s s *` binds `a b`, then `s`, without nesting either. A `[ ... ]` right after the names is a value: `3 hnew -> [ p ] [ 2 4 7 ]` binds p and pushes the Block [ 2 4 7 ].
 
-**Share a skeleton, not a copy.** When two words differ only in one step (two training loops, a minimum and a maximum), write the shared part once with a word parameter and pass the step: `#_reduce ( p:Ptr n:Int pick:Word(Scalar,Scalar--Scalar) -- x:Scalar ) p 0 hread n [times| i | p i hread pick ] end`, then `#st_min ( p:Ptr n:Int -- x:Int ) 'min _reduce end` (spec section 2, Word parameters). Each use compiles as its own word, so a word parameter costs nothing; the effect of the word passed is checked at the call.
+**Share a skeleton, not a copy.** When two words differ only in one step (two training loops, a minimum and a maximum), write the shared part once with a word parameter and pass the step: `#_reduce ( cells:Ptr count:Int pick:Word(Scalar,Scalar--Scalar) -- result:Scalar ) cells 0 hread count [times| i best | best cells i hread pick ] end`, then `#st_min ( cells:Ptr count:Int -- least:Int ) 'min _reduce end` (spec section 2, Word parameters). Each use compiles as its own word, so a word parameter costs nothing; the effect of the word passed is checked at the call.
 
 **Private helpers.** In a module, a word whose name starts with `_` (`#_sq_dev`) is visible only in that file, so helpers do not crowd the program's namespace and two modules can each have their own `_step`.
 
@@ -153,16 +153,17 @@ The checker counts, for every word, how far each token moves the stack, and reje
 For a fixed number of iterations, use a counted loop instead of a helper word:
 
 ```scrooge
-0 10 [times| i | i + ]                      { sum 0..9: leaves 45 }
-s 0 81 [for| c | 0 s c Board_cells_set ]     { clear 81 record cells; net 0 }
-9 [times| r | 9 [times| c | r 9 * c + ... ] ]   { nested: the inner body sees r }
+0 10 [times| i sum | sum i + ]                 { sum 0..9: leaves 45 }
+0 1 20 [times| i a b | b a b + ] drop          { two carried values: leaves fib(20) }
+board 0 81 [for| cell | board cell 0 Board_cells_set ]   { carries nothing: net 0 }
+9 [times| row | 9 [times| col | row 9 * col + ... ] ]    { nested: the inner body sees row }
 ```
 
-- `n [times| i | body ]` runs i = 0..n-1 and takes one bound; `lo hi [for| i | body ]` runs i = lo..hi-1 and takes two. A value left below them is not a bound but a carried value: `0 5 [times| ...` with a `[for|` in mind carries the 0.
-- The body's net effect is 0. To accumulate, leave the accumulator BELOW the loop and have the body replace it (`acc i +`); several accumulators work the same way (`0 1 20 [times| i | swap over + ]`).
-- A frame cannot update a name: `0 -> [ s ] 5 [times| i | s i + -> [ s ] ] s` leaves s at 0, because the inner `-> [ s ]` is a new name for one iteration (the compiler rejects it: `AliasRebindsOuter`). Thread the value on the stack instead: `0 5 [times| i | i + ] -> [ s ]`.
+- `n [times| i | body ]` runs i = 0..n-1 and takes one bound; `lo hi [for| i | body ]` runs i = lo..hi-1 and takes two.
+- **What a loop carries is named after the index** (since v1.97, the one form): `0 10 [times| i sum | sum i + ]`. The names after the index are bound, the deepest first, from the values just below the bound(s), and the body leaves their next values, deepest first, and nothing else. After the loop the final values are on the stack. A loop with no carried names leaves the stack as it found it; a body that takes a value from below the loop without naming it is an ArityMismatch ("takes 1 value from below the loop"). This is what lets you write a loop without counting stack positions: inside the body, `sum` is the running total, by name.
+- A carried name is a new name, not one bound outside the loop: `0 -> [ s ] 5 [times| i | s i + -> [ s ] ] s` is rejected (`AliasRebindsOuter`), because a frame cannot update a name. Name the value the loop carries instead: `0 5 [times| i s | s i + ] -> [ s ]`.
 - It is faster than the equivalent tail-recursive word (a plain C loop; carried values stay in registers) and has no depth limit.
-- **Stopping early**: `until [ c ]` or `while [ c ]` as the first thing in the body ends the loop before a trip (`0 100 [times| i | until [ dup 20 > ] i + ]`), and `n [find| i | c ]` leaves the first index whose c is true, or -1 (`v vec_len [find| i | v i vec_get k = ]`). Write these instead of a helper word whose only job is to stop a loop.
+- **Stopping early**: `until [ c ]` or `while [ c ]` as the first thing in the body ends the loop before a trip; c sees the index and the carried names (`0 100 [times| i sum | until [ sum 20 > ] sum i + ]`), and `n [find| i | c ]` leaves the first index whose c is true, or -1 (`v vec_len [find| i | v i vec_get k = ]`). Write these instead of a helper word whose only job is to stop a loop, and instead of a "found" flag carried to the end: a search is a `[find|`.
 
 ## 2d. A State Record Threaded Through Small Words
 
@@ -176,31 +177,32 @@ use "util"
   bits Int 1 0
   nbits Int 1 0
 end
-#rd_buf ( -- a:Bytes ) 4 bytes_new end
-#rd_byte ( r:Rd -- b:Int )
-  r Rd_buf r Rd_pos bytes_get
-  r r Rd_pos 1 + Rd_pos_set
+#rd_buf ( -- buf:Bytes ) 4 bytes_new end
+#rd_byte ( rd:Rd -- byte:Int )
+  rd Rd_buf rd Rd_pos bytes_get
+  rd 1 Rd_pos_add
 end
-#rd_bit ( r:Rd -- b:Int )
-  r Rd_nbits 0 = when [ r r rd_byte Rd_bits_set r 8 Rd_nbits_set ]
-  r Rd_bits 1 bitand
-  r r Rd_bits 1 bitshr Rd_bits_set
-  r r Rd_nbits 1 - Rd_nbits_set
+#rd_bit ( rd:Rd -- bit:Int )
+  rd Rd_nbits 0 = when [ rd rd rd_byte Rd_bits_set rd 8 Rd_nbits_set ]
+  rd Rd_bits 1 bitand
+  rd rd Rd_bits 1 bitshr Rd_bits_set
+  rd -1 Rd_nbits_add
 end
-#rd_bits ( r:Rd n:Int -- v:Int )
-  0 n [times| i | r rd_bit i bitshl bitor ]
+#rd_bits ( rd:Rd count:Int -- value:Int )
+  0 count [times| i value | value rd rd_bit i bitshl bitor ]
 end
 #test_bits ( -- ok:Int )
-  Rd_new -> [ r ]
-  r Rd_buf 0 181 bytes_set
-  r 3 rd_bits 5 "low 3 bits of 181" expect_eq
-  r 5 rd_bits 22 "high 5 bits" expect_eq and
-  r Rd_pos 1 "one byte read" expect_eq and
+  Rd_new -> [ rd ]
+  rd Rd_buf 0 181 bytes_set
+  rd 3 rd_bits 5 "low 3 bits of 181" expect_eq
+  rd 5 rd_bits 22 "high 5 bits" expect_eq and
+  rd Rd_pos 1 "one byte read" expect_eq and
 end
 ```
 
-- A field word takes the record its field belongs to: `r Rd_pos`, never a record that contains it. Reading a field of a nested record is two calls, `z Z_t T_base`, and a mention of `z` with no call to take it is left on the stack (the ArityMismatch lists it with its line).
-- A word that changes the record leaves nothing for it (`rd_bit` gives only the bit): the caller still has `r`.
+- A field word takes the record its field belongs to: `rd Rd_pos`, never a record that contains it. Reading a field of a nested record is two calls, `z Z_t T_base`, and a mention of `z` with no call to take it is left on the stack (the ArityMismatch lists it with its line).
+- A word that changes the record leaves nothing for it (`rd_bit` gives only the bit): the caller still has `rd`.
+- A number field gets an adder (since v1.97): `rd 1 Rd_pos_add` reads, adds and writes back, where `rd rd Rd_pos 1 + Rd_pos_set` needs the record twice.
 - A field with a Bytes, Ints, Floats, Vec or Dict takes a word that makes it (`rd_buf`), run once by `Rd_new`; nothing is allocated per call after that, so memory stays bounded.
 - Before calling a word of another module, read its signature (`--words MODULE`, or `--show NAME MAIN`): a wrong guess costs a rejected build.
 
@@ -216,7 +218,7 @@ end
 - **Memory**: a Block owns the Blocks inside it and frees them with itself, and a heap cell owns what it holds, so nested data costs nothing once released. Bracket per-item work with `region [ ... ]` (an `hmark`/`hrelease` pair) so a long run does not keep every allocation alive. The checker rejects storing something made inside the region into a structure made before it (`RegionEscape`); copy results out as numbers or Blocks, or allocate the structure before the region. A Vec, Dict, list or StrBuf made before the region may grow inside it (since v1.95 it keeps its slot when it grows), so a region around one record's or one query's work can still push its timing or its result row onto an outer Vec. A Ptr used after its region is a fatal error that names where it was made and released.
 - **Codes get their own type**: a token kind, an opcode or a state is an `#enum`, not a number: `#enum Kw select from where union end` gives `Kw_select` .. `Kw_union` (0 .. 3), `Kw_count`, `Kw_name ( k:Kw -- s:Block )` for messages, and `Kw_of`/`Kw_raw` to convert from and to the number (an enum's `Kw_of` stops on a number that is not a code). Declare record fields and parameters as `Kw`, and the checker rejects comparing a code with a plain number (`t Tk_val Kw_union =`), arithmetic on a code, and a number passed where a code is expected; the SQL runs' worst bug (keyword 118 matching the literal 118) is then a compile error. `#type Name Base end` makes any Int, Float or Ptr its own type the same way (`#type Row Int end`, `Row_of`, `Row_raw`). Both cost nothing at run time. Library handles have types too: `map_make` gives an `IntMap`, so a word that takes a map declares `m:IntMap`, not `m:Ptr`.
 - **Rows, keys and small results are `#struct` values**: `#struct Row name Block kind Shape age Int end` gives `Row_make` (label it: `"al" :name Shape_circle :kind 25 :age Row_make`), `r Row_age`, and `r 26 Row_with_age`, a new Row. Structs compare with `=` and sort field by field, so they serve as Dict keys, Vec elements and sort keys, and they never change under you. Use a `#record` only for state that changes in place.
-- **Heap state with named fields**: declare it with `#record Name  field Type count init ...  end` (spec Sec.5) instead of hand-numbering offsets. Every field names its initial value (`0`, `nil`, `hnull`, `"root"`, an enum member, or a word such as `mkvec`), and `Name_new` stores it. A record is its own type (`b:Board` in signatures, a Ptr at run time). It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` that takes the record first and the value last (`s i v`, or `s v` for a count-1 field) and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset and the Ptr (`b Board_raw`): `#record Board cells Int 81 0 solved Int 1 0 end` then `Board_new -> [ b ] b 0 5 Board_cells_set b 1 Board_solved_set b 0 Board_cells print_int`.
+- **Heap state with named fields**: declare it with `#record Name  field Type count init ...  end` (spec Sec.5) instead of hand-numbering offsets. Every field names its initial value (`0`, `nil`, `hnull`, `"root"`, an enum member, or a word such as `mkvec`), and `Name_new` stores it. A record is its own type (`b:Board` in signatures, a Ptr at run time). It generates `Name_new`, `Name_size`, and per field a typed getter `Name_field`, a setter `Name_field_set` that takes the record first and the value last (`s i v`, or `s v` for a count-1 field), for a number field (Int, Float, Scalar) an adder `Name_field_add` that adds to it in place (`s i amount`, or `s amount`; since v1.97), and `Name_field_off`, the field's first cell, for bulk words such as `hmove`/`hfill`/`fread_into` that take a raw offset and the Ptr (`b Board_raw`): `#record Board cells Int 81 0 solved Int 1 0 end` then `Board_new -> [ b ] b 0 5 Board_cells_set b 1 Board_solved_set b 0 Board_cells print_int`.
 - **File Handle (from `fopen`)**: `fgetc` / `fputc` / `fread` / `fwrite`, or the `file.sg` words below. A `File` is opaque in exactly the way a `Ptr` is: arithmetic on it, `hread`/`hwrite` through it, and `_at`/`_get`/`_set` into it are all static `TypeError`s.
 - **Command-Line Argument (from `argv`)**: an ordinary `Block` of character codes -- index it, compare it, print it like any other string. `argc`/`argv` use C's indexing exactly: `0 argv` is the program, the first real argument is `1 argv`.
 

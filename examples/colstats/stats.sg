@@ -13,14 +13,14 @@ use "util"
 { population variance: the mean squared deviation from the mean }
 #st_var ( cells:Ptr count:Int -- variance:Float )
   cells count st_mean -> [ m ]
-  0.0 count [times| i | cells i hread m _sq_dev + ] count to_float /
+  0.0 count [times| i total | total cells i hread m _sq_dev + ] count to_float /
 end
 
 #st_sd ( cells:Ptr count:Int -- sd:Float ) st_var sqrt end
 { one loop, two uses: `pick` is a word parameter, so st_min and st_max }
 { share the loop instead of copying it (each compiles to its own word) }
 #_reduce ( cells:Ptr count:Int pick:Word(Scalar,Scalar--Scalar) -- result:Scalar )
-  cells 0 hread count [times| i | cells i hread pick ]
+  cells 0 hread count [times| i best | best cells i hread pick ]
 end
 #st_min ( cells:Ptr count:Int -- least:Scalar ) 'min _reduce end
 #st_max ( cells:Ptr count:Int -- greatest:Scalar ) 'max _reduce end

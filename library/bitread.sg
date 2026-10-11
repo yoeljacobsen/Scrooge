@@ -128,5 +128,5 @@ end
 { the low n bits of v in reverse order (a Huffman code read bit by bit, }
 { or a table index for codes packed from their top bit) }
 #br_rev ( bits:Int count:Int -- reversed:Int )
-  0 count [times| k | 1 bitshl bits k bitshr 1 bitand bitor ]
+  0 count [times| k rev | rev 1 bitshl bits k bitshr 1 bitand bitor ]
 end
