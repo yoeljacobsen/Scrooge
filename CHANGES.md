@@ -2,6 +2,16 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.98
+
+From the first v1.97 runs (sql agy-11, agy-12 and a Qwen run through opencode). Nothing breaks: every v1.97 program still builds.
+
+- **A region may leave numbers and Blocks**: `db q region [ run_query ] -> [ ok err ]`. Four runs passed a pass/fail pair out of a region through a 2-cell buffer written inside it. A Block is reference counted and outlives the release. A heap value left by a region (a Ptr, record, compact array, Vec or Dict) is a RegionEscape, and a region still may not take values from below it.
+- **`--edit` refuses a stale write**: it reads the files, applies the script, and writes them back. A file that changed in between (an append, a parallel tool call) is no longer overwritten by the older copy; nothing is written, and the edit says to run again.
+- **`--edit` says when it replaced another file's word**: a "new" helper named like a word of an imported module replaces that word, as before. When the replacement has another signature and the edit is refused, the message now names the file and the word, and says to pick a name no file uses.
+- **`--name-carries` finishes in one call**: loops inside loops, a latch peeked by its test (`until [ dup 1 = ] drop` becomes `until [ c 1 = ]`), and labels where the named values feed a call of 4 or more inputs. Migrating agy-11's v1.96 SQL engine took one call per file; it passes 8884/8884.
+- **`#include` and `#define` are named as C**: a Scrooge file has no preamble or preprocessor, and `#` starts a word definition. One run spent 55 rejections on "word include missing signature". That message now shows the definition form.
+
 ## What changed in v1.97
 
 From the v1.96 round and the friction analysis: against Go, Scrooge needed 7-19x the compiler calls for programs of the same size. The cost is in the number of names and stack positions an agent has to keep track of. **Breaking:** a loop body that takes a value from below the loop without naming it is now an error. `scroogec_fast --name-carries FILE` rewrites such loops into the new form.
