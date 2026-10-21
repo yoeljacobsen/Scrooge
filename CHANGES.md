@@ -2,6 +2,15 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v2.00
+
+From a run by a fresh Claude Opus 5.5 agent on v1.99 (8884/8884 in 6.8 s, 34 minutes). Nothing breaks, except a test suite whose `test_` word is called by another word.
+
+- **A program that does nothing says so.** A file built with `-o` that defines words but has no top-level code (no `main` on its last line) builds, starts, runs nothing and exits 0. It now draws `WARNING NothingRuns`, with `--explain NothingRuns`. Three runs met this.
+- **A `test_` helper is refused by `--test`.** A word named `test_...` is a test. One that another word calls is a helper, and `--test` ran it as a test: `#test_db ( -- n:Int )` passed whenever it returned non-zero. `--test` now names it and says to rename it.
+- **String escapes are in the spec:** `\n`, `\t`, `\r`, `\"`, `\\`; any other `\c` is c.
+- **The manifest is found next to the compiler**, as the library's files are. Without `-L`, run from another directory, `use "util"` found util.sg but not the manifest ("lists no lexicon util").
+
 ## What changed in v1.99
 
 From two runs on v1.98 the same day: crush with Nemotron failed after 19 hours, and Antigravity with Argon passed 8884/8884 in 37 minutes. **Breaking:** the closing `?` after a cond is gone. A cond ends with its `]`. To migrate, delete each `?` (the library and examples are migrated).

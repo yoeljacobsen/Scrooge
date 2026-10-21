@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.99)
+# Scrooge on one screen (v2.00)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_99.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v2_00.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. **Name every word for what it does and every parameter for what it holds** (`put_cell ( cells row value )`, not `_pc ( t r v )`), as the primitives and the library do (`vec_set ( vec index value )`): on a stack the names are the only meaning a value carries, and labels, frame names, ArgumentOrder and every error message use them. The checker warns `ShortName` on a one-letter input of a word with three or more. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
