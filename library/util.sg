@@ -12,7 +12,7 @@ end
 end
 #feq_step ( idx:Int acc:Block val:Scalar ctx:Scalar -- acc:Block )
   val ctx =
-  cond [ acc val cons ] else [ acc ] ?
+  cond [ acc val cons ] else [ acc ]
 end
 #filter_eq ( block:Block target:Int -- filtered:Block )
   target block [fold| idx acc val ctx | idx acc val ctx feq_step from nil ]
@@ -20,7 +20,7 @@ end
 end
 #idx_step ( idx:Int acc:Int val:Scalar ctx:Scalar -- acc:Int )
   acc -1 = val ctx = and
-  cond [ idx ] else [ acc ] ?
+  cond [ idx ] else [ acc ]
 end
 #index_of ( block:Block target:Scalar -- idx:Int )
   target block [fold| idx acc val ctx | idx acc val ctx idx_step from -1 ]
@@ -52,13 +52,13 @@ end
       acc 1 block_get ctx cons val cons 1 swap pair
     ] else [
       acc 1 block_get val cons 0 swap pair
-    ] ?
-  ] ?
+    ]
+  ]
 end
 #insert_sorted ( val:Unknown blk:Block -- result:Block )
   val blk [fold| idx acc elem x | idx acc elem :val x :ctx insert_sort_step from [ 0 nil ] ]
   -> [ res_pair ] res_pair 0 block_get 0 =
-  cond [ res_pair 1 block_get val cons ] else [ res_pair 1 block_get ] ?
+  cond [ res_pair 1 block_get val cons ] else [ res_pair 1 block_get ]
   reverse
 end
 { block_sort was an insertion sort that rebuilt its result on every insert:
@@ -95,13 +95,28 @@ end
 { ---- returns its flag, so several combine with `and`, and prints the      ---- }
 { ---- message (and the values) when it fails.                              ---- }
 #ex_say_step ( s:Block --  ) s [fold| i acc c _ | c print_char acc from 0 ] drop end
-#ex_num_step ( x:Unknown --  )
+#ex_scalar_step ( x:Unknown --  )
   x type_of 0 = cond [ x print_int ] else [
-    x type_of 1 = cond [ x 6 print_float ] else [ "(not a number)" ex_say_step ] ?
-  ] ?
+    x type_of 1 = cond [ x 6 print_float ] else [
+      x type_of 2 = cond [ "[..]" ex_say_step ] else [ "(a Ptr)" ex_say_step ]
+    ]
+  ]
+end
+{ ---- v1.99: a Block whose elements are all printable characters is text ---- }
+{ ---- and shows in quotes; any other Block shows its elements (argon-1).  ---- }
+#ex_is_text ( block:Block -- text:Int )
+  block [fold| i acc c _ | acc c type_of 0 = and_then [ c 32 >= c 126 <= and ] and from 1 ]
+end
+#ex_block_step ( block:Block --  )
+  block ex_is_text cond [ 34 print_char block ex_say_step 34 print_char ] else [
+    "[ " ex_say_step block [fold| i acc e _ | e ex_scalar_step 32 print_char acc from 0 ] drop "]" ex_say_step
+  ]
+end
+#ex_num_step ( x:Unknown --  )
+  x type_of 2 = cond [ x ex_block_step ] else [ x ex_scalar_step ]
 end
 #expect ( ok:Int msg:Block -- ok:Int )
-  ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ? ok
+  ok cond [ ] else [ "  expected: " ex_say_step msg ex_say_step 10 print_char ] ok
 end
 { ---- expect_stop: the first thing in a #test_ word whose code must stop ---- }
 { ---- the program; --test runs it alone and passes it when the program   ---- }
@@ -117,12 +132,12 @@ end
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step 10 print_char
-    ] ? ok
+    ] ok
 end
 #expect_near ( got:Scalar want:Scalar tol:Scalar msg:Block -- ok:Int )
   got want - abs tol > not -> [ ok ]
     ok cond [ ] else [
       "  " ex_say_step msg ex_say_step ": got " ex_say_step got ex_num_step
       ", want " ex_say_step want ex_num_step " within " ex_say_step tol ex_num_step 10 print_char
-    ] ? ok
+    ] ok
 end

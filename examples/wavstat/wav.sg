@@ -54,7 +54,7 @@ end
 #_find ( wav:Wav id:Int -- size:Int )
   wav 8 _read
   wav 4 _u32 -> [ size ]
-  wav 0 _u32 id = cond [ size ] else [ wav size _skip_body wav id _find ] ?
+  wav 0 _u32 id = cond [ size ] else [ wav size _skip_body wav id _find ]
 end
 
 #_check_pcm ( wav:Wav -- ) wav 0 _u16 1 = not when [ wav "not PCM (format tag is not 1)" _fail ] end
@@ -106,7 +106,7 @@ end
 { sample index (0-based) of the buffer, a signed 16-bit value }
 #wav_sample ( wav:Wav index:Int -- sample:Int )
   wav index 2 * _u16 -> [ u ]
-  u 32768 < cond [ u ] else [ u 65536 - ] ?
+  u 32768 < cond [ u ] else [ u 65536 - ]
 end
 
 #wav_close ( wav:Wav -- ) wav Wav_fh fclose drop end

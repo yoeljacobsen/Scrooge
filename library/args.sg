@@ -29,7 +29,7 @@ end
 #arg_or ( index:Int default:Block -- arg:Block )
   default index argv
   -> [ default a ok ] ok
-  cond [ a ] else [ a drop default ] ?
+  cond [ a ] else [ a drop default ]
 end
 
 { ---- Private: build the argument list from the tail backwards, so each   ---- }
@@ -37,11 +37,11 @@ end
 { ---- with no reversal pass.                                             ---- }
 #atl_step ( i:Int acc:Block -- i:Int acc:Block )
   i 1 -
-  i argv -> [ a ok ] ok cond [ acc a cons ] else [ a drop acc ] ?
+  i argv -> [ a ok ] ok cond [ acc a cons ] else [ a drop acc ]
 end
 #atl_loop ( i:Int acc:Block -- args:Block )
   i 1 <
-  cond [ acc ] else [ i acc atl_step atl_loop ] ?
+  cond [ acc ] else [ i acc atl_step atl_loop ]
 end
 
 { ---- Every argument except the program name, in order, as a Block of     ---- }
@@ -66,24 +66,24 @@ end
 end
 #ae_loop ( left:Block right:Block idx:Int acc:Int -- equal:Int )
   idx left block_len < acc and
-  cond [ left right idx acc ae_step ae_loop ] else [ acc ] ?
+  cond [ left right idx acc ae_step ae_loop ] else [ acc ]
 end
 #ae_eq_check ( a:Block b:Block -- equal:Int )
   a block_len b block_len =
-  cond [ a :left b :right 0 :idx 1 :acc ae_loop ] else [ 0 ] ?
+  cond [ a :left b :right 0 :idx 1 :acc ae_loop ] else [ 0 ]
 end
 
 { ---- Private: does the argument at this index equal `name`? A missing    ---- }
 { ---- index is simply not a match.                                       ---- }
 #af_match_check ( name:Block idx:Int -- flag:Int )
-  idx argv -> [ a ok ] ok cond [ a name ae_eq_check ] else [ a drop 0 ] ?
+  idx argv -> [ a ok ] ok cond [ a name ae_eq_check ] else [ a drop 0 ]
 end
 #af_loop ( name:Block idx:Int -- i:Int found:Int )
   idx argc =
   cond [ 0 0 ] else [
     name idx af_match_check
-    cond [ idx 1 ] else [ name idx 1 + af_loop ] ?
-  ] ?
+    cond [ idx 1 ] else [ name idx 1 + af_loop ]
+  ]
 end
 
 { ---- The C index of the first argument equal to `name`, searching from 1 ---- }
@@ -136,20 +136,20 @@ end
 { ---- divided once at the end, so "0.07" is the double nearest 0.07.     ---- }
 #af_char_step ( mantissa:Int places:Int dot:Int bad:Int nd:Int ch:Int -- mantissa:Int places:Int dot:Int bad:Int nd:Int )
   ch 47 > ch 58 < and cond [ mantissa 10 * ch 48 - + places dot + dot bad nd 1 + ] else [
-    ch 46 = cond [ mantissa places 1 dot bad or nd ] else [ mantissa places dot 1 nd ] ?
-  ] ?
+    ch 46 = cond [ mantissa places 1 dot bad or nd ] else [ mantissa places dot 1 nd ]
+  ]
 end
 #af_value_check ( mantissa:Int places:Int dot:Int bad:Int nd:Int neg:Int -- value:Float ok:Int )
-  mantissa to_float 10.0 places pow / neg cond [ -1.0 * ] else [ ] ? bad not nd 0 > and
+  mantissa to_float 10.0 places pow / neg cond [ -1.0 * ] else [ ] bad not nd 0 > and
 end
 #af_parse_check ( s:Block -- x:Float ok:Int )
   s block_len 0 = cond [ 0.0 0 ] else [
     s 0 block_get 45 = -> [ neg ] 0 0 0 0 0 neg s block_len [for| i mantissa places dot bad nd | mantissa places dot bad nd s i block_get :ch af_char_step ]
     -> [ mantissa places dot bad nd ] mantissa places dot bad nd neg af_value_check
-  ] ?
+  ]
 end
 { ---- the decimal after flag name (-l 0.02), or default when the flag is  ---- }
 { ---- absent or its value is not a plain decimal                          ---- }
 #arg_float_or ( name:Block default:Float -- value:Float )
-  name nil arg_value_or af_parse_check -> [ value ok ] ok cond [ value ] else [ default ] ?
+  name nil arg_value_or af_parse_check -> [ value ok ] ok cond [ value ] else [ default ]
 end

@@ -34,9 +34,9 @@ end
 
 { ---- the index (0..n-1) of the first largest of p[off..off+n); n must be at least 1 ---- }
 #vec_argmax ( ptr:Ptr start:Int count:Int -- index:Int )
-  count 1 < cond [ "vec_argmax: empty range" abort ] else [ ] ?
+  count 1 < cond [ "vec_argmax: empty range" abort ] else [ ]
   0 ptr start hread 1 count [for| index bi bv |
-    ptr start index + hread -> [ v ] v bv > cond [ index v ] else [ bi bv ] ?
+    ptr start index + hread -> [ v ] v bv > cond [ index v ] else [ bi bv ]
   ] drop
 end
 
@@ -50,12 +50,12 @@ end
 #vec_be32 ( ptr:Ptr index:Int -- value:Int )
   ptr index hread 24 bitshl ptr index 1 + hread 16 bitshl bitor
   ptr index 2 + hread 8 bitshl bitor ptr index 3 + hread bitor
-  -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ] ?
+  -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ]
 end
 
 { ---- the 32-bit little-endian signed integer in p[off..off+4) ---- }
 #vec_le32 ( ptr:Ptr index:Int -- value:Int )
   ptr index 3 + hread 24 bitshl ptr index 2 + hread 16 bitshl bitor
   ptr index 1 + hread 8 bitshl bitor ptr index hread bitor
-  -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ] ?
+  -> [ u ] u 2147483647 > cond [ u 4294967296 - ] else [ u ]
 end

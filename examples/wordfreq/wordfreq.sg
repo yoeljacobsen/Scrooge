@@ -23,7 +23,7 @@ use "vec"
 
 { a letter, folded to lower case; 0 for anything else }
 #_letter ( char:Int -- letter:Int )
-  char is_upper cond [ char 32 + ] else [ char is_lower cond [ char ] else [ 0 ] ? ] ?
+  char is_upper cond [ char 32 + ] else [ char is_lower cond [ char ] else [ 0 ] ]
 end
 
 { end the word being built, if any, and count it }
@@ -35,7 +35,7 @@ end
 #count_line ( tally:Dict buf:StrBuf line:Block -- )
   line block_len [times| i |
     line i block_get _letter -> [ l ]
-    l 0 = cond [ tally buf _flush ] else [ buf l strbuf_add_char ] ?
+    l 0 = cond [ tally buf _flush ] else [ buf l strbuf_add_char ]
   ]
   tally buf _flush
 end

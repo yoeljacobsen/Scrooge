@@ -85,7 +85,7 @@ end
 #f_read_all_loop ( fh:File acc:Block size:Int -- str:Block )
   fh acc size fh size fread
   -> [ fh acc size chunk ] chunk block_len 0 =
-  cond [ acc ] else [ fh acc chunk f_cat_loop size f_next_chunk f_read_all_loop ] ?
+  cond [ acc ] else [ fh acc chunk f_cat_loop size f_next_chunk f_read_all_loop ]
 end
 #f_read_all ( fh:File -- str:Block )
   fh nil f_chunk f_read_all_loop
@@ -104,17 +104,17 @@ end
 #f_read_file ( path:Block -- str:Block ok:Int )
   path f_open_read
   -> [ fh ok ] ok not
-  cond [ nil 0 ] else [ fh f_read_all fh fclose ] ?
+  cond [ nil 0 ] else [ fh f_read_all fh fclose ]
 end
 #f_write_file ( path:Block str:Block -- ok:Int )
   str path f_open_write
   -> [ str fh ok ] ok not
-  cond [ 0 ] else [ fh str fwrite str block_len = fh fclose and ] ?
+  cond [ 0 ] else [ fh str fwrite str block_len = fh fclose and ]
 end
 #f_append_file ( path:Block str:Block -- ok:Int )
   str path f_open_append
   -> [ str fh ok ] ok not
-  cond [ 0 ] else [ fh str fwrite str block_len = fh fclose and ] ?
+  cond [ 0 ] else [ fh str fwrite str block_len = fh fclose and ]
 end
 
 { ---- Home-directory expansion (GAPS_TASK_PLAN.md G4) ---- }

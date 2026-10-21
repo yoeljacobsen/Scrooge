@@ -24,8 +24,8 @@ end
 
 #main ( -- )
   1 "" arg_or rn_read -> [ p n ok ]
-  ok not cond [ "colstats: cannot read the file" abort ] ?
-  n 0 = cond [ "colstats: the file has no integers" abort ] ?
+  ok not cond [ "colstats: cannot read the file" abort ]
+  n 0 = cond [ "colstats: the file has no integers" abort ]
   p n report
 end
 main

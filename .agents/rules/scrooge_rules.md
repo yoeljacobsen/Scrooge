@@ -1,6 +1,6 @@
-# Scrooge v1.98 Workspace Rules & Agent Directives
+# Scrooge v1.99 Workspace Rules & Agent Directives
 
-This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_98.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
+This rule file ensures the Google Antigravity environment enforces Scrooge language standards and guidelines when reading, writing, or generating Scrooge code. The authority is the specification, `spec/scrooge_spec_v1_99.txt`; the method is the skill guide, `spec/scrooge_skill.md`. Read `spec/scrooge_cheatsheet.md` first: the language on one screen. Where this file and the spec disagree, the spec wins; fix this file.
 
 ---
 
@@ -58,7 +58,7 @@ This rule file ensures the Google Antigravity environment enforces Scrooge langu
 * Control Flow:
   - `flag cond [ true-branch ] else [ false-branch ]`. The flag is unbracketed; both branches must have the same net stack effect.
   - `flag cond [ true-branch ]` omits the else-branch, which then means `else [ ]`, so the true-branch must have net effect 0.
-  - A closing `?` after the last branch is optional (older code writes `... else [ f ] ?`). A `?` or `else` anywhere else is a ParseError.
+  - A cond ends with its `]`: no closing `?` (gone since v1.99) and no `end` (`end` closes only a definition). An `else` anywhere else is a ParseError.
   - Iterators: `[map| idx val ctx | body ]` and `[fold| idx acc val ctx | body from init ]` (spec Sec.3).
   - Statements: `a when [ body ]` / `a unless [ body ]` run the body (net effect 0) when a is true / false. Short-circuit values: `a and_then [ b ]` is b if a is true, else 0; `a or_else [ b ]` is 1 if a is true, else b (b evaluated only when needed). `and`/`or` evaluate both sides.
   - Counted loops: `n [times| i | body ]` (i = 0..n-1) and `lo hi [for| i | body ]` (i = lo..hi-1); state the loop carries is named after the index and the body leaves its next values (`0 10 [times| i sum | sum i + ]` leaves 45); a body that takes an unnamed value from below the loop is an error. To stop early, `until [ c ]` or `while [ c ]` is the first thing in the body; `n [find| i | c ]` leaves the first index whose c is true, or -1.

@@ -31,7 +31,7 @@ end
 { the middle of count sorted values: the middle one, or the mean of the two middle ones }
 #_middle ( sorted:Ptr count:Int -- median:Scalar )
   count 2 / -> [ h ]
-  count 2 \ 1 = cond [ sorted h hread ] else [ sorted h 1 - hread sorted h hread + 2.0 / ] ?
+  count 2 \ 1 = cond [ sorted h hread ] else [ sorted h 1 - hread sorted h hread + 2.0 / ]
 end
 
 #st_median ( cells:Ptr count:Int -- median:Scalar ) cells count _sorted_copy count _middle end

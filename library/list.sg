@@ -47,7 +47,7 @@ end
 
 #lst_new_cap ( old_cap:Int -- new_cap:Int )
   old_cap 0 =
-  cond [ 1 ] else [ old_cap 2 * ] ?
+  cond [ 1 ] else [ old_cap 2 * ]
 end
 
 #lst_copy_step ( src:Ptr dst:Ptr idx:Int stop:Int -- src:Ptr dst:Ptr idx:Int stop:Int )
@@ -56,7 +56,7 @@ end
 end
 #lst_copy_loop ( src:Ptr dst:Ptr idx:Int stop:Int --  )
   idx stop <
-  cond [ src dst idx stop lst_copy_step lst_copy_loop ] else [ ] ?
+  cond [ src dst idx stop lst_copy_step lst_copy_loop ] else [ ]
 end
 
 { the cells keep their slot (hresize, since v1.95) }
@@ -75,7 +75,7 @@ end
     ptr lst_grow
     ptr ptr 1 hread val lst_set
     ptr 1 ptr 1 hread 1 + hwrite
-  ] ?
+  ]
 end
 
 #lst_try_push ( ptr:Ptr val:Unknown -- ok:Int )
@@ -84,5 +84,5 @@ end
     ptr ptr 1 hread val lst_set
     ptr 1 ptr 1 hread 1 + hwrite
     1
-  ] else [ 0 ] ?
+  ] else [ 0 ]
 end

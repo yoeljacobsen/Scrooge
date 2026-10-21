@@ -4,7 +4,7 @@
 { ---- the number in a status line after its key: "VmHWM:\t  245180 kB" is 245180 ---- }
 #proc_line_num ( line:Block start:Int -- value:Int )
   0 start line block_len [for| i value |
-    line i block_get -> [ c ] c 48 < c 57 > or cond [ value ] else [ value 10 * c 48 - + ] ?
+    line i block_get -> [ c ] c 48 < c 57 > or cond [ value ] else [ value 10 * c 48 - + ]
   ]
 end
 
@@ -13,15 +13,15 @@ end
   fh freadline -> [ line got ]
     got not cond [ 0 0 ] else [
       line block_len key block_len < cond [ fh key proc_scan_loop ] else [
-        line 0 key block_len block_slice key = cond [ line key block_len proc_line_num 1 ] else [ fh key proc_scan_loop ] ?
-      ] ?
-    ] ?
+        line 0 key block_len block_slice key = cond [ line key block_len proc_line_num 1 ] else [ fh key proc_scan_loop ]
+      ]
+    ]
 end
 
 { ---- the value of a /proc/self/status field such as "VmRSS:"; ok is 0 when it is absent ---- }
 #proc_status_kb ( key:Block -- kb:Int ok:Int )
   "/proc/self/status" 0 fopen -> [ fh fok ]
-    fok not cond [ 0 0 ] else [ fh key proc_scan_loop -> [ kb ok ] fh fclose drop kb ok ] ?
+    fok not cond [ 0 0 ] else [ fh key proc_scan_loop -> [ kb ok ] fh fclose drop kb ok ]
 end
 
 { ---- peak resident memory so far (VmHWM), the figure to report; not VmPeak ---- }

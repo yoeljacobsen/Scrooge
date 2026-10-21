@@ -26,7 +26,7 @@ end
 { the character at pos, or 0 past the end }
 #_ch ( toks:Toks pos:Int -- char:Int )
   toks Toks_text -> [ s ]
-  pos s block_len < cond [ s pos block_get ] else [ 0 ] ?
+  pos s block_len < cond [ s pos block_get ] else [ 0 ]
 end
 
 #_is_name ( char:Int -- flag:Int ) char is_lower char is_upper or char '_' = or end
@@ -41,10 +41,10 @@ end
 #_ends ( toks:Toks pos:Int kind:Kind -- flag:Int ) toks pos _ch kind _stops end
 
 { the place found, or all of them when none was (-1) }
-#_or_all ( found:Int all:Int -- length:Int ) found 0 < cond [ all ] else [ found ] ? end
+#_or_all ( found:Int all:Int -- length:Int ) found 0 < cond [ all ] else [ found ] end
 
 #_stops ( char:Int kind:Kind -- flag:Int )
-  kind Kind_number = cond [ char is_digit not ] else [ char _is_name char is_digit or not ] ?
+  kind Kind_number = cond [ char is_digit not ] else [ char _is_name char is_digit or not ]
 end
 
 { record one token }
@@ -60,19 +60,19 @@ end
 end
 
 { the kind of token that starts with char }
-#_kind ( char:Int -- kind:Kind ) char is_digit cond [ Kind_number ] else [ char _is_name cond [ Kind_word ] else [ Kind_op ] ? ] ? end
+#_kind ( char:Int -- kind:Kind ) char is_digit cond [ Kind_number ] else [ char _is_name cond [ Kind_word ] else [ Kind_op ] ] end
 
 { the token at pos (not a space): its length }
 #_one ( toks:Toks pos:Int -- length:Int )
   toks pos _ch _kind -> [ kind ]
-  kind Kind_op = cond [ 1 ] else [ toks pos kind _run ] ?
+  kind Kind_op = cond [ 1 ] else [ toks pos kind _run ]
   -> [ length ] toks kind pos length _add length
 end
 
 { every token of the text, from pos }
 #_scan ( toks:Toks pos:Int -- )
   pos toks Toks_text block_len < when [
-    toks pos _ch is_space cond [ 1 ] else [ toks pos _one ] ?
+    toks pos _ch is_space cond [ 1 ] else [ toks pos _one ]
     -> [ m ] toks pos m + _scan
   ]
 end

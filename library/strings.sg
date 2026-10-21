@@ -28,11 +28,11 @@ end
 { ---- Integer -> string (supports negative integers) ---- }
 #its_loop ( n:Int acc:Block -- result:Block )
   n 0 =
-  cond [ acc ] else [ n 10 / acc n 10 \ 48 + cons its_loop ] ?
+  cond [ acc ] else [ n 10 / acc n 10 \ 48 + cons its_loop ]
 end
 #int_to_str ( value:Int -- str:Block )
   value 0 =
-  cond [ "0" ] else [ value 0 < cond [ 0 value - nil its_loop 45 cons ] else [ value nil its_loop ] ? ] ?
+  cond [ "0" ] else [ value 0 < cond [ 0 value - nil its_loop 45 cons ] else [ value nil its_loop ] ]
 end
 
 { ---- Print an integer via string conversion, then newline ---- }
@@ -77,11 +77,11 @@ end
       chars idx 1 + stop acc 10 * ch 48 - + 1
     ] else [
       chars stop stop acc 0
-    ] ?
+    ]
 end
 #s2i_loop ( chars:Block idx:Int stop:Int acc:Int ok:Int -- acc:Int ok:Int )
   idx stop <
-  cond [ chars idx stop acc ok s2i_step s2i_loop ] else [ acc ok ] ?
+  cond [ chars idx stop acc ok s2i_step s2i_loop ] else [ acc ok ]
 end
 { Note: the parameter is documented as `end` in the signature (harmless --
   signature scanning stops at `)`, not the "end" keyword) but bound as
@@ -99,17 +99,17 @@ end
     chars
     start
     stop
-    start stop < cond [ chars start block_get 45 = ] else [ 0 ] ?
+    start stop < cond [ chars start block_get 45 = ] else [ 0 ]
   -> [ chars start stop neg ]
     neg
     chars
-    neg cond [ start 1 + ] else [ start ] ? :idx
+    neg cond [ start 1 + ] else [ start ] :idx
     stop
     0 :acc
     0 :ok
     s2i_loop
   -> [ neg acc ok ]
-    neg cond [ 0 acc - ] else [ acc ] ?
+    neg cond [ 0 acc - ] else [ acc ]
     ok
 end
 
@@ -119,11 +119,11 @@ end
 #fs_cmp_step ( hay:Block needle:Block hpos:Int npos:Int nlen:Int ok:Int -- hay:Block needle:Block hpos:Int npos:Int nlen:Int ok:Int )
   hay needle hpos
   hay hpos npos + block_get needle npos block_get =
-  cond [ npos 1 + nlen 1 ] else [ nlen nlen 0 ] ?
+  cond [ npos 1 + nlen 1 ] else [ nlen nlen 0 ]
 end
 #fs_cmp_loop ( hay:Block needle:Block hpos:Int npos:Int nlen:Int ok:Int -- match:Int )
   npos nlen < ok and
-  cond [ hay needle hpos npos nlen ok fs_cmp_step fs_cmp_loop ] else [ ok ] ?
+  cond [ hay needle hpos npos nlen ok fs_cmp_step fs_cmp_loop ] else [ ok ]
 end
 #fs_matches_at ( hay:Block needle:Block index:Int nlen:Int -- match:Int )
   hay needle index :hpos 0 :npos nlen 1 :ok fs_cmp_loop
@@ -135,8 +135,8 @@ end
   pos nlen + hlen > not
   cond [
     hay needle pos :index nlen fs_matches_at
-    cond [ pos 1 ] else [ hay needle pos hlen nlen fs_scan_step fs_scan_loop ] ?
-  ] else [ 0 0 ] ?
+    cond [ pos 1 ] else [ hay needle pos hlen nlen fs_scan_step fs_scan_loop ]
+  ] else [ 0 0 ]
 end
 { Note: the search-start parameter is `start`, not `from`. `from` is the
   reserved word that introduces a fold's initial accumulator, so binding it
@@ -179,13 +179,13 @@ end
 { ---- Padding to a width with spaces (v1.84); a string at least that    ---- }
 { ---- wide is returned as it is. int_to_str_pad pads a number with 0s.  ---- }
 #str_pad_left ( str:Block width:Int -- padded:Block )
-  str block_len width < cond [ str 32 cons width str_pad_left ] else [ str ] ?
+  str block_len width < cond [ str 32 cons width str_pad_left ] else [ str ]
 end
 #_pad_spaces ( acc:Block k:Int -- acc:Block )
-  k 0 > cond [ acc 32 cons k 1 - _pad_spaces ] else [ acc ] ?
+  k 0 > cond [ acc 32 cons k 1 - _pad_spaces ] else [ acc ]
 end
 #_pad_prepend ( str:Block count:Int acc:Block -- acc:Block )
-  count 0 < cond [ acc ] else [ str count 1 - acc str count block_get cons _pad_prepend ] ?
+  count 0 < cond [ acc ] else [ str count 1 - acc str count block_get cons _pad_prepend ]
 end
 #str_pad_right ( str:Block width:Int -- padded:Block )
   str str block_len 1 - nil width str block_len - _pad_spaces _pad_prepend
@@ -193,11 +193,11 @@ end
 
 { ---- An integer in hexadecimal, lowercase; a negative one as its 64-bit ---- }
 { ---- pattern (16 digits): -1 is ffffffffffffffff.                      ---- }
-#_hex_digit ( d:Int -- c:Int ) d 10 < cond [ d 48 + ] else [ d 87 + ] ? end
+#_hex_digit ( d:Int -- c:Int ) d 10 < cond [ d 48 + ] else [ d 87 + ] end
 #_hex_loop ( value:Int digits:Int acc:Block -- str:Block )
-  value 0 = digits 16 = or cond [ acc ] else [ value 4 bitshr digits 1 + acc value 15 bitand _hex_digit cons _hex_loop ] ?
+  value 0 = digits 16 = or cond [ acc ] else [ value 4 bitshr digits 1 + acc value 15 bitand _hex_digit cons _hex_loop ]
 end
-#int_to_hex ( value:Int -- str:Block ) value 0 = cond [ "0" ] else [ value 0 nil _hex_loop ] ? end
+#int_to_hex ( value:Int -- str:Block ) value 0 = cond [ "0" ] else [ value 0 nil _hex_loop ] end
 
 { ---- The pieces of str between the separator ch, in order; n         ---- }
 { ---- separators give n+1 pieces, empty ones included ("a,,b" is a,   ---- }
@@ -206,6 +206,6 @@ end
   index 0 < cond [ acc str 0 stop block_slice cons ] else [
     str index block_get ch = cond [
       str ch index 1 - :index index :stop acc str index 1 + stop index - 1 - block_slice cons :acc _split_loop
-    ] else [ str ch index 1 - :index stop acc _split_loop ] ? ] ?
+    ] else [ str ch index 1 - :index stop acc _split_loop ] ]
 end
 #str_split ( str:Block ch:Int -- parts:Block ) str ch str block_len 1 - :index str block_len :stop nil :acc _split_loop end

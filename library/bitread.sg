@@ -39,8 +39,8 @@ end
       h 2 got 0 max hwrite
       got 0 > not when [ h 5 0 hwrite ]
       got 0 >
-    ] ?
-  ] ?
+    ]
+  ]
 end
 
 { the next byte of the source into the bits read ahead }
@@ -96,7 +96,7 @@ end
   done count < br BitIn_raw 4 hread 8 < not and cond [
     dst off done + br 8 br_get bytes_set
     br :br dst :dst off :off count :count done 1 + :done _br_drain
-  ] else [ done ] ?
+  ] else [ done ]
 end
 
 { count bytes from the buffer into dst at dpos }
@@ -114,7 +114,7 @@ end
     count done - h 2 hread h 1 hread - min -> [ m ]
     br :br dst :dst off done + :dpos m :count _br_copy
     br :br dst :dst off :off count :count done m + :done _br_bulk
-  ] else [ done ] ?
+  ] else [ done ]
 end
 
 { from the next byte boundary, up to count bytes into dst at off (a stored }

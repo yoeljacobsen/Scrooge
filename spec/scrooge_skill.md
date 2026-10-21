@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v1.98)
+# Skill: Writing Correct Scrooge (v1.99)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v1_98.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v1_99.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -118,7 +118,7 @@ Build every program from small words, each doing one job, and combine them into 
 
 Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only five that exist). A word's inputs are names already: write them in the body (`#avg ( s:Int n:Int -- m:Float ) s to_float n to_float / end`) and the word binds them itself, so do not begin a body with `-> [ s n ]`. Name an intermediate result with a frame where it is made: `p n st_mean -> [ m ]`, then use `m` to the end of the block. Names keep their static types; shufflers produce `Unknown`. A frame binds at most 64 names; for more state, use a `#record`.
 
-- **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A trailing `?` is optional.
+- **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A cond ends with its `]`; there is no closing `?` or `end` (`end` closes only a definition).
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
   ```scrooge
   #copy_block ( blk:Block -- copy:Block )
@@ -399,7 +399,7 @@ The compiler edits source a whole word at a time, so you never need a script tha
 compiler/scroogec_fast --words src/token.sg            # every definition: name, signature, lines
 compiler/scroogec_fast --show tok_kind src/token.sg    # print one definition, with its comment
 compiler/scroogec_fast -L library --edit src/token.sg <<'EOF'
-#tok_kind ( ch:Int -- kind:TokKind ) ch is_digit cond [ TokKind_num ] else [ TokKind_word ] ? end
+#tok_kind ( ch:Int -- kind:TokKind ) ch is_digit cond [ TokKind_num ] else [ TokKind_word ] end
 EOF
 compiler/scroogec_fast --fmt src/token.sg              # re-indent (two spaces per bracket level)
 ```

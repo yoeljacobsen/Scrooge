@@ -1,6 +1,6 @@
-# Scrooge on one screen (v1.98)
+# Scrooge on one screen (v1.99)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_98.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v1_99.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. **Name every word for what it does and every parameter for what it holds** (`put_cell ( cells row value )`, not `_pc ( t r v )`), as the primitives and the library do (`vec_set ( vec index value )`): on a stack the names are the only meaning a value carries, and labels, frame names, ArgumentOrder and every error message use them. The checker warns `ShortName` on a one-letter input of a word with three or more. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -8,7 +8,7 @@ Postfix: every word takes its inputs from the stack and leaves its outputs there
 
 | Construct | Stack effect | Notes |
 |---|---|---|
-| `f cond [ t ] else [ e ]` | ( f -- ... ) | the only branch (there is no `if`); both branches have the same net effect; with no `else`, the true branch is net 0 |
+| `f cond [ t ] else [ e ]` | ( f -- ... ) | the only branch (there is no `if`); both branches have the same net effect; with no `else`, the true branch is net 0; it ends with its `]` (no `?`, no `end`: `end` closes only a definition) |
 | `f when [ b ]`, `f unless [ b ]` | ( f -- ) | body net 0 |
 | `a and_then [ b ]`, `a or_else [ b ]` | ( a -- v ) | short-circuit; the body leaves one value |
 | `n [times| i | b ]`, `lo hi [for| i | b ]` | ( n -- ), ( lo hi -- ) | body net 0; state is named after the index and the body leaves its next value: `0 10 [times| i sum | sum i + ]` leaves 45; `until [ c ]` / `while [ c ]` first in the body stops it |

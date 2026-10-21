@@ -25,11 +25,11 @@ use "util"
   path is the empty string, which f_read_file will then fail to open. }
 #is_flag ( arg:Block -- flag:Int )
   arg block_len 0 >
-  cond [ arg 0 block_get 45 = ] else [ 0 ] ?
+  cond [ arg 0 block_get 45 = ] else [ 0 ]
 end
 
 #keep_step ( idx:Int acc:Block val:Block ctx:Int -- acc2:Block )
-  val is_flag cond [ acc ] else [ acc val cons ] ?
+  val is_flag cond [ acc ] else [ acc val cons ]
 end
 #operands ( args:Block -- files:Block )
   args [fold| idx acc val _ | idx acc val 0 :ctx keep_step from nil ] reverse
@@ -43,14 +43,14 @@ end
   cond [
     counting
     cond [ path str_print 58 print_char 32 print_char text block_len print_line 1 ]
-    else [ f_stdout text fwrite text block_len = ] ?
+    else [ f_stdout text fwrite text block_len = ]
   ] else [
     text drop
     f_stderr arg_prog fwrite drop
     f_stderr ": cannot read " fwrite drop
     f_stderr path f_write_line drop
     0
-  ] ?
+  ]
 end
 
 #emit_step ( idx:Int acc:Int val:Block ctx:Int -- acc2:Int )
@@ -65,10 +65,10 @@ end
       { no operands: behave as a filter on standard input }
       cfound
       cond [ f_stdin f_read_all block_len print_line ]
-      else [ f_stdout f_stdin f_read_all fwrite drop ] ?
+      else [ f_stdout f_stdin f_read_all fwrite drop ]
     ] else [
       cfound files [fold| idx acc val ctx | idx acc val ctx emit_step from 1 ]
-      cond [ ] else [ "args_demo: some files could not be read" abort ] ?
-    ] ?
+      cond [ ] else [ "args_demo: some files could not be read" abort ]
+    ]
 end
 main

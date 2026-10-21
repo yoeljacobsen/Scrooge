@@ -2,6 +2,20 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v1.99
+
+From two runs on v1.98 the same day: crush with Nemotron failed after 19 hours, and Antigravity with Argon passed 8884/8884 in 37 minutes. **Breaking:** the closing `?` after a cond is gone. A cond ends with its `]`. To migrate, delete each `?` (the library and examples are migrated).
+
+- **One way to end a cond.** The optional `?` was a second spelling of the end of a cond. Nemotron took it, and then `end`, for cond closers (as `then` in Forth) and spent 93 rejections on it. A `?` is now a ParseError that says to delete it.
+- **`end` mistaken for a cond closer is named.**
+  - Every stray `end` in a file is reported in one pass; Nemotron fixed them one call at a time, 37 calls in a row.
+  - After a `] end` the message says that `end` closes only a definition, so the `] end` ended the word.
+  - An `end` inside an open `[`, followed by the definition's real `end`, says which `[` is open and to write `]`.
+- **A cond ladder whose tests compare strings counts once**, as v1.97 meant: `word "all" = cond [ .. ] else [ word "any" = cond ...`. A string literal is a data block, which the ladder test did not accept.
+- **AllocInLoop skips a word that always runs inside a region**: every call of it is inside a region, directly or through words that are. Calls from `#test_` words do not count. A parser's tail-recursive AST builders called within a per-query region no longer warn.
+- **`expect_eq` shows Blocks**: a string as text in quotes, any other Block as its elements, instead of "(not a number)".
+- **`--test` says how many warnings the build has**, which it does not show; `--check-only` lists them.
+
 ## What changed in v1.98
 
 From the first v1.97 runs (sql agy-11, agy-12 and a Qwen run through opencode). Nothing breaks: every v1.97 program still builds.

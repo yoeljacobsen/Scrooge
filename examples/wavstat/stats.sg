@@ -10,7 +10,7 @@ use "util"
   count Int 8 0
 end
 
-#_abs ( sample:Int -- magnitude:Int ) sample 0 < cond [ 0 sample - ] else [ sample ] ? end
+#_abs ( sample:Int -- magnitude:Int ) sample 0 < cond [ 0 sample - ] else [ sample ] end
 
 #_add_peak ( acc:Acc channel:Int magnitude:Int -- ) magnitude acc channel Acc_peak > when [ acc channel magnitude Acc_peak_set ] end
 
@@ -28,7 +28,7 @@ end
 { the RMS of a channel as a fraction of full scale (32768), 0.0 for no samples }
 #acc_rms ( acc:Acc channel:Int -- rms:Float )
   acc channel Acc_count -> [ n ]
-  n 0 = cond [ 0.0 ] else [ acc channel Acc_sq n to_float / sqrt 32768.0 / ] ?
+  n 0 = cond [ 0.0 ] else [ acc channel Acc_sq n to_float / sqrt 32768.0 / ]
 end
 
 #test_peak ( -- ok:Int )

@@ -33,7 +33,7 @@ end
     ] else [
       0
       0
-    ] ?
+    ]
 end
 
 #map_get ( table:IntMap key:Int -- val:Unknown )
@@ -46,7 +46,7 @@ end
       data_ptr bucket_idx 1 + hread
     ] else [
       [ 75 101 121 32 110 111 116 32 102 111 117 110 100 ] abort
-    ] ?
+    ]
 end
 
 { map_set returns ok=0 rather than silently overwriting when the bucket }
@@ -72,5 +72,5 @@ end
     data_ptr bucket_idx key hwrite
     data_ptr bucket_idx 1 + val hwrite
     1
-  ] else [ 0 ] ?
+  ] else [ 0 ]
 end
