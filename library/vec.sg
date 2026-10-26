@@ -122,3 +122,38 @@ end
 #vec_sort_by ( v:Vec less:Word(Unknown,Unknown--Int) -- )
   v vec_data 0 v vec_len 'less sort_by
 end
+
+{ ---- sort_by_ctx: sort_by with a context value the order needs (v2.01;  ---- }
+{ ---- an ORDER BY's terms, a table's column): `less ( ctx a b -- f )` is   ---- }
+{ ---- nonzero when a must come before b: `rows terms 'row_before          ---- }
+{ ---- vec_sort_by_ctx`, with `#row_before ( terms:Block left:Block       ---- }
+{ ---- right:Block -- f:Int )`. Stable; the same merge sort as sort_by.    ---- }
+#_sortc_left ( ptr:Ptr start:Int mid:Int hi:Int lpos:Int rpos:Int ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- flag:Int )
+  lpos mid < and_then [ rpos hi < not or_else [ ctx ptr start rpos + hread ptr start lpos + hread less not ] ]
+end
+#_sortc_merge ( ptr:Ptr start:Int tmp:Ptr lo:Int mid:Int hi:Int ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- )
+  lo mid hi lo - [times| k i j |
+    ptr start mid hi i :lpos j :rpos ctx 'less _sortc_left
+    cond [ tmp lo k + ptr start i + hread hwrite i 1 + j ]
+    else [ tmp lo k + ptr start j + hread hwrite i j 1 + ]
+  ]
+  drop drop
+end
+#_sortc_pass ( ptr:Ptr start:Int count:Int tmp:Ptr width:Int ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- )
+  count 2 width * + 1 - 2 width * / [times| r |
+    2 width * r * -> [ lo ]
+    ptr start tmp lo lo width + count min :mid lo 2 width * + count min :hi ctx 'less _sortc_merge
+  ]
+  tmp :src 0 :soff ptr :dst start :doff count :count hmove
+end
+#sort_by_ctx ( ptr:Ptr start:Int count:Int ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- )
+  hmark -> [ mk ]
+  count 1 max hnew -> [ t ]
+  1 64 [times| k w | w count < cond [ ptr start count t :tmp w :width ctx 'less _sortc_pass w 2 * ] else [ w ] ]
+  drop
+  mk hrelease
+end
+{ sorts a Vec with sort_by_ctx's order: `rows terms 'row_before vec_sort_by_ctx` }
+#vec_sort_by_ctx ( vec:Vec ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- )
+  vec vec_data 0 :start vec vec_len :count ctx 'less sort_by_ctx
+end

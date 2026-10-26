@@ -2,6 +2,16 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v2.01
+
+From the small-Qwen runs on v1.99 and v2.00 (both passed 8884/8884) and the clean Claude run. Nothing breaks.
+
+- **A sort whose order needs a value**: `vec_sort_by_ctx ( vec ctx less -- )` and `sort_by_ctx ( ptr start count ctx less -- )`. `less ( ctx a b -- f )` gets the context first: `rows terms 'row_before vec_sort_by_ctx`. ORDER BY needs its terms inside the comparator. Three runs worked around this with a hand-written merge sort or decorated keys, and one asked for exactly this. It is a library word with a compile-time word parameter, like `vec_sort_by`, not a run-time word value.
+- **A loop whose body runs short names where**: the ArityMismatch now says at which word the stack runs short. When a `[fold|` or `[map|` with a context comes before that point, it says that one takes its context before its Block. The claude run's missing fold context was blamed on the loop around it.
+- **`--edit` points at `delete`**: when an edit is refused because a word the script did not touch is now wrong, the refusal names it and says a `delete NAME` line removes it in the same edit. One Qwen run deleted obsolete words with sed twice, not knowing the step.
+- **`--edit` names text it leaves behind**: when the old definition had been cut short by an `end` inside it, the `] end` text after the new one belongs to no definition, and the edit now says so.
+- **`--explain ArityMismatch` covers loops and folds**: named loop state, and the context a fold or map takes.
+
 ## What changed in v2.00
 
 From a run by a fresh Claude Opus 5.5 agent on v1.99 (8884/8884 in 6.8 s, 34 minutes). Nothing breaks, except a test suite whose `test_` word is called by another word.

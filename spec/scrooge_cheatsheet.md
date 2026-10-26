@@ -1,6 +1,6 @@
-# Scrooge on one screen (v2.00)
+# Scrooge on one screen (v2.01)
 
-Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v2_00.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
+Postfix: every word takes its inputs from the stack and leaves its outputs there, so `3 4 + 2 *` is 14. The spec (`spec/scrooge_spec_v2_01.txt`) is normative; the skill guide (`spec/scrooge_skill.md`) is the method.
 
 **Words.** `#name ( inputs -- outputs ) body end`, every parameter tagged: Int, Float, Scalar (either kind of number), Block (an immutable array; a string is a Block of character codes), Ptr (heap cells), File, Unknown, or a type the program declares. Inputs are names in the body: `#avg ( total:Int count:Int -- mean:Float ) total to_float count to_float / end`. **Name every word for what it does and every parameter for what it holds** (`put_cell ( cells row value )`, not `_pc ( t r v )`), as the primitives and the library do (`vec_set ( vec index value )`): on a stack the names are the only meaning a value carries, and labels, frame names, ArgumentOrder and every error message use them. The checker warns `ShortName` on a one-letter input of a word with three or more. The body must change the stack by outputs minus inputs, which is checked. Top-level code after the words runs the program: `main`.
 
@@ -26,7 +26,7 @@ Other loops are words that call themselves in tail position.
 **Types of your own.** `#enum Tok num ident op end` gives `Tok_num` .. `Tok_op` (members are always prefixed), `Tok_name`, `Tok_count`, `Tok_of` and `Tok_raw` (so no member may be named `name`, `count`, `of` or `raw`); a Tok compared with a plain number is a TypeError. `#type Row Int end` gives `Row_of` and `Row_raw`. `#struct Pt x Int y Int end` is an immutable value: `1 :x 2 :y Pt_make`, `p Pt_x`, `p 5 Pt_with_x` (a new Pt); `=` and sorting go field by field.
 
 **Library** (`use "name"` at the top of each file that calls it):
-- `vec` (`Vec`): `vec_new vec_push vec_get vec_set vec_len vec_pop vec_sort vec_sort_by sort_by`.
+- `vec` (`Vec`): `vec_new vec_push vec_get vec_set vec_len vec_pop vec_sort vec_sort_by sort_by`, and `rows terms 'before vec_sort_by_ctx` when the order needs a value (`#before ( terms left right -- f )`).
 - `dict` (`Dict`, integer or string keys): `dict_new dict_set dict_get dict_find dict_get_or dict_has dict_del dict_add`.
 - `strings` (`str_print int_to_str str_to_int find_sub str_split str_pad_left`, and the builder `n strbuf_new`, `b s strbuf_add`, `b strbuf_to_str`); `file` (`f_read_file f_write_file`); `args`; `util` (`assert expect expect_eq`); `numeric`; `bitread` (bits of a file or Bytes, LSB first: `fh 65536 br_from_file`, `br n br_get`, `br br_align`, `br dst off n br_bytes`). Lines: `fh freadline`, or `fh a freadline_into` into a Bytes.
 - `x to_str` gives any value as text; `x trace` prints it to stderr with its line. Which words for which job (a file as a stream, bits, a list, a table, arguments, stopping with a message): skill guide section 0d. A whole program in modules with tests: `examples/wavstat/`.

@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v2.00)
+# Skill: Writing Correct Scrooge (v2.01)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v2_00.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v2_01.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -57,7 +57,7 @@ Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the 
 | numbers from bytes | `a i bytes_le16`, `bytes_le32`, `bytes_be32` (unsigned) |
 | bits of a stream, least significant first (DEFLATE, gzip, PNG) | `fh 65536 br_from_file` or `a start n br_from_bytes`, `br n br_get`, `br n br_peek`, `br n br_drop`, `br br_align`, `br br_over` (bitread) |
 | write bytes or text | `bytes_write`, `f_write_file`, `fwrite`; build text with `strbuf_new`, `strbuf_add`, `strbuf_add_int`, `strbuf_write` (strings) |
-| a growable list, sorting | `vec_new`, `vec_push`, `vec_get`, `vec_sort_by` with a word `'less`, `sort_by` (vec) |
+| a growable list, sorting | `vec_new`, `vec_push`, `vec_get`, `vec_sort_by` with a word `'less`, `sort_by` (vec); `vec_sort_by_ctx` when the order needs a value, such as an ORDER BY's terms (`less ( ctx a b -- f )`) |
 | a table by key (Int or string) | `dict_new`, `dict_set`, `dict_get_or`, `dict_has` (dict) |
 | numbers in bulk | `ints_new`, `floats_new`, `bytes_new`; `floats_dot`, `floats_axpy`, `floats_from_bytes` (in C) |
 | text | `int_to_str`, `str_to_int`, `float_to_str`, `str_split`, `find_sub`, `str_print` (strings) |
@@ -121,6 +121,7 @@ Use names, not stack shufflers (`dup`, `drop`, `swap`, `rot`, `over`, the only f
 - **Unbracketed `cond` Conditions**: Write `flag cond [ true_branch ] else [ false_branch ]`. Do NOT place brackets `[` `]` around the condition expression `flag`. When there is nothing to do on the false path, drop the else-branch: `flag cond [ true_branch ]` (the true branch must then have net effect 0). A cond ends with its `]`; there is no closing `?` or `end` (`end` closes only a definition).
 - **Clean Single-Frame Scoping**: In helper words, decompose complex steps into top-level helper words:
   ```scrooge
+  use "util"
   #copy_block ( blk:Block -- copy:Block )
     blk [fold| idx acc val _ | acc val cons from nil ] reverse
   end
@@ -236,6 +237,7 @@ end
 - **`fold` Accumulation (Inverting)**:
   Accumulating values during `[fold| ... | acc val cons from nil ]` prepends elements one-by-one, which inherently reverses iteration order. Use a trailing `reverse` step when input order must be preserved:
   ```scrooge
+  use "util"
   #copy_block ( blk:Block -- copy:Block )
     blk [fold| idx acc val _ | acc val cons from nil ] reverse
   end
@@ -384,7 +386,7 @@ compiler/scroogec_fast --log build_log.tsv -L library -o prog prog.sg   # any co
 ```
 
 - The compiler exits 0 on ACCEPT and 1 on REJECT, and a rejected build removes any older binary at the `-o` path, so `build && ./prog` never runs a stale program.
-- Warnings go to stderr after `ACCEPT`: `MutualRecursion` (words calling each other in tail position where one takes no inputs, so the cycle cannot run as a loop and stops at 65,536 trips; words that pass their state as inputs run as a loop), and `LargeWord` (a word to split, section 1). Take them seriously.
+- Warnings go to stderr after `ACCEPT`; `--explain CLASS` gives each one's rule and a corrected example. `LargeWord` (a word doing more than one job, section 1), `SimilarWords` (words the same but for a call or two: one word with a word parameter), `ShortName` (a one-letter input of a word of three or more), `ArgumentOrder` (named arguments in another parameter's place), `AllocInLoop` (heap memory allocated on every trip of a loop and never freed: allocate once, or `region [ ]` per trip), `MutualRecursion` (words calling each other in tail position where one takes no inputs, so the cycle cannot run as a loop and stops at 65,536 trips), `UnusedWordTemplate` (a word with word parameters that nothing calls) and `NothingRuns` (a program file with no top-level code). Take them seriously.
 - `exit ( code -- )` ends a program with a status of your choosing.
 - `--log FILE`, with any command, appends one tab-separated line to FILE (made with a header when missing): the time, the seconds the call took, the exit status, the verdict, the errors by class, the warnings, the arguments (without `-L` and `--log`) and the first error line (with the lines after it when it ends in a colon, as a refused `--edit`'s does). A wrapper script that passes it on every call keeps a record of a whole session.
 - For a final speed measurement of a program that already runs correctly, `--no-ptr-check` leaves out the stale-Ptr check (about 7% in heap-read-heavy code). Develop and test with the check on.

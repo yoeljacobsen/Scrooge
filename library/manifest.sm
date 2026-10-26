@@ -179,6 +179,8 @@ tool "vec" name "vec_to_block" sig "( vec:Vec -- block:Block )" desc "The values
 tool "vec" name "vec_sort" sig "( vec:Vec -- )" desc "Sorts the values ascending as hsort orders them (numbers by value, strings and rows element by element), stably. A Ptr value (a Vec, a Dict, hnull) stops the program: sort rows as Blocks or #struct values, and turn a NULL into a number first."
 tool "vec" name "sort_by" sig "( ptr:Ptr start:Int count:Int less:Word(Unknown,Unknown--Int) -- )" desc "Sorts the n cells of p from off, stably, in the order of the word passed: less ( a b -- f ) is nonzero when a must come before b. `p 0 n 'by_age sort_by`."
 tool "vec" name "vec_sort_by" sig "( v:Vec less:Word(Unknown,Unknown--Int) -- )" desc "Sorts the Vec as sort_by does: `v 'by_age vec_sort_by`."
+tool "vec" name "sort_by_ctx" sig "( ptr:Ptr start:Int count:Int ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- )" desc "sort_by with a context value the order needs (an ORDER BY's terms): less ( ctx a b -- f ) is nonzero when a must come before b. Stable (v2.01)."
+tool "vec" name "vec_sort_by_ctx" sig "( vec:Vec ctx:Unknown less:Word(Unknown,Unknown,Unknown--Int) -- )" desc "Sorts the Vec as sort_by_ctx does: `rows terms 'row_before vec_sort_by_ctx`, with #row_before ( terms left right -- f )."
 
 { ---- Primitives: built into the compiler, no `use` needed. Not loaded by the compiler; checked against it by tools/build_manifest.py ---- }
 
