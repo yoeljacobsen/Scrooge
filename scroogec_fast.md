@@ -34,7 +34,7 @@ scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack
 - Looking things up: `--lookup NAME [FILE]` (a word's signature and comment, a primitive, a library word or one of FILE's), `--apropos TERMS` (words whose description has every term), `--explain [CLASS]` (every error and warning class, or one with its rule, a bad and a good example), `--stack WORD FILE` (the stack at the end of each line of one word), `--unchecked-calls FILE` (calls whose arguments are neither labelled nor passed by a matching name).
 - `--test FILE` runs FILE's `#test_` words; `--deep` also tests every module FILE loads; `--test-timeout N` sets the limit in seconds.
 - `--log FILE`, with any command, appends one tab-separated line to FILE: the time, seconds, exit status, verdict, errors by class, warnings, arguments and the first error line.
-- `--edit FILE` options: `--program MAIN` checks the whole program MAIN when FILE is one of its modules; `--no-check` writes without checking.
+- `--edit MAIN.sg`: give it the program file; a definition replaces the word of that name in whichever module holds it, and the whole program is checked. `--no-check` writes without checking.
 - `--labels-required N`: the number of inputs from which a call must name every argument (default 4; 0 makes labels optional).
 - `--stage2`: Enables Stage 2 verification rules (enabled by default).
 - `--metrics`: Calculates transitive static stack metrics and branch count for the entry point macro and outputs a JSON summary.

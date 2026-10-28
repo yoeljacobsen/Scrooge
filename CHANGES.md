@@ -2,6 +2,18 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v2.02
+
+From four runs on v2.01 by the small local Qwen model: SQL (8884/8884), gzip (every test file), QMNIST (Track B 98.64%, meeting the target) and the same SQL task in Go. Nothing breaks, except a file with an unmatched `]`, which was silently accepted before.
+
+- **An unmatched `]` is a ParseError at the bracket.** An extra `]` in a word was accepted, and a word after it lost the names of its inputs: the QMNIST run spent 4 builds on "the body begins with its own frame" in a word that had none.
+- **`--test` refuses a stray `end`** as the build does. It blanked all top-level text, a stray `end` included, so a module passed its tests and was refused once another file used it.
+- **A loop whose carried value was not pushed says so**: `len [times| k left |` now names the loop, the values it takes (the start of `left`, then the count) and how many it found.
+- **A call that runs short inside a frame in a loop body is named.** `-> [ other ] a i other ints_get ints_set` now points at `ints_set`, which needed the array a second time. The QMNIST run bisected it with 4 probe files.
+- **`nil` where a record is expected names `hnull`**: a record field that starts as `nil` is a ParseError that gives `parent Env 1 hnull`, and a call that passes `nil` for an `Env` says an absent `Env` is `hnull Env_of`.
+- **`--edit` and `--program`**: `--edit MAIN.sg` already edits every module of MAIN, but the v2.01 docs wrongly offered `--program`. `--edit` with `--program` is now refused with the right command, in either order; before, `--program MAIN --edit MODULE` printed ACCEPT and wrote nothing. `--edit --help` lists the script steps.
+- **Docs**: the `bytes_move` family is memmove (an LZ77 match that reads bytes it is writing needs a byte loop); a `hmark` difference is not an allocation count (`proc_peak_kb` gives the peak); `UnusedWordTemplate` on a module checked alone says the word is checked when the file that calls it is built.
+
 ## What changed in v2.01
 
 From the small-Qwen runs on v1.99 and v2.00 (both passed 8884/8884) and the clean Claude run. Nothing breaks.
