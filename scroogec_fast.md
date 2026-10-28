@@ -14,7 +14,7 @@ Compiled from `scroogec_fast.nim` (in the development repository), `scroogec_fas
 ## Usage
 
 ```bash
-scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack] [--profile] [-O0|-O1|-O2|-O3] [--no-ptr-check] [--loops] [--dump-c [path]] [--dump-bytecode [path]] [-o <outBinary>] <file.sg>
+scroogec_fast [options] <file.sg>      # build; scroogec_fast --help lists every option, grouped
 ```
 
 ### Options & Flags
@@ -25,9 +25,10 @@ scroogec_fast [-L <libDir>] [--stage2] [--metrics] [--check-only] [--debug-stack
 - `--dump-c [path]`, `--dump-c:[path]`: Performs static verification, generates and dumps intermediate C source code to `path` (or `<basename>.c`), and exits immediately.
 - `--dump-bytecode [path]`, `--dump-bytecode:[path]`, `--dump-scc [path]`: Performs static verification, generates and dumps intermediate binary bytecode (`.scc`) to `path` (or `<basename>.scc`), and exits immediately.
 - `--check-only` (one file or several, each under `== FILE`): Only performs static analysis and outputs `ACCEPT` or `REJECT` without emitting a native binary executable.
+- A build of a file that defines words but has no top-level code is refused (`NothingRuns`, an error since v2.04): the program would do nothing. `--check-only` accepts such a module.
 - `--debug-stack`: Ends the generated `main` with `print_stack()`, so the program prints whatever it left on the stack as `STACK: [...]` after its own output. Off by default.
-- `--profile`: Builds a program that prints each word's calls, self time and total time to stderr at exit (see `compiler/scroogec_fast.md`).
-- `-O0` / `-O1` / `-O2` / `-O3`: the optimisation level passed to gcc (default `-O3`). Behaviour is identical at every level; `-O0` builds a large program about ten times faster, for the edit-build-test loop.
+- `--profile`: Builds a program that prints, at exit, each word's calls, self time and total time, and (since v2.04) the allocations made in the word itself (Blocks, heap cells, arrays) with the memory they asked for, to stderr. A word that copies or allocates far more often than expected shows there.
+- `-O0` / `-O1` / `-O2` / `-O3`: the optimisation level passed to gcc (default `-O3`). Behaviour is identical at every level; `-O0` builds a large program about ten times faster, for checking and small tests, but runs much slower (40 times in a numeric kernel): any run that does real work uses the default.
 - `--loops`: with a build (or `--dump-c`), print one line per counted loop (`[times| ]`, `[for| ]`) in the program's own words: `fast access through p, w` when its heap reads and writes through outer variables compile to one bounds check each, or `checked access (calls #helper at line N)` naming the word call (or `hrelease`) that prevents it.
 - `--no-ptr-check`: leave out the check that a Ptr's allocation has not been released by `hrelease` and reused (one comparison per `hread`/`hwrite`; about 7% in a program made almost only of heap reads). For benchmark builds of a program already tested with the check on; a Ptr to a released slot that has not been reused is still caught.
 - Source editing, a whole word at a time: `--words FILE...` (every definition with its size in tokens), `--show NAME FILE`, `--edit FILE` (definitions and steps on stdin: a definition replaces the word of that name or is added after the file's last definition, and `delete NAME`, `rename OLD NEW`, `move NAME MODULE`, `into FILE`; checked, and nothing is written if the program would be rejected; a definition named like a word of another file replaces that word, and the message says so; since v1.98 nothing is written if a file changed while the edit ran, after it was read), `--fmt [--check] FILE` (re-indent only), `--test FILE` (runs the `#test_` words; since v1.99 it also says how many warnings the build has, which `--check-only` lists), `--name-carries FILE` (rewrites loops in the pre-v1.97 form, whose state sat unnamed below the loop, into the named form `[times| i sum |`, in one call: nested loops, `until [ dup ... ] drop` latches, labels for calls of 4 or more inputs). See the skill guide, section 8b.

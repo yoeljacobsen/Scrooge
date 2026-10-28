@@ -2,6 +2,21 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v2.04
+
+From reading the four qwen38fn runs on v2.01 for what the agents actually did, not what they reported. In each, the longest stretch went to a compiler "quirk" that does not exist, built from a program the checker accepted or a message that did not name the cause. Three kinds of program that built before are now refused, each a likely bug; the messages say what to write.
+
+- **`block_get` and `block_set` on a Vec, a record or another type of its own** are refused: `'block_get' indexes a Block, and a Vec is not one: a Vec's elements are read with vec_get`. It built and stopped at run time with `get (:) operand must be a block/list` (an old syntax, no line), which the SQL run read as a label bug for about 20 calls.
+- **A value of the same type as the container it goes into needs its label**: `rows row :value vec_push` for a Vec pushed into a Vec of Vecs. The types cannot catch a swap there: the SQL run's `copy nxt vec_push` pushed the wrong Vec, and about 45 calls went to a "a cond inside a loop binds the wrong slot" theory. `--labels-required 0` turns this off with the other label rules.
+- **A call inside a cond branch that runs short is named**, also in a branch that ends the program: `"msg" die` with a two-input `die` built and stopped with "Stack underflow" (QMNIST). In gzip a call one argument short in an else branch gave only `(true=1, false=0)`, and the agent concluded the die exemption was broken.
+- **Unequal cond branches say what each leaves**: `the true branch leaves ( b ), the false branch ( b a )`, and point at `--stack WORD FILE`.
+- **A build of a file with no top-level code is refused** (`NothingRuns`, a warning since v2.00): it said ACCEPT, ran nothing and exited 0. `--check-only` still accepts a module.
+- **`--profile` counts allocations per word**: Blocks, heap cells and arrays made in each word, with the memory asked for. The SQL run spent about 150 calls finding 74 million row copies made by `keep row copy_row v push_if`, which copies whether or not it keeps.
+- **`--help` lists every option**, grouped. It printed a usage line from v1.6x without `--lookup`, `--stack`, `--test` or `--edit`, which is what the SQL agent saw first. `compiler/scroogec_fast.md`, unchanged since v1.90, now points at `scroogec_fast.md` for the options.
+- **`--edit` says it built nothing**: "checked: ACCEPT" was read as a build, and the gzip run ran an old binary for 7 calls.
+- **Names from other languages are pointed to Scrooge's**: an unknown `println`, `parse_int`, `str_eq`, `split`, `time_ms`, `flush`, `strcat`, `mkdir` and a few more say what to use, as `%` did; `--lookup` and `--apropos` too. `--apropos` with no entry having every term lists those with the most (`--apropos standard error print` found nothing).
+- **Docs**: `-O0` runs much slower (40 times in a numeric kernel), so only checks and small tests use it; after a context reset, re-read the cheatsheet; `-L` names the library, not your modules (`use "src/geo"`); the cheatsheet adds setters to the container-first rule, that `until` is tested before the first trip, and that every word on a line runs.
+
 ## What changed in v2.03
 
 Nothing breaks.

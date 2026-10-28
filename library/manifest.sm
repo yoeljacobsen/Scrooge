@@ -331,4 +331,4 @@ prim name "to_int" sig "( number:Scalar -- result:Int )" desc "An integer as is;
 prim name "float_to_str" sig "( number:Scalar decimals:Int -- str:Block )" desc "The text print_float prints (printf %.*f, 0-17 decimals), as a Block of character codes."
 prim name "type_of" sig "( value:Unknown -- kind:Int )" desc "The value's runtime type: 0 integer, 1 float, 2 Block, 3 Ptr (a File handle is an integer)."
 prim name "hnull" sig "( -- ptr:Ptr )" desc "A Ptr that refers to nothing; equal only to another hnull; hread/hwrite through it are fatal."
-prim name "clock_ns" sig "( -- ns:Int )" desc "Nanoseconds from a monotonic clock; only differences between readings mean anything."
+prim name "clock_ns" sig "( -- ns:Int )" desc "The time in nanoseconds from a monotonic clock, for measuring elapsed time; only differences between readings mean anything."
