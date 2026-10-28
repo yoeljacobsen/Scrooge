@@ -2,6 +2,14 @@
 
 Newest first. The README says where to start; this file is the history.
 
+## What changed in v2.03
+
+Nothing breaks.
+
+- **Trigonometry, as a library lexicon**: `use "math"` gives `sin`, `cos`, `tan`, `atan`, `atan2 ( dy dx -- angle )` and `pi`. They are written in Scrooge with fdlibm's method. Against C's libm, sin and cos are within 1 unit in the last place, tan within 2, atan and atan2 within 3. `sin`, `cos` and `tan` stop the program for an angle over 1647099 (2^20 pi/2), where the result would lose precision; reduce such an angle first. Being library words, not primitives, the names stay free in programs that do not load `math`. Four SQL runs computed MD5's sine constants outside Scrooge (`floor(abs(sin(i)) 2^32)`); now `i sin abs 4294967296.0 * floor` gives all 64 exactly.
+- **Float literals reach C exactly.** The compiler wrote each float literal into C with 16 significant digits, so a literal that needs 17 could become the neighbouring double: `1.5707963267341256` came out as `1.570796326734126`. It now writes 17 digits. Found while checking `math` against libm.
+- **A library word's name is free in a file that does not use its lexicon.** An input named `reverse` (a `util` word) was refused even in a file without `use "util"`. Now the name is flagged only when the file loads that lexicon.
+
 ## What changed in v2.02
 
 From four runs on v2.01 by the small local Qwen model: SQL (8884/8884), gzip (every test file), QMNIST (Track B 98.64%, meeting the target) and the same SQL task in Go. Nothing breaks, except a file with an unmatched `]`, which was silently accepted before.

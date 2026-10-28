@@ -91,6 +91,13 @@ tool "map" name "map_find" sig "( table:IntMap key:Int -- val:Unknown found:Int 
 tool "map" name "map_get" sig "( table:IntMap key:Int -- val:Unknown )" desc "Aborts when the key is absent; use map_find if absence is expected."
 tool "map" name "map_set" sig "( table:IntMap key:Int val:Unknown -- ok:Int )" desc "ok=0 if the write would clobber a different existing key at that bucket."
 
+tool "math" name "pi" sig "( -- value:Float )" desc "pi, 3.141592653589793."
+tool "math" name "sin" sig "( angle:Scalar -- sine:Float )" desc "The sine of an angle in radians, within 1 unit in the last place of C's libm; stops the program for |angle| over 1647099 (2^20 pi/2)."
+tool "math" name "cos" sig "( angle:Scalar -- cosine:Float )" desc "The cosine of an angle in radians, within 1 unit in the last place of C's libm; stops the program for |angle| over 1647099."
+tool "math" name "tan" sig "( angle:Scalar -- tangent:Float )" desc "The tangent of an angle in radians, within 2 units in the last place of C's libm; stops the program for |angle| over 1647099."
+tool "math" name "atan" sig "( value:Scalar -- angle:Float )" desc "The arctangent of value, in radians, in -pi/2 .. pi/2, within 3 units in the last place of C's libm."
+tool "math" name "atan2" sig "( dy:Scalar dx:Scalar -- angle:Float )" desc "The angle of the point (dx, dy) from the positive x axis, in radians, in -pi .. pi (dy first, as C's atan2)."
+
 tool "memory" name "hclear" sig "( ptr:Ptr start:Int size:Int -- )" desc "Set size cells from start to 0."
 tool "memory" name "hloop_fill" sig "( ptr:Ptr start:Int count:Int val:Int -- )" desc "Set the cells start..stop-1 to val."
 tool "memory" name "hloop_add" sig "( ptr:Ptr start:Int count:Int val:Int -- )" desc "Add val to each of the cells start..stop-1."

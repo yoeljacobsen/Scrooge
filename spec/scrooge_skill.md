@@ -1,4 +1,4 @@
-# Skill: Writing Correct Scrooge (v2.02)
+# Skill: Writing Correct Scrooge (v2.03)
 
 Operational guide for writing Scrooge that passes static verification and runs right. The specification defines the language; this guide is the method: how to learn it, how to build a program in it, the patterns that work, and how to debug.
 
@@ -9,7 +9,7 @@ Operational guide for writing Scrooge that passes static verification and runs r
 Learn the language from its documents and from small experiments, in this order:
 
 1. **Start with the cheat sheet** (`spec/scrooge_cheatsheet.md`): the whole language, the library and the tools on one screen, with a program that runs. Keep it open while you write.
-2. **Read the specification** (`spec/scrooge_spec_v2_02.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
+2. **Read the specification** (`spec/scrooge_spec_v2_03.txt`) once, end to end. It is short and normative: when this guide and the spec disagree, the spec wins.
 3. **Read this guide**, in particular sections 2 to 2c (frames, how stack effects add up, loops): they cover the rules that cost earlier programmers the most rebuilds.
 4. **Look every word up before you use it**: `compiler/scroogec_fast -L library --lookup hwrite` prints `hwrite ( p:Ptr i:Int v:Unknown -- )` and what it does. It knows primitives, library words (and the lexicon to `use`), types and constructs (`--lookup fold`), and, given your file as well, your own words. `--apropos sort order` finds words by what they do. The same lines are in `library/manifest.sm` and spec Sec.8, generated from the sources and checked against the compiler. Look before writing a helper: sorting, a growable vector, a hash map, string conversion, argument parsing, bit counts and file reading already exist.
 5. **When a build is rejected**, `--explain ArityMismatch` (any class the message names) gives the rule, a wrong example and the corrected one, and `--stack WORD FILE` prints the stack at the end of each line of a word, with names and types: the line where it stops being what you meant is the bug.
@@ -60,6 +60,7 @@ Look each one up (`--lookup NAME`) before using it; `--apropos TERMS` finds the 
 | a growable list, sorting | `vec_new`, `vec_push`, `vec_get`, `vec_sort_by` with a word `'less`, `sort_by` (vec); `vec_sort_by_ctx` when the order needs a value, such as an ORDER BY's terms (`less ( ctx a b -- f )`) |
 | a table by key (Int or string) | `dict_new`, `dict_set`, `dict_get_or`, `dict_has` (dict) |
 | numbers in bulk | `ints_new`, `floats_new`, `bytes_new`; `floats_dot`, `floats_axpy`, `floats_from_bytes` (in C) |
+| angles | `sin`, `cos`, `tan`, `atan`, `atan2 ( dy dx )`, `pi` (math); `exp`, `log`, `sqrt`, `pow` are primitives |
 | text | `int_to_str`, `str_to_int`, `float_to_str`, `str_split`, `find_sub`, `str_print` (strings) |
 | command-line arguments | `1 "" arg_or` (the first), `"-v" arg_flag`, `"-n" 10 arg_int_or`, `"-o" "out" arg_value_or` (args) |
 | state shared by many words | one `#record`, made once, passed first to every word (section 2d) |
